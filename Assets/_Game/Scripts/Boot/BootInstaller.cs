@@ -8,8 +8,6 @@ public class BootInstaller : MonoBehaviour
 
     private void Awake()
     {
-        DontDestroyOnLoad(gameObject);
-
         // TODO: 이후 GameConfig / Save / Service 초기화 지점
         SceneLoader.Load(_nextScene);
     }

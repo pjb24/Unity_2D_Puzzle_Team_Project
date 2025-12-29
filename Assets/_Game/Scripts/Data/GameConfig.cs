@@ -14,22 +14,22 @@ public class DifficultyProfile
     public E_Difficulty _difficulty;
 
     [Header("Rewind")]
-    public int _rewindMax = 3;
+    public int RewindMax = 3;
 
     [Header("Fail Policy")]
-    public bool _failOnChildBlocked = true; // Easy는 false로
-    public bool _hardResetStage = false;    // Hard는 true로
+    public bool FailOnChildBlocked = true; // Easy는 false로
+    public bool HardResetStage = false;    // Hard는 true로
 
     [Header("Tuning")]
-    public float _childStepDelay = 0.0f;    // 연출/턴 템포
+    public float ChildStepDelay = 0.0f;    // 연출/턴 템포
 }
 
 [System.Serializable]
 public class ChapterDefinition
 {
-    public string _chapterId = "Chapter_01";
-    public ChapterVisualProfile _visualProfile;
-    public List<StageDefinition> _stages = new();
+    public string ChapterId = "Chapter_01";
+    public ChapterVisualProfile VisualProfile;
+    public List<StageDefinition> Stages = new();
 }
 
 [CreateAssetMenu(menuName = "Puzzle/Data/Game Config")]
@@ -68,11 +68,11 @@ public class GameConfig : ScriptableObject
             var ch = _chapters[c];
             if (ch == null) continue;
 
-            if (ch._stages == null) ch._stages = new List<StageDefinition>();
-            for (int s = ch._stages.Count - 1; s >= 0; s--)
+            if (ch.Stages == null) ch.Stages = new List<StageDefinition>();
+            for (int s = ch.Stages.Count - 1; s >= 0; s--)
             {
-                if (ch._stages[s] == null)
-                    Debug.LogWarning($"[GameConfig] Null stage in {ch._chapterId}", this);
+                if (ch.Stages[s] == null)
+                    Debug.LogWarning($"[GameConfig] Null stage in {ch.ChapterId}", this);
             }
         }
 

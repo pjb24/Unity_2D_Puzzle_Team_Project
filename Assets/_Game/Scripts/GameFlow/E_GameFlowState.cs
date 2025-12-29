@@ -1,0 +1,10 @@
+public enum E_GameFlowState
+{
+    Boot,
+    MainMenu,
+    ChapterLoad,
+    StageLoad,
+    Play,
+    StageClear,
+    Ending,
+}

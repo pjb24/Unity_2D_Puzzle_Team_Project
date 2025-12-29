@@ -12,4 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7534df970ec105843b51ce822367888a, type: 3}
   m_Name: Child Path Definition
   m_EditorClassIdentifier: 
-  _pathIndices: 
+  _pathIndices: 000000000100000002000000
