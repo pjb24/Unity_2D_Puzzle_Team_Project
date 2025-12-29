@@ -1,0 +1,92 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+public enum E_Difficulty
+{
+    Easy,
+    Normal,
+    Hard,
+}
+
+[System.Serializable]
+public class DifficultyProfile
+{
+    public E_Difficulty _difficulty;
+
+    [Header("Rewind")]
+    public int _rewindMax = 3;
+
+    [Header("Fail Policy")]
+    public bool _failOnChildBlocked = true; // Easy는 false로
+    public bool _hardResetStage = false;    // Hard는 true로
+
+    [Header("Tuning")]
+    public float _childStepDelay = 0.0f;    // 연출/턴 템포
+}
+
+[System.Serializable]
+public class ChapterDefinition
+{
+    public string _chapterId = "Chapter_01";
+    public ChapterVisualProfile _visualProfile;
+    public List<StageDefinition> _stages = new();
+}
+
+[CreateAssetMenu(menuName = "Puzzle/Data/Game Config")]
+public class GameConfig : ScriptableObject
+{
+    [Header("Chapters")]
+    [SerializeField] private List<ChapterDefinition> _chapters = new();
+
+    [Header("Difficulty Profiles")]
+    [SerializeField] private List<DifficultyProfile> _difficultyProfiles = new();
+
+    [Header("Default Params")]
+    [SerializeField] private E_Difficulty _defaultDifficulty = E_Difficulty.Normal;
+
+    public IReadOnlyList<ChapterDefinition> Chapters => _chapters;
+    public E_Difficulty DefaultDifficulty => _defaultDifficulty;
+
+    public DifficultyProfile GetProfile(E_Difficulty difficulty)
+    {
+        for (int i = 0; i < _difficultyProfiles.Count; i++)
+        {
+            if (_difficultyProfiles[i] != null && _difficultyProfiles[i]._difficulty == difficulty)
+                return _difficultyProfiles[i];
+        }
+        return null;
+    }
+
+    private void OnValidate()
+    {
+        if (_chapters == null) _chapters = new List<ChapterDefinition>();
+        if (_difficultyProfiles == null) _difficultyProfiles = new List<DifficultyProfile>();
+
+        // 챕터/스테이지 null 검증
+        for (int c = 0; c < _chapters.Count; c++)
+        {
+            var ch = _chapters[c];
+            if (ch == null) continue;
+
+            if (ch._stages == null) ch._stages = new List<StageDefinition>();
+            for (int s = ch._stages.Count - 1; s >= 0; s--)
+            {
+                if (ch._stages[s] == null)
+                    Debug.LogWarning($"[GameConfig] Null stage in {ch._chapterId}", this);
+            }
+        }
+
+        // 난이도 프로필 중복 방지(최소)
+        for (int i = 0; i < _difficultyProfiles.Count; i++)
+        {
+            for (int j = i + 1; j < _difficultyProfiles.Count; j++)
+            {
+                if (_difficultyProfiles[i] != null && _difficultyProfiles[j] != null &&
+                    _difficultyProfiles[i]._difficulty == _difficultyProfiles[j]._difficulty)
+                {
+                    Debug.LogWarning($"[GameConfig] Duplicate difficulty profile: {_difficultyProfiles[i]._difficulty}", this);
+                }
+            }
+        }
+    }
+}
