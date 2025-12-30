@@ -6,8 +6,6 @@
 /// Chapter 끝이면 MainMenu로 복귀(엔딩은 나중에 확장)
 ///
 
-using UnityEngine;
-
 public class StageClearState : IGameFlowState
 {
     private readonly GameFlowStateMachine _sm;
