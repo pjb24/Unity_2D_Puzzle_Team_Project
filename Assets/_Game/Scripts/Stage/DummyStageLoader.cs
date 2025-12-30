@@ -86,15 +86,19 @@ public class DummyStageLoader : IStageLoader
         int w = Mathf.Max(1, stageDef.BoardSize.x);
         int h = Mathf.Max(1, stageDef.BoardSize.y);
 
-        // 간단 경로: (0,0) -> (w-1,0) -> (w-1,h-1)
-        Vector3 p0 = GetTileCenterLocal(stageDef, 0, 0);
-        Vector3 p1 = GetTileCenterLocal(stageDef, w - 1, 0);
-        Vector3 p2 = GetTileCenterLocal(stageDef, w - 1, h - 1);
+        var indices = PerimeterPathBuilder.Build(w, h);
 
         ctx._stageRuntime._pathPoints.Clear();
-        ctx._stageRuntime._pathPoints.Add(ToWorld(ctx, p0));
-        ctx._stageRuntime._pathPoints.Add(ToWorld(ctx, p1));
-        ctx._stageRuntime._pathPoints.Add(ToWorld(ctx, p2));
+
+        for (int i = 0; i < indices.Count; i++)
+        {
+            int idx = indices[i];
+            int x = idx % w;
+            int y = idx / w;
+
+            Vector3 pLocal = GetTileCenterLocal(stageDef, x, y);
+            ctx._stageRuntime._pathPoints.Add(ToWorld(ctx, pLocal));
+        }
 
         // 디버그용 path marker 생성(선택)
         var pathRoot = new GameObject("[Path]");
@@ -142,18 +146,24 @@ public class DummyStageLoader : IStageLoader
         ctx._stageRuntime._gridPresenter = new GridPresenter(ctx._stageRuntime._root.transform, w, h, _tileSize);
 
         // FatherController 부착 + 초기화
-        var fatherCtrl = ctx._stageRuntime._father.AddComponent<FatherController>();
-        fatherCtrl.Initialize(ctx._stageRuntime._grid, ctx._stageRuntime._gridPresenter, stageDef.FatherSpawn._cell);
-
-        // Child도 나중에 점유 필요하면 Initialize 동일 패턴으로 확장
-
         ctx._stageRuntime._fatherController = ctx._stageRuntime._father.GetComponent<FatherController>();
         if (ctx._stageRuntime._fatherController == null)
             ctx._stageRuntime._fatherController = ctx._stageRuntime._father.AddComponent<FatherController>();
+        var fatherCtrl = ctx._stageRuntime._fatherController;
+        fatherCtrl.Initialize(ctx._stageRuntime._grid, ctx._stageRuntime._gridPresenter, stageDef.FatherSpawn._cell);
 
+        // ChildPathRuntime 생성
+        var pathRuntime = new ChildPathRuntime(ctx._stageRuntime._grid, ctx._stageRuntime._gridPresenter);
+
+        // blocked steps: StageDefinition에 추가한 BlockedPathSteps 사용
+        var blocked = stageDef.BlockedPathSteps; // IReadOnlyList<int>
+
+        // ChildController 부착 + 초기화
         ctx._stageRuntime._childController = ctx._stageRuntime._child.GetComponent<ChildController>();
         if (ctx._stageRuntime._childController == null)
             ctx._stageRuntime._childController = ctx._stageRuntime._child.AddComponent<ChildController>();
+        var childCtrl = ctx._stageRuntime._childController;
+        childCtrl.Initialize(pathRuntime, blocked, startPos: 0);
     }
 
     private Vector3 GetTileCenterLocal(StageDefinition stageDef, int x, int y)

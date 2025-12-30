@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public enum E_StageTransitionType
@@ -45,7 +46,7 @@ public class StageDefinition : ScriptableObject
     [SerializeField] private SpawnInfo _childSpawn;
 
     [Header("Child Path")]
-    [SerializeField] private ChildPathDefinition _childPath;
+    [SerializeField] private int[] _blockedPathSteps; // 경로 step index 기준
 
     [Header("Transition")]
     [SerializeField] private E_StageTransitionType _transitionType = E_StageTransitionType.Fade;
@@ -57,7 +58,7 @@ public class StageDefinition : ScriptableObject
     public E_CellType[] Cells => _cells;
     public SpawnInfo FatherSpawn => _fatherSpawn;
     public SpawnInfo ChildSpawn => _childSpawn;
-    public ChildPathDefinition ChildPath => _childPath;
+    public IReadOnlyList<int> BlockedPathSteps => _blockedPathSteps;
     public E_StageTransitionType TransitionType => _transitionType;
 
     private void OnValidate()
@@ -83,18 +84,6 @@ public class StageDefinition : ScriptableObject
         ValidateCellInBoard(_fatherSpawn._cell, nameof(_fatherSpawn));
         ValidateCellInBoard(_childSpawn._cell, nameof(_childSpawn));
 
-        // 4) ChildPath 참조/길이
-        if (_childPath == null)
-        {
-            Debug.LogWarning($"[StageDefinition] ChildPath is null: {name}", this);
-        }
-        else
-        {
-            var count = _childPath.PathIndices?.Count ?? 0;
-            if (count < 2)
-                Debug.LogWarning($"[StageDefinition] ChildPath too short: {name}", this);
-        }
-
         // 5) (옵션) Goal 최소 1개 권장
         if (_cells != null)
         {
@@ -105,6 +94,21 @@ public class StageDefinition : ScriptableObject
             }
             if (!hasGoal)
                 Debug.LogWarning($"[StageDefinition] No Goal cell: {name}", this);
+        }
+
+        if (_blockedPathSteps != null)
+        {
+            int w = _boardSize.x;
+            int h = _boardSize.y;
+            var indices = PerimeterPathBuilder.Build(w, h);
+
+            int n = indices?.Count ?? 0;
+            for (int i = 0; i < _blockedPathSteps.Length; i++)
+            {
+                int s = _blockedPathSteps[i];
+                if (s < 0) _blockedPathSteps[i] = 0;
+                if (n > 0 && s >= n) _blockedPathSteps[i] = n - 1;
+            }
         }
     }
 
