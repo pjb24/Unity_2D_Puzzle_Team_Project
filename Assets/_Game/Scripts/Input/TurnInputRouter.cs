@@ -25,13 +25,6 @@ public class TurnInputRouter : MonoBehaviour
         _buffer = buffer;
     }
 
-    // 실제 입력 시스템 콜백에서 호출
-    public void OnMoveUp()
-    {
-        if (_turnDriver.IsInputLocked) return; // 잠금 규칙
-        _buffer.Enqueue(new TurnCommand(E_TurnCommandType.MoveUp));
-    }
-
     #region Unity Lifecycle
 
     private void OnEnable()
