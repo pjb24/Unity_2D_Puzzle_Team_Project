@@ -42,7 +42,7 @@ public class TurnStateMachine
         _current.Enter(_ctx);
         _isStarted = true;
 
-        Debug.Log($"[Turn] Start Phase = {_current.Phase}");
+        // Debug.Log($"[Turn] Start Phase = {_current.Phase}");
     }
 
     public void Tick()
@@ -58,7 +58,7 @@ public class TurnStateMachine
 
         _current.Exit(_ctx);
         _current = Get(next);
-        Debug.Log($"[Turn] Phase => {_current.Phase} (TurnIndex={_ctx.TurnIndex})");
+        // Debug.Log($"[Turn] Phase => {_current.Phase} (TurnIndex={_ctx.TurnIndex})");
         _current.Enter(_ctx);
     }
 

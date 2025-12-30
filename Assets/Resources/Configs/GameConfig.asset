@@ -26,7 +26,7 @@ MonoBehaviour:
   _difficultyProfiles:
   - _difficulty: 0
     RewindMax: 3
-    FailOnChildBlocked: 1
+    FailOnChildBlocked: 0
     HardResetStage: 0
     ChildStepDelay: 0
   - _difficulty: 1

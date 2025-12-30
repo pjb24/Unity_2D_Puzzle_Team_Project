@@ -21,6 +21,12 @@ public class TurnContext
 
     public FatherActionResult FatherResult { get; set; }
 
+    public DifficultyProfile _profile { get; private set; }
+    public TurnSignalBus _signals { get; private set; }
+
+    public void InjectDifficulty(DifficultyProfile profile) => _profile = profile;
+    public void InjectSignals(TurnSignalBus signals) => _signals = signals;
+
     public TurnContext(FatherController father,
         ChildController child,
         TurnSnapshotRecorder snapshotRecorder)
@@ -38,13 +44,13 @@ public class TurnContext
         ChildBlocked = false;
         TurnFailed = false;
         TurnCleared = false;
-        Debug.Log($"[Turn] Tick TurnIndex={TurnIndex}, Cmd={cmd}");
+        // Debug.Log($"[Turn] Tick TurnIndex={TurnIndex}, Cmd={cmd}");
     }
 
     public void SetInputLocked(bool locked)
     {
         IsInputLocked = locked;
-        Debug.Log($"[Turn] InputLocked={(locked ? "ON" : "OFF")} (TurnIndex={TurnIndex})");
+        // Debug.Log($"[Turn] InputLocked={(locked ? "ON" : "OFF")} (TurnIndex={TurnIndex})");
     }
 
     public void ClearAcceptedInput()

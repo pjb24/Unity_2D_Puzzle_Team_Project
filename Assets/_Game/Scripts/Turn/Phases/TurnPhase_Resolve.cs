@@ -21,12 +21,47 @@ public class TurnPhase_Resolve : ITurnPhase
     public void Enter(TurnContext ctx)
     {
         // 1) Goal 체크
+        // 1) Clear 우선
         if (ctx.FatherResult.TriggerGoal)
+        {
             ctx.TurnCleared = true;
+            ctx.TurnFailed = false;
 
-        // 2) ChildBlocked 정책은 기존대로(나중에 난이도 적용)
+            ctx._signals?.RaiseResolved(E_TurnResolveOutcome.StageCleared, E_StageFailReason.None, ctx.TurnIndex);
+
+            ctx.SetInputLocked(false);
+            _sm.Change(E_TurnPhase.Snapshot);
+            return;
+        }
+
+        // 2) ChildBlocked 분기
         if (ctx.ChildBlocked)
-            ctx.TurnFailed = true;
+        {
+            bool failOnBlocked = ctx._profile != null && ctx._profile.FailOnChildBlocked;
+            if (failOnBlocked)
+            {
+                ctx.TurnFailed = true;
+
+                bool hardReset = ctx._profile != null && ctx._profile.HardResetStage;
+
+                var outcome = hardReset
+                    ? E_TurnResolveOutcome.StageFailed_Reset
+                    : E_TurnResolveOutcome.StageFailed_Rewind;
+
+                ctx._signals?.RaiseResolved(outcome, E_StageFailReason.ChildBlocked, ctx.TurnIndex);
+            }
+            else
+            {
+                // Easy: 실패 없음(턴은 정상 종료)
+                ctx.TurnFailed = false;
+                ctx._signals?.RaiseResolved(E_TurnResolveOutcome.Continue, E_StageFailReason.ChildBlocked, ctx.TurnIndex);
+            }
+        }
+        else
+        {
+            ctx.TurnFailed = false;
+            ctx._signals?.RaiseResolved(E_TurnResolveOutcome.Continue, E_StageFailReason.None, ctx.TurnIndex);
+        }
 
         ctx.SetInputLocked(false); // 잠금 OFF (규칙: Resolve 종료)
         _sm.Change(E_TurnPhase.Snapshot);

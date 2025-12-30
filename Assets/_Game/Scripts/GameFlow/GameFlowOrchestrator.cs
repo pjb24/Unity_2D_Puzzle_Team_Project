@@ -30,6 +30,7 @@ public class GameFlowOrchestrator : MonoBehaviour
             _chapterIndex = 0,
             _stageIndex = 0
         };
+        _ctx._gameConfig = _ctx._config.LoadGameConfig();
 
         _sm = new GameFlowStateMachine();
 
@@ -44,6 +45,7 @@ public class GameFlowOrchestrator : MonoBehaviour
         _mainMenuState.SetNext(_stageLoadState);
         _stageLoadState.SetNext(_playState);
         _playState.SetNext(_stageClearState);
+        _playState.SetStageLoad(_stageLoadState);
         _stageClearState.SetMainMenuState(_mainMenuState);
         _stageClearState.SetStagedLoadState(_stageLoadState);
         _endingState.SetMainMenu(_mainMenuState);
@@ -69,7 +71,7 @@ public class GameFlowOrchestrator : MonoBehaviour
 
     private void OnFlowStateChanged(E_GameFlowState state)
     {
-        Debug.Log("[GameFlowOrchestrator] OnFlowStateChanged current state: " + _sm._currentId.ToString());
+        // Debug.Log("[GameFlowOrchestrator] OnFlowStateChanged current state: " + _sm._currentId.ToString());
     }
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)

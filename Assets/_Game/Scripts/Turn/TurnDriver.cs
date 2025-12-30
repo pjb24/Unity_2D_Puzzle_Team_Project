@@ -2,6 +2,7 @@
 /// Phase들이 TurnStateMachine을 참조하니, 팩토리 패턴으로 한 번에 조립한다.
 ///
 
+using System;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -14,13 +15,21 @@ public class TurnDriver : MonoBehaviour
     private TurnInputBuffer _input;
 
     private TurnInputRouter _router;
+    private TurnSignalBus _signals = new TurnSignalBus();
 
     public bool IsInputLocked => _ctx != null && _ctx.IsInputLocked;
+
+    public void AddListenerOnResolved(Action<E_TurnResolveOutcome, E_StageFailReason, int> cb)
+    => _signals.AddListenerOnResolved(cb);
+
+    public void RemoveListenerOnResolved(Action<E_TurnResolveOutcome, E_StageFailReason, int> cb)
+        => _signals.RemoveListenerOnResolved(cb);
 
     public void Bind(FatherController father,
         ChildController child,
         TurnSnapshotRecorder snapshot,
-        TurnInputRouter router)
+        TurnInputRouter router,
+        DifficultyProfile profile)
     {
         if (_isBound) return;
 
@@ -28,6 +37,10 @@ public class TurnDriver : MonoBehaviour
 
         _input = new TurnInputBuffer();
         _ctx = new TurnContext(father, child, snapshot);
+
+        // Inject
+        _ctx.InjectDifficulty(profile);
+        _ctx.InjectSignals(_signals);
 
         _sm = new TurnStateMachine(_ctx);
 

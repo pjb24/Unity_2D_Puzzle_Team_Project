@@ -22,6 +22,5 @@ MonoBehaviour:
   _childSpawn:
     _cell: {x: 0, y: 0}
     _world: {x: 0, y: 0, z: 0}
-  _childPath: {fileID: 11400000, guid: 267adb9e5d7fb7c43bc7048e052e4d66, type: 2}
-  _blockedPathSteps: 
+  _blockedPathSteps: 14000000
   _transitionType: 1
