@@ -19,7 +19,11 @@ public class TurnContext
     public ChildController Child { get; }
     public TurnSnapshotRecorder SnapshotRecorder { get; }
 
-    public TurnContext(FatherController father, ChildController child, TurnSnapshotRecorder snapshotRecorder)
+    public FatherActionResult FatherResult { get; set; }
+
+    public TurnContext(FatherController father,
+        ChildController child,
+        TurnSnapshotRecorder snapshotRecorder)
     {
         Father = father;
         Child = child;

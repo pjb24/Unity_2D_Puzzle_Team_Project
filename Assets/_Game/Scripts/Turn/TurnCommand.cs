@@ -5,7 +5,7 @@ public enum E_TurnCommandType
     MoveDown,
     MoveLeft,
     MoveRight,
-    TurnCommit,
+    Interact,
     TurnCancel,
     RewindPrev,
     RewindNext,

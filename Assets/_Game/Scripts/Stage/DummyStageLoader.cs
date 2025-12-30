@@ -27,6 +27,8 @@ public class DummyStageLoader : IStageLoader
         ctx._stageRuntime = new StageRuntimeRefs();
         ctx._stageRuntime._root = new GameObject($"[StageRuntime] C{ctx._chapterIndex}_S{ctx._stageIndex}");
 
+        ctx._stageDefinition = stageDef;
+
         // 4) 더미 보드 생성
         CreateDummyBoard(ctx, stageDef);
 
@@ -61,7 +63,7 @@ public class DummyStageLoader : IStageLoader
         tilesRoot.transform.SetParent(ctx._stageRuntime._root.transform, false);
 
         // 원점 기준 중앙정렬
-        Vector3 origin = new Vector3(-(w - 1) * 0.5f * _tileSize, 0f, -(h - 1) * 0.5f * _tileSize);
+        Vector3 origin = new Vector3(-(w - 1) * 0.5f * _tileSize, -(h - 1) * 0.5f * _tileSize, 0f);
 
         for (int y = 0; y < h; y++)
         {
@@ -70,8 +72,8 @@ public class DummyStageLoader : IStageLoader
                 var tile = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 tile.name = $"Tile_{x}_{y}";
                 tile.transform.SetParent(tilesRoot.transform, false);
-                tile.transform.localScale = new Vector3(_tileSize, 0.1f, _tileSize);
-                tile.transform.localPosition = origin + new Vector3(x * _tileSize, 0f, y * _tileSize);
+                tile.transform.localScale = new Vector3(_tileSize, _tileSize, 0.1f);
+                tile.transform.localPosition = origin + new Vector3(x * _tileSize, y * _tileSize, 0f);
 
                 // 충돌이 필요없으면 제거 가능(지금은 바닥으로 사용 가능)
                 ctx._stageRuntime._tiles.Add(tile.transform);
@@ -130,6 +132,28 @@ public class DummyStageLoader : IStageLoader
 
         ctx._stageRuntime._father.transform.position = fatherPos + Vector3.up * 0.9f;
         ctx._stageRuntime._child.transform.position = childPos + Vector3.up * 0.9f;
+
+        var stageDef = ctx._stageDefinition; // 이미 ctx에 들고 있거나, LoadStage 내에서 stageDef 사용
+
+        // Grid 생성(Cells 배열 기반)
+        int w = Mathf.Max(1, stageDef.BoardSize.x);
+        int h = Mathf.Max(1, stageDef.BoardSize.y);
+        ctx._stageRuntime._grid = new BoardGrid(w, h, stageDef.Cells);
+        ctx._stageRuntime._gridPresenter = new GridPresenter(ctx._stageRuntime._root.transform, w, h, _tileSize);
+
+        // FatherController 부착 + 초기화
+        var fatherCtrl = ctx._stageRuntime._father.AddComponent<FatherController>();
+        fatherCtrl.Initialize(ctx._stageRuntime._grid, ctx._stageRuntime._gridPresenter, stageDef.FatherSpawn._cell);
+
+        // Child도 나중에 점유 필요하면 Initialize 동일 패턴으로 확장
+
+        ctx._stageRuntime._fatherController = ctx._stageRuntime._father.GetComponent<FatherController>();
+        if (ctx._stageRuntime._fatherController == null)
+            ctx._stageRuntime._fatherController = ctx._stageRuntime._father.AddComponent<FatherController>();
+
+        ctx._stageRuntime._childController = ctx._stageRuntime._child.GetComponent<ChildController>();
+        if (ctx._stageRuntime._childController == null)
+            ctx._stageRuntime._childController = ctx._stageRuntime._child.AddComponent<ChildController>();
     }
 
     private Vector3 GetTileCenterLocal(StageDefinition stageDef, int x, int y)
@@ -137,8 +161,8 @@ public class DummyStageLoader : IStageLoader
         int w = Mathf.Max(1, stageDef.BoardSize.x);
         int h = Mathf.Max(1, stageDef.BoardSize.y);
 
-        Vector3 origin = new Vector3(-(w - 1) * 0.5f * _tileSize, 0f, -(h - 1) * 0.5f * _tileSize);
-        return origin + new Vector3(x * _tileSize, 0f, y * _tileSize);
+        Vector3 origin = new Vector3(-(w - 1) * 0.5f * _tileSize, -(h - 1) * 0.5f * _tileSize, 0f);
+        return origin + new Vector3(x * _tileSize, y * _tileSize, 0f);
     }
 
     private Vector3 ToWorld(GameFlowContext ctx, Vector3 localInRoot)

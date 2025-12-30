@@ -10,7 +10,7 @@ public class TurnInputRouter : MonoBehaviour
 
     [Header("Input Actions")]
     [SerializeField] private InputActionReference _moveAction;  // Vector2
-    [SerializeField] private InputActionReference _turnCommit;
+    [SerializeField] private InputActionReference _interactAction;
     [SerializeField] private InputActionReference _turnCancel;
     [SerializeField] private InputActionReference _rewindPrev;
     [SerializeField] private InputActionReference _rewindNext;
@@ -31,7 +31,7 @@ public class TurnInputRouter : MonoBehaviour
     {
         Bind(_moveAction, OnMovePerformed);
 
-        Bind(_turnCommit, OnTurnCommitPerformed);
+        Bind(_interactAction, OnInteractPerformed);
         Bind(_turnCancel, OnTurnCancel);
         Bind(_rewindPrev, OnRewindPrev);
         Bind(_rewindNext, OnRewindNext);
@@ -41,7 +41,7 @@ public class TurnInputRouter : MonoBehaviour
     {
         Unbind(_moveAction, OnMovePerformed);
 
-        Unbind(_turnCommit, OnTurnCommitPerformed);
+        Unbind(_interactAction, OnInteractPerformed);
         Unbind(_turnCancel, OnTurnCancel);
         Unbind(_rewindPrev, OnRewindPrev);
         Unbind(_rewindNext, OnRewindNext);
@@ -91,11 +91,11 @@ public class TurnInputRouter : MonoBehaviour
         _buffer.Enqueue(cmd);
     }
 
-    private void OnTurnCommitPerformed(InputAction.CallbackContext ctx)
+    private void OnInteractPerformed(InputAction.CallbackContext ctx)
     {
         if (!IsInputAllowed()) return;
 
-        _buffer.Enqueue(new TurnCommand(E_TurnCommandType.TurnCommit));
+        _buffer.Enqueue(new TurnCommand(E_TurnCommandType.Interact));
     }
 
     private TurnCommand ToDigitalCommand(Vector2 v)

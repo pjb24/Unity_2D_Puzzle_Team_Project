@@ -1,6 +1,14 @@
+///
+/// FatherController 최소 통합(4방향 스냅 + 점유)
+/// 외부로 event 노출 금지 → AddListener/RemoveListener 유지
+/// _lastResult 프로퍼티로 TurnContext/Resolve가 조회하게 한다
+/// (콜백에 ctx를 못 넣는 구조와 잘 맞음).
+///
+
 using System;
 using UnityEngine;
 
+[DisallowMultipleComponent]
 public class FatherController : MonoBehaviour
 {
     private event Action _onActionCompleted;
@@ -8,10 +16,84 @@ public class FatherController : MonoBehaviour
     public void AddListenerOnActionCompleted(Action cb) => _onActionCompleted += cb;
     public void RemoveListenerOnActionCompleted(Action cb) => _onActionCompleted -= cb;
 
+    public Vector2Int Cell { get; private set; }
+    public FatherActionResult LastResult => _lastResult;
+
+    private FatherActionResult _lastResult;
+
+    private BoardGrid _grid;
+    private GridPresenter _presenter;
+
+    public void Initialize(BoardGrid grid, GridPresenter presenter, Vector2Int spawnCell)
+    {
+        _grid = grid;
+        _presenter = presenter;
+
+        Cell = spawnCell;
+
+        // 점유 등록
+        _grid.SetOcc(Cell, E_Occupant.Father);
+
+        // 위치 스냅
+        transform.position = _presenter.CellToWorld(Cell) + Vector3.up * 0.9f; // 더미 캡슐 높이 보정
+    }
+
     public void RequestAction(TurnCommand cmd)
     {
-        // TODO: 실제 이동/벽충돌 등 처리
-        // 프로토타입: 즉시 완료
-        _onActionCompleted?.Invoke();
+        // Move 외에는 일단 패스(확장 가능)
+        Vector2Int dir = cmd.Type switch
+        {
+            E_TurnCommandType.MoveUp => Vector2Int.up,
+            E_TurnCommandType.MoveDown => Vector2Int.down,
+            E_TurnCommandType.MoveLeft => Vector2Int.left,
+            E_TurnCommandType.MoveRight => Vector2Int.right,
+            _ => Vector2Int.zero
+        };
+
+        if (dir == Vector2Int.zero)
+        {
+            _lastResult = new FatherActionResult(E_FatherActionResultCode.None, Cell, Cell, false);
+            _onActionCompleted?.Invoke();
+            return;
+        }
+
+        TryMove(dir);
+        _onActionCompleted?.Invoke(); // 프로토타입: 즉시 완료(나중에 코루틴/트윈으로 교체)
+    }
+
+    private void TryMove(Vector2Int dir)
+    {
+        Vector2Int from = Cell;
+        Vector2Int to = from + dir;
+
+        if (!_grid.IsInBounds(to))
+        {
+            _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_OutOfBounds, from, from, false);
+            return;
+        }
+
+        var cellType = _grid.GetCell(to);
+        if (_grid.IsBlockedCell(cellType))
+        {
+            _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Cell, from, from, false);
+            return;
+        }
+
+        if (_grid.GetOcc(to) != E_Occupant.None)
+        {
+            _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Occupied, from, from, false);
+            return;
+        }
+
+        // 점유 갱신
+        _grid.SetOcc(from, E_Occupant.None);
+        _grid.SetOcc(to, E_Occupant.Father);
+        Cell = to;
+
+        // 월드 이동 스냅(프로토타입)
+        transform.position = _presenter.CellToWorld(Cell) + Vector3.up * 0.9f;
+
+        bool triggerGoal = (cellType == E_CellType.Goal);
+        _lastResult = new FatherActionResult(E_FatherActionResultCode.Moved, from, to, triggerGoal);
     }
 }

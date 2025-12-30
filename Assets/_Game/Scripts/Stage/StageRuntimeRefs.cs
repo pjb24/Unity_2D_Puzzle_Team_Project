@@ -9,4 +9,11 @@ public class StageRuntimeRefs
 
     public GameObject _father;
     public GameObject _child;
+
+    public FatherController _fatherController;
+    public ChildController _childController;
+    public TurnSnapshotRecorder _snapshot;
+
+    public BoardGrid _grid;
+    public GridPresenter _gridPresenter;
 }

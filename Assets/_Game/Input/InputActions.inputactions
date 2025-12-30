@@ -16,7 +16,7 @@
                     "initialStateCheck": true
                 },
                 {
-                    "name": "TurnCommit",
+                    "name": "Interact",
                     "type": "Button",
                     "id": "bc757f92-4583-466a-90be-0414d69468dd",
                     "expectedControlType": "",
@@ -170,7 +170,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": ";Keyboard&Mouse",
-                    "action": "TurnCommit",
+                    "action": "Interact",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -181,7 +181,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": ";Keyboard&Mouse",
-                    "action": "TurnCommit",
+                    "action": "Interact",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -192,7 +192,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": ";Gamepad",
-                    "action": "TurnCommit",
+                    "action": "Interact",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

@@ -29,11 +29,11 @@ public class TurnPhase_Input : ITurnPhase
 
         if (_input.TryDequeue(out TurnCommand cmd))
         {
+            _sm.Change(E_TurnPhase.FatherAction);
+
             ctx.BeginNewTurn(cmd);
             ctx.SetInputLocked(true);          // 잠금 ON (규칙)
             ctx.Father.RequestAction(cmd);     // FatherAction이 구독/완료로 이어짐
-
-            _sm.Change(E_TurnPhase.FatherAction);
         }
     }
 }
