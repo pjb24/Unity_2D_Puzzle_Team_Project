@@ -12,7 +12,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
-public class ChildController : MonoBehaviour
+public partial class ChildController : MonoBehaviour
 {
     private event Action<bool> _onStepCompleted; // bool = blocked
     public void AddListenerOnStepCompleted(Action<bool> cb) => _onStepCompleted += cb;

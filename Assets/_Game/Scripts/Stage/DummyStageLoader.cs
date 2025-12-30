@@ -147,6 +147,7 @@ public class DummyStageLoader : IStageLoader
 
         // FatherController 부착 + 초기화
         ctx._stageRuntime._fatherController = ctx._stageRuntime._father.GetComponent<FatherController>();
+        ctx._stageRuntime._father.AddComponent<RewindKey>();
         if (ctx._stageRuntime._fatherController == null)
             ctx._stageRuntime._fatherController = ctx._stageRuntime._father.AddComponent<FatherController>();
         var fatherCtrl = ctx._stageRuntime._fatherController;
@@ -160,6 +161,7 @@ public class DummyStageLoader : IStageLoader
 
         // ChildController 부착 + 초기화
         ctx._stageRuntime._childController = ctx._stageRuntime._child.GetComponent<ChildController>();
+        ctx._stageRuntime._child.AddComponent<RewindKey>();
         if (ctx._stageRuntime._childController == null)
             ctx._stageRuntime._childController = ctx._stageRuntime._child.AddComponent<ChildController>();
         var childCtrl = ctx._stageRuntime._childController;

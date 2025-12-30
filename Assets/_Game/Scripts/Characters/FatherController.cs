@@ -1,6 +1,5 @@
 ///
 /// FatherController 최소 통합(4방향 스냅 + 점유)
-/// 외부로 event 노출 금지 → AddListener/RemoveListener 유지
 /// _lastResult 프로퍼티로 TurnContext/Resolve가 조회하게 한다
 /// (콜백에 ctx를 못 넣는 구조와 잘 맞음).
 ///
@@ -9,7 +8,7 @@ using System;
 using UnityEngine;
 
 [DisallowMultipleComponent]
-public class FatherController : MonoBehaviour
+public partial class FatherController : MonoBehaviour
 {
     private event Action _onActionCompleted;
 
