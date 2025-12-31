@@ -98,7 +98,11 @@ public class TurnSnapshotRecorder : MonoBehaviour
 
     public void Restore(TurnSnapshot snapshot)
     {
-        if (snapshot == null) return;
+        if (snapshot == null)
+        {
+            Debug.LogWarning("[Rewind] Restore fallback: snapshot is null.");
+            return;
+        }
 
         // 현재 씬의 rewindables 맵 구성
         var map = BuildRewindableMap();
@@ -108,12 +112,35 @@ public class TurnSnapshotRecorder : MonoBehaviour
             var e = snapshot._entries[i];
 
             if (!map.TryGetValue(e._keyGuid, out IRewindable rw))
+            {
+                Debug.LogWarning($"[Rewind] Restore fallback: rewindable not found. key={e._keyGuid}");
                 continue;
+            }
 
             var type = Type.GetType(e._typeName);
-            if (type == null) continue;
+            if (type == null)
+            {
+                Debug.LogWarning($"[Rewind] Restore fallback: type not found. type={e._typeName}");
+                continue;
+            }
 
-            object stateObj = JsonUtility.FromJson(e._json, type);
+            object stateObj;
+            try
+            {
+                stateObj = JsonUtility.FromJson(e._json, type);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[Rewind] Restore fallback: json parse failed. type={e._typeName} ex={ex.Message}");
+                continue;
+            }
+
+            if (stateObj == null)
+            {
+                Debug.LogWarning($"[Rewind] Restore fallback: stateObj is null. type={e._typeName}");
+                continue;
+            }
+
             rw.RestoreState(stateObj);
         }
 

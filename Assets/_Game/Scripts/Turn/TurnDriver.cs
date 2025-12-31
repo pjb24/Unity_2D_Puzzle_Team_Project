@@ -94,4 +94,15 @@ public class TurnDriver : MonoBehaviour
     {
         _input?.Clear();
     }
+
+    public void SyncTurnIndexFromSnapshot(int turnIndex)
+    {
+        if (_ctx == null) return;
+
+        _ctx.SetTurnIndexFromRewind(turnIndex);
+
+        // 안전하게 Input 상태로 돌리고 버퍼 비움
+        _input?.Clear();
+        _sm?.Change(E_TurnPhase.Input);
+    }
 }

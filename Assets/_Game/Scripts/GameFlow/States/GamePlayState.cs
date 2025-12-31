@@ -1,8 +1,9 @@
+// GamePlayState.cs
 ///
 /// 요구: Play → StageClear
-/// 프로토타입 최소:
-/// C 키(또는 UI 버튼)로 StageClear 강제 트리거
-/// 나중에 퍼즐 목표 달성 이벤트로 교체
+/// 
+/// 퍼즐 목표 달성 이벤트로 교체
+/// 또는 C 키(또는 UI 버튼)로 StageClear 강제 트리거
 ///
 
 using UnityEngine;
@@ -70,6 +71,11 @@ public class GamePlayState : IGameFlowState
         var profile = (cfg != null) ? cfg.GetProfile(cfg.DefaultDifficulty) : null;
         if (profile == null)
             Debug.LogWarning("[GamePlayState] DifficultyProfile is null. Resolve outcome may be wrong.");
+
+        // ===== (5) Stage Start Reset 고정 =====
+        snapshot?.ClearAll();
+
+        _rewind?.ResetForStageStart(profile != null ? profile.RewindMax : 0);
 
         _turnDriver.Bind(rt._fatherController, rt._childController, snapshot, router, profile);
 

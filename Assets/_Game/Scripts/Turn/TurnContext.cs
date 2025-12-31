@@ -75,4 +75,19 @@ public class TurnContext
 
         FatherResult = default;
     }
+
+    public void SetTurnIndexFromRewind(int turnIndex)
+    {
+        TurnIndex = Mathf.Max(0, turnIndex);
+
+        IsInputLocked = false;
+        HasAcceptedInput = false;
+        AcceptedCommand = default;
+
+        ChildBlocked = false;
+        TurnFailed = false;
+        TurnCleared = false;
+
+        FatherResult = default;
+    }
 }

@@ -1,8 +1,8 @@
+// FatherController.Rewind.cs
 ///
 /// 저장: Cell
 /// 복구: Grid 점유 갱신 + transform 스냅
 ///
-// FatherController.Rewind.cs (partial 추천)
 using System;
 using UnityEngine;
 
@@ -13,31 +13,57 @@ public partial class FatherController : IRewindable
     {
         public int _x;
         public int _y;
+        public E_Facing _facing;
     }
 
     public object CaptureState()
     {
-        return new FatherState { _x = Cell.x, _y = Cell.y };
+        return new FatherState
+        {
+            _x = Cell.x,
+            _y = Cell.y,
+            _facing = Facing
+        };
     }
 
     public void RestoreState(object state)
     {
-        if (state is not FatherState s) return;
+        if (state is not FatherState s)
+        {
+            Debug.LogWarning("[FatherController] RestoreState fallback: invalid state type.");
+            return;
+        }
+
+        if (_grid == null || _presenter == null)
+        {
+            Debug.LogWarning("[FatherController] RestoreState fallback: grid/presenter is null.");
+            return;
+        }
 
         Vector2Int to = new Vector2Int(s._x, s._y);
 
-        // 점유 리셋(프로토타입: Father만 고려)
-        if (_grid != null)
+        if (!_grid.IsInBounds(to))
+        {
+            Debug.LogWarning($"[FatherController] RestoreState fallback: out of bounds -> clamp. to={to}");
+            to = new Vector2Int(
+                Mathf.Clamp(to.x, 0, _grid._w - 1),
+                Mathf.Clamp(to.y, 0, _grid._h - 1));
+        }
+
+        // 점유 리셋
+        if (_grid.IsInBounds(Cell))
         {
             // 기존 Cell 비우기
             _grid.SetOcc(Cell, E_Occupant.None);
-            // 새 Cell 점유
-            _grid.SetOcc(to, E_Occupant.Father);
         }
 
-        Cell = to;
+        // 새 Cell 점유
+        _grid.SetOcc(to, E_Occupant.Father);
 
-        if (_presenter != null)
-            transform.position = _presenter.CellToWorld(Cell) + Vector3.up * 0.9f;
+        Cell = to;
+        Facing = s._facing;
+
+        transform.position = _presenter.CellToWorld(Cell) + Vector3.up * 0.9f;
+        ApplyFacingVisual();
     }
 }

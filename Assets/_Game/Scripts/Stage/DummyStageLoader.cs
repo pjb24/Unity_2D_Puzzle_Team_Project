@@ -1,3 +1,4 @@
+// DummyStageLoader.cs
 using System;
 using UnityEngine;
 
@@ -6,9 +7,16 @@ public class DummyStageLoader : IStageLoader
     // ===== Tunables =====
     private readonly float _tileSize = 1.0f;
 
+    // Registry GameObject name (under StageRuntime root)
+    private const string InteractRegistryName = "InteractRegistry";
+
     public void LoadStage(GameFlowContext ctx, Action onComplete)
     {
-        if (ctx == null) return;
+        if (ctx == null)
+        {
+            Debug.LogWarning("[StageLoader] LoadStage fallback: ctx is null.");
+            return;
+        }
 
         // 1) 이전 스테이지 정리
         UnloadStage(ctx);
@@ -26,24 +34,44 @@ public class DummyStageLoader : IStageLoader
         // 3) 런타임 refs 생성
         ctx._stageRuntime = new StageRuntimeRefs();
         ctx._stageRuntime._root = new GameObject($"[StageRuntime] C{ctx._chapterIndex}_S{ctx._stageIndex}");
-
         ctx._stageDefinition = stageDef;
+
+        // 3.1) InteractRegistry 생성(루트 하위)
+        var registry = EnsureInteractRegistry(ctx);
 
         // 4) 더미 보드 생성
         CreateDummyBoard(ctx, stageDef);
 
-        // 5) 더미 경로 생성(간단히 좌→우→상→하 같은 식)
+        // 5) 더미 경로 생성
         CreateDummyPath(ctx, stageDef);
 
-        // 6) 스폰
+        // 6) 스폰(그리드/프리젠터/컨트롤러 포함)
         SpawnDummyCharacters(ctx);
+
+        // 6.1) Father에 InteractPort 주입
+        BindFatherInteractPort(ctx, registry);
+
+        // 6.2) 씬에 존재하는 다수 Interactable 등록(프리팹 배치 + 런타임 생성 모두 커버)
+        // - 런타임 생성 Interactable이 Initialize에서 Register를 안 해도 여기서 잡힘
+        if (registry != null)
+        {
+            registry.RebuildFromScene();
+        }
+        else
+        {
+            Debug.LogWarning("[StageLoader] RegisterInteractables fallback: registry is null.");
+        }
 
         onComplete?.Invoke();
     }
 
     public void UnloadStage(GameFlowContext ctx)
     {
-        if (ctx == null) return;
+        if (ctx == null)
+        {
+            Debug.LogWarning("[StageLoader] UnloadStage fallback: ctx is null.");
+            return;
+        }
 
         if (ctx._stageRuntime != null)
         {
@@ -54,8 +82,61 @@ public class DummyStageLoader : IStageLoader
         }
     }
 
+    // ===== (3) InteractRegistry 생성 =====
+    private InteractRegistry EnsureInteractRegistry(GameFlowContext ctx)
+    {
+        if (ctx == null || ctx._stageRuntime == null || ctx._stageRuntime._root == null)
+        {
+            Debug.LogWarning("[StageLoader] EnsureInteractRegistry fallback: runtime/root is null.");
+            return null;
+        }
+
+        var root = ctx._stageRuntime._root.transform;
+
+        // 이미 있으면 재사용
+        var existing = root.GetComponentInChildren<InteractRegistry>(includeInactive: true);
+        if (existing != null)
+            return existing;
+
+        var go = new GameObject(InteractRegistryName);
+        go.transform.SetParent(root, false);
+        return go.AddComponent<InteractRegistry>();
+    }
+
+    // ===== (3) Father에 포트 주입 =====
+    private void BindFatherInteractPort(GameFlowContext ctx, InteractRegistry registry)
+    {
+        if (ctx == null || ctx._stageRuntime == null)
+        {
+            Debug.LogWarning("[StageLoader] BindFatherInteractPort fallback: runtime is null.");
+            return;
+        }
+
+        var fatherCtrl = ctx._stageRuntime._fatherController;
+        if (fatherCtrl == null)
+        {
+            Debug.LogWarning("[StageLoader] BindFatherInteractPort fallback: fatherController is null.");
+            return;
+        }
+
+        if (registry == null)
+        {
+            Debug.LogWarning("[StageLoader] BindFatherInteractPort fallback: registry is null. Interact will not work.");
+            return;
+        }
+
+        // FatherController에 아래 API가 있어야 함:
+        fatherCtrl.BindInteractPort(new InteractPort_Registry(registry));
+    }
+
     private void CreateDummyBoard(GameFlowContext ctx, StageDefinition stageDef)
     {
+        if (ctx == null || ctx._stageRuntime == null || ctx._stageRuntime._root == null)
+        {
+            Debug.LogWarning("[StageLoader] CreateDummyBoard fallback: runtime/root is null.");
+            return;
+        }
+
         int w = Mathf.Max(1, stageDef.BoardSize.x);
         int h = Mathf.Max(1, stageDef.BoardSize.y);
 
@@ -83,10 +164,21 @@ public class DummyStageLoader : IStageLoader
 
     private void CreateDummyPath(GameFlowContext ctx, StageDefinition stageDef)
     {
+        if (ctx == null || ctx._stageRuntime == null || ctx._stageRuntime._root == null)
+        {
+            Debug.LogWarning("[StageLoader] CreateDummyPath fallback: runtime/root is null.");
+            return;
+        }
+
         int w = Mathf.Max(1, stageDef.BoardSize.x);
         int h = Mathf.Max(1, stageDef.BoardSize.y);
 
         var indices = PerimeterPathBuilder.Build(w, h);
+        if (indices == null || indices.Count <= 0)
+        {
+            Debug.LogWarning("[StageLoader] CreateDummyPath fallback: perimeter indices is null/empty.");
+            return;
+        }
 
         ctx._stageRuntime._pathPoints.Clear();
 
@@ -120,6 +212,19 @@ public class DummyStageLoader : IStageLoader
 
     private void SpawnDummyCharacters(GameFlowContext ctx)
     {
+        if (ctx == null || ctx._stageRuntime == null || ctx._stageRuntime._root == null)
+        {
+            Debug.LogWarning("[StageLoader] SpawnDummyCharacters fallback: runtime/root is null.");
+            return;
+        }
+
+        var stageDef = ctx._stageDefinition;
+        if (stageDef == null)
+        {
+            Debug.LogWarning("[StageLoader] SpawnDummyCharacters fallback: stageDef is null.");
+            return;
+        }
+
         // Father
         ctx._stageRuntime._father = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         ctx._stageRuntime._father.name = "Father(Dummy)";
@@ -129,15 +234,6 @@ public class DummyStageLoader : IStageLoader
         ctx._stageRuntime._child = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         ctx._stageRuntime._child.name = "Child(Dummy)";
         ctx._stageRuntime._child.transform.SetParent(ctx._stageRuntime._root.transform, true);
-
-        // 위치: 경로 첫 점, 두 번째 점에 배치
-        Vector3 fatherPos = ctx._stageRuntime._pathPoints.Count > 0 ? ctx._stageRuntime._pathPoints[0] : Vector3.zero;
-        Vector3 childPos = ctx._stageRuntime._pathPoints.Count > 1 ? ctx._stageRuntime._pathPoints[1] : (fatherPos + Vector3.right);
-
-        ctx._stageRuntime._father.transform.position = fatherPos + Vector3.up * 0.9f;
-        ctx._stageRuntime._child.transform.position = childPos + Vector3.up * 0.9f;
-
-        var stageDef = ctx._stageDefinition; // 이미 ctx에 들고 있거나, LoadStage 내에서 stageDef 사용
 
         // Grid 생성(Cells 배열 기반)
         int w = Mathf.Max(1, stageDef.BoardSize.x);
@@ -150,6 +246,7 @@ public class DummyStageLoader : IStageLoader
         ctx._stageRuntime._father.AddComponent<RewindKey>();
         if (ctx._stageRuntime._fatherController == null)
             ctx._stageRuntime._fatherController = ctx._stageRuntime._father.AddComponent<FatherController>();
+        
         var fatherCtrl = ctx._stageRuntime._fatherController;
         fatherCtrl.Initialize(ctx._stageRuntime._grid, ctx._stageRuntime._gridPresenter, stageDef.FatherSpawn._cell);
 
@@ -164,6 +261,7 @@ public class DummyStageLoader : IStageLoader
         ctx._stageRuntime._child.AddComponent<RewindKey>();
         if (ctx._stageRuntime._childController == null)
             ctx._stageRuntime._childController = ctx._stageRuntime._child.AddComponent<ChildController>();
+
         var childCtrl = ctx._stageRuntime._childController;
         childCtrl.Initialize(pathRuntime, blocked, startPos: 0);
     }

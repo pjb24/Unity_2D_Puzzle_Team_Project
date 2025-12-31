@@ -475,8 +475,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _recorder: {fileID: 211024661}
   _turnDriver: {fileID: 454478395}
-  _rewindMax: 1
-  _failToChapterReset: 3
+  _rewindMax: 3
 --- !u!1 &1523297881
 GameObject:
   m_ObjectHideFlags: 0

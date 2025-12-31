@@ -108,9 +108,7 @@ public class RewindController : MonoBehaviour
         _enterIndex = _cursorIndex; // 진입 시점 고정
 
         // 안전하게 최신 상태를 복원(되감기 UI 기준점)
-        var snap = _recorder.GetAt(_cursorIndex);
-        if (snap != null)
-            _recorder.Restore(snap);
+        RestoreAndSync(_cursorIndex);
 
         ClearTurnInputBuffer();
         Debug.Log($"[RewindController] EnterRewind cursor={_cursorIndex} remaining={_rewindRemaining}");
@@ -128,9 +126,7 @@ public class RewindController : MonoBehaviour
 
         _cursorIndex = next;
 
-        var snap = _recorder.GetAt(_cursorIndex);
-        if (snap != null)
-            _recorder.Restore(snap);
+        RestoreAndSync(_cursorIndex);
 
         ClearTurnInputBuffer();
         Debug.Log($"[RewindController] Prev cursor={_cursorIndex}");
@@ -149,9 +145,7 @@ public class RewindController : MonoBehaviour
 
         _cursorIndex = next;
 
-        var snap = _recorder.GetAt(_cursorIndex);
-        if (snap != null)
-            _recorder.Restore(snap);
+        RestoreAndSync(_cursorIndex);
 
         ClearTurnInputBuffer();
         Debug.Log($"[RewindController] Next cursor={_cursorIndex}");
@@ -185,9 +179,7 @@ public class RewindController : MonoBehaviour
         // 진입 시점 상태로 복귀
         if (_recorder != null && _enterIndex >= 0)
         {
-            var snap = _recorder.GetAt(_enterIndex);
-            if (snap != null)
-                _recorder.Restore(snap);
+            RestoreAndSync(_enterIndex);
         }
         else
         {
@@ -200,6 +192,32 @@ public class RewindController : MonoBehaviour
 
         ClearTurnInputBuffer();
         Debug.Log("[RewindController] Cancel -> restored enter snapshot and exit rewind.");
+    }
+
+    private void RestoreAndSync(int index)
+    {
+        if (_recorder == null)
+        {
+            Debug.LogWarning("[RewindController] RestoreAndSync fallback: recorder is null.");
+            return;
+        }
+
+        var snap = _recorder.GetAt(index);
+        if (snap == null)
+        {
+            Debug.LogWarning($"[RewindController] RestoreAndSync fallback: snapshot is null. index={index}");
+            return;
+        }
+
+        _recorder.Restore(snap);
+
+        if (_turnDriver == null)
+        {
+            Debug.LogWarning("[RewindController] RestoreAndSync fallback: turnDriver is null.");
+            return;
+        }
+
+        _turnDriver.SyncTurnIndexFromSnapshot(snap._turnIndex);
     }
 
     private void ClearTurnInputBuffer()
