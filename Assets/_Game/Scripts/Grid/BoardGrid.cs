@@ -1,3 +1,4 @@
+// BoardGrid.cs
 ///
 /// 런타임 Grid 모델(순수 C#)
 /// 좌표: Vector2Int (x,y)

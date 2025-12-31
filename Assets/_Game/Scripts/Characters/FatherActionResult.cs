@@ -1,3 +1,4 @@
+// FatherActionResult.cs
 ///
 /// FatherAction 결과 모델(확장 포인트)
 /// 이동 성공/실패

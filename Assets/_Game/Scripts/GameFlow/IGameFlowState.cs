@@ -1,3 +1,4 @@
+// IGameFlowState.cs
 public interface IGameFlowState
 {
     E_GameFlowState Id { get; }

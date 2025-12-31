@@ -1,3 +1,4 @@
+// GameFlowSignalBus.cs
 ///
 /// 목적
 /// “상태가 바뀌었다” 같은 상위 흐름 신호를 외부로 event 노출 없이 전달

@@ -1,3 +1,4 @@
+// GridPresenter.cs
 ///
 /// 표현 레이어: “월드 좌표 ↔ 셀” 변환 규칙 고정
 /// DummyStageLoader가 타일을 “중앙 정렬 + tileSize”로 깔고 있다.

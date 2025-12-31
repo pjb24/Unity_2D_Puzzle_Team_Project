@@ -1,3 +1,4 @@
+// ChildController.cs
 ///
 /// 핵심 규칙
 /// _pathPos: 현재 위치(스텝 인덱스)

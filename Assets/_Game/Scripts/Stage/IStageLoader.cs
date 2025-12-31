@@ -1,3 +1,4 @@
+// IStageLoader.cs
 using System;
 
 public interface IStageLoader

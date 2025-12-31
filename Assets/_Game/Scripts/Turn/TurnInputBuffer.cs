@@ -1,3 +1,4 @@
+// TurnInputBuffer.cs
 ///
 /// 입력 수집은 계속 가능(키 입력 감지)
 /// 하지만 턴 명령 enqueue는 InputUnlocked에서만 허용(또는 dequeue만 Input에서 수행)

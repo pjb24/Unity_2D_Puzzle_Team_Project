@@ -1,3 +1,4 @@
+// StageProgression.cs
 using UnityEngine;
 
 public class StageProgression : IStageProgression

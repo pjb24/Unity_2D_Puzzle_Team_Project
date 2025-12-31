@@ -1,3 +1,4 @@
+// EndingState.cs
 using UnityEngine;
 
 public class EndingState : IGameFlowState

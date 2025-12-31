@@ -1,3 +1,4 @@
+// BootState.cs
 ///
 /// 요구: Boot → MainMenu
 /// 핵심:

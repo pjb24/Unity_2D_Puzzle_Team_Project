@@ -1,3 +1,4 @@
+// StageClearState.cs
 ///
 /// 요구: StageClear → (다음 스테이지 or 다음 챕터 or 종료)
 /// 프로토타입 분기 규칙:

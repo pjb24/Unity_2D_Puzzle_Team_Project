@@ -1,3 +1,4 @@
+// IConfigProvider.cs
 public interface IConfigProvider
 {
     GameConfig LoadGameConfig();

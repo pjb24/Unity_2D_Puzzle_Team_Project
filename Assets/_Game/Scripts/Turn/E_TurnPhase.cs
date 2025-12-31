@@ -1,3 +1,4 @@
+// E_TurnPhase.cs
 public enum E_TurnPhase
 {
     Input = 0,

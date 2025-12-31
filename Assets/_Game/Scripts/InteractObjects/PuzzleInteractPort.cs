@@ -1,3 +1,5 @@
+// PuzzleInteractPort.cs
+
 using UnityEngine;
 
 public class PuzzleInteractPort : IInteractPort

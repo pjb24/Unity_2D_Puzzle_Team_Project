@@ -1,3 +1,4 @@
+// TurnPhase_Resolve.cs
 /// <summary>
 /// Resolve → Snapshot
 /// 

@@ -1,3 +1,4 @@
+// ResourcesConfigProvider.cs
 ///
 /// GameConfig는 1회 로드 후 캐시
 /// StageDefinition은

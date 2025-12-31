@@ -1,3 +1,4 @@
+// MainMenuState.cs
 /// <summary>
 /// 요구: MainMenu → StageLoad (그리고 Gameplay 씬 로드)
 /// 핵심:

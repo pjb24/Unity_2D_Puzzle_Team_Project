@@ -1,3 +1,4 @@
+// ChapterVisualProfile.cs
 using UnityEngine;
 
 [CreateAssetMenu(menuName = "Puzzle/Data/Chapter Visual Profile")]
