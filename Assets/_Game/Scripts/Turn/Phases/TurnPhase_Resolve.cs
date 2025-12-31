@@ -11,6 +11,8 @@
 /// 이동 실패면 로그/피드백 훅(나중에 UI/사운드)
 /// </summary>
 
+using UnityEngine;
+
 public class TurnPhase_Resolve : ITurnPhase
 {
     public E_TurnPhase Phase => E_TurnPhase.Resolve;
@@ -55,6 +57,12 @@ public class TurnPhase_Resolve : ITurnPhase
             {
                 // Easy: 실패 없음(턴은 정상 종료)
                 ctx.TurnFailed = false;
+
+                if (ctx.Child != null)
+                    ctx.Child.RequestBlockedFeedback();
+                else
+                    Debug.LogWarning("[TurnPhase_Resolve] ChildBlocked feedback skipped: ctx.Child is null (fallback).");
+
                 ctx._signals?.RaiseResolved(E_TurnResolveOutcome.Continue, E_StageFailReason.ChildBlocked, ctx.TurnIndex);
             }
         }

@@ -12,13 +12,13 @@ public class GamePlayState : IGameFlowState
 {
     private readonly GameFlowStateMachine _sm;
     private IGameFlowState _next;
-
     private IGameFlowState _stageLoad; // 실패 시 이동용
 
     private TurnDriver _turnDriver;
     private RewindController _rewind;
 
     private GameFlowContext _ctx;
+    private DifficultyProfile _profile;
 
     public E_GameFlowState Id => E_GameFlowState.Play;
 
@@ -66,22 +66,46 @@ public class GamePlayState : IGameFlowState
             return;
         }
 
-        // DifficultyProfile 결정(프로토타입: DefaultDifficulty 사용)
-        var cfg = ctx._gameConfig;
-        var profile = (cfg != null) ? cfg.GetProfile(cfg.DefaultDifficulty) : null;
-        if (profile == null)
-            Debug.LogWarning("[GamePlayState] DifficultyProfile is null. Resolve outcome may be wrong.");
+        // DifficultyProfile 결정
+        _profile = null;
+        if (_ctx._gameConfig == null)
+        {
+            Debug.LogWarning("[GamePlayState] GameConfig is null. DifficultyProfile is null (fallback).");
+            ctx.SetFailStreakLimit(0);
+        }
+        else
+        {
+            _profile = _ctx._gameConfig.GetProfile(_ctx._gameConfig.DefaultDifficulty);
+            if (_profile == null)
+            {
+                Debug.LogWarning("[GamePlayState] DifficultyProfile not found. Using null profile (fallback).");
+                ctx.SetFailStreakLimit(0);
+            }
+            else
+            {
+                ctx.SetFailStreakLimit(_profile.FailStreakToReturnChapterStart);
+            }
+        }
 
         // ===== (5) Stage Start Reset 고정 =====
         snapshot?.ClearAll();
 
-        _rewind?.ResetForStageStart(profile != null ? profile.RewindMax : 0);
+        _rewind?.ResetForStageStart(_profile != null ? _profile.RewindMax : 0);
 
-        _turnDriver.Bind(rt._fatherController, rt._childController, snapshot, router, profile);
+        _turnDriver.Bind(rt._fatherController, rt._childController, snapshot, router, _profile);
 
         // ExitPort 바인딩
         if (_rewind != null)
-            _rewind.BindExitPort(new RewindExitPort_GameFlow(_sm, ctx, _stageLoad));
+        {
+            if (_stageLoad == null)
+            {
+                Debug.LogWarning("[GamePlayState] StageLoad state is null. Rewind exhaustion restart may fail (fallback).");
+            }
+            else
+            {
+                _rewind.BindExitPort(new RewindExitPort_GameFlow(_sm, _ctx, _stageLoad));
+            }
+        }
 
         // 구독 (Bind 이후에 수행: TurnDriver 존재/초기화 보장)
         _turnDriver.AddListenerOnResolved(OnTurnResolved);
@@ -99,6 +123,7 @@ public class GamePlayState : IGameFlowState
 
         _turnDriver = null;
         _rewind = null;
+        _profile = null;
     }
 
     public void Tick(GameFlowContext ctx)
@@ -117,31 +142,82 @@ public class GamePlayState : IGameFlowState
         switch (outcome)
         {
             case E_TurnResolveOutcome.StageCleared:
-                _sm.ChangeState(_ctx, _next);
-                break;
+                {
+                    if (_next == null)
+                    {
+                        Debug.LogWarning("[GamePlayState] StageCleared but StageClear state is null. Fallback to StageLoad.");
+                        ChangeToStageLoad();
+                        return;
+                    }
+                    else
+                    {
+                        _ctx.ResetFailStreak();
+                        _sm.ChangeState(_ctx, _next);
+                    }
+                    break;
+                }
 
             case E_TurnResolveOutcome.StageFailed_Reset:
-                // Hard: 즉시 리셋(= StageLoad로 이동)
-                _sm.ChangeState(_ctx, _stageLoad);
-                break;
+                {
+                    HandleStageFailedReset();
+                    break;
+                }
 
             case E_TurnResolveOutcome.StageFailed_Rewind:
-                // Normal: 자동 Rewind 진입
-                if (_rewind != null)
                 {
-                    _rewind.EnterRewind(E_RewindEnterSource.FailureAuto);
+                    // Normal: 자동 Rewind 진입
+                    if (_rewind != null)
+                    {
+                        _rewind.EnterRewind(E_RewindEnterSource.FailureAuto);
+                    }
+                    else
+                    {
+                        // Rewind 시스템이 없으면 폴백
+                        Debug.LogWarning("[GamePlayState] RewindController is null. Normal rewind will fallback to StageLoad.");
+                        ChangeToStageLoad();
+                    }
+                    break;
                 }
-                else
-                {
-                    // Rewind 시스템이 없으면 폴백
-                    Debug.LogWarning("[GamePlayState] RewindController is null. Normal rewind will fallback to StageLoad.");
-                    _sm.ChangeState(_ctx, _stageLoad);
-                }
-                break;
 
             case E_TurnResolveOutcome.Continue:
             default:
                 break;
         }
+    }
+
+    private void HandleStageFailedReset()
+    {
+        // C) Hard + Ironman -> 즉시 1-1 복귀
+        bool hardReset = _profile != null && _profile.HardResetStage;
+        bool ironman = _ctx._gameConfig != null && _ctx._gameConfig.IronmanHardReturnToChapterStart;
+
+        if (hardReset && ironman)
+        {
+            Debug.LogWarning("[GamePlayState] Hard fail with Ironman -> return to chapter start (1-1).");
+            _ctx.ResetToChapterStart();
+            ChangeToStageLoad();
+            return;
+        }
+
+        // B) “스테이지 재시작” 누적 -> 임계 도달 시 챕터 복귀
+        bool returnToChapterStart = _ctx.RecordFailAndShouldReturnChapterStart();
+        if (returnToChapterStart)
+        {
+            Debug.LogWarning("[GamePlayState] FailStreak reached -> return to chapter start.");
+            _ctx.ResetToChapterStart();
+        }
+
+        ChangeToStageLoad();
+    }
+
+    private void ChangeToStageLoad()
+    {
+        if (_stageLoad == null)
+        {
+            Debug.LogWarning("[GamePlayState] StageLoad state is null. Cannot change state (fallback).");
+            return;
+        }
+
+        _sm.ChangeState(_ctx, _stageLoad);
     }
 }

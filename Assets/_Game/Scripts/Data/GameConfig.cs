@@ -21,6 +21,10 @@ public class DifficultyProfile
     public bool FailOnChildBlocked = true; // Easy는 false로
     public bool HardResetStage = false;    // Hard는 true로
 
+    [Header("Normal - FailStreak Return ChapterStart")]
+    [SerializeField, Min(0)] private int _failStreakToReturnChapterStart = 0;
+    public int FailStreakToReturnChapterStart => _failStreakToReturnChapterStart;
+
     [Header("Tuning")]
     public float ChildStepDelay = 0.0f;    // 연출/턴 템포
 }
@@ -45,6 +49,10 @@ public class GameConfig : ScriptableObject
     [Header("Default Params")]
     [SerializeField] private E_Difficulty _defaultDifficulty = E_Difficulty.Normal;
 
+    [Header("Hard - Ironman Option")]
+    [SerializeField] private bool _ironmanHardReturnToChapterStart = false;
+    public bool IronmanHardReturnToChapterStart => _ironmanHardReturnToChapterStart;
+
     public IReadOnlyList<ChapterDefinition> Chapters => _chapters;
     public E_Difficulty DefaultDifficulty => _defaultDifficulty;
 
@@ -55,6 +63,8 @@ public class GameConfig : ScriptableObject
             if (_difficultyProfiles[i] != null && _difficultyProfiles[i]._difficulty == difficulty)
                 return _difficultyProfiles[i];
         }
+
+        Debug.LogWarning($"[GameConfig] DifficultyProfile not found for {difficulty} (fallback).");
         return null;
     }
 
