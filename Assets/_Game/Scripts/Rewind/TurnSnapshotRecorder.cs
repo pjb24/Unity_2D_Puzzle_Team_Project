@@ -18,6 +18,9 @@ public class TurnSnapshotRecorder : MonoBehaviour
 
     public int Count => _snapshots.Count;
 
+    public int LatestIndex => _snapshots.Count - 1; // 스냅샷이 0개면 -1
+
+    // ^1은 뒤에서 첫번째를 의미함
     public TurnSnapshot GetLatest() => (_snapshots.Count > 0) ? _snapshots[^1] : null;
 
     public TurnSnapshot GetByTurnIndex(int turnIndex)
@@ -25,6 +28,33 @@ public class TurnSnapshotRecorder : MonoBehaviour
         for (int i = _snapshots.Count - 1; i >= 0; i--)
             if (_snapshots[i]._turnIndex == turnIndex) return _snapshots[i];
         return null;
+    }
+
+    public TurnSnapshot GetAt(int index)
+    {
+        if ((uint)index >= (uint)_snapshots.Count)
+            return null;
+
+        return _snapshots[index];
+    }
+
+    public bool TryGetAt(int index, out TurnSnapshot snapshot)
+    {
+        snapshot = null;
+
+        if ((uint)index >= (uint)_snapshots.Count)
+            return false;
+
+        snapshot = _snapshots[index];
+        return true;
+    }
+
+    public int ClampIndex(int index)
+    {
+        if (_snapshots.Count == 0) return -1;
+        if (index < 0) return 0;
+        if (index >= _snapshots.Count) return _snapshots.Count - 1;
+        return index;
     }
 
     public void ClearAll() => _snapshots.Clear();
@@ -57,8 +87,11 @@ public class TurnSnapshotRecorder : MonoBehaviour
 
         // 3) 보관(링버퍼)
         _snapshots.Add(snap);
-        if (_maxSnapshots > 0 && _snapshots.Count > _maxSnapshots)
+
+        while (_maxSnapshots > 0 && _snapshots.Count > _maxSnapshots)
+        {
             _snapshots.RemoveAt(0);
+        }
 
         Debug.Log($"[Rewind] Capture Snapshot turnIndex={turnIndex}, entries={snap._entries.Count}");
     }
@@ -85,6 +118,28 @@ public class TurnSnapshotRecorder : MonoBehaviour
         }
 
         Debug.Log($"[Rewind] Restore Snapshot turnIndex={snapshot._turnIndex}");
+    }
+
+    public void DiscardAfterIndex(int index)
+    {
+        if (_snapshots.Count <= 0)
+        {
+            Debug.LogWarning("[Rewind] DiscardAfterIndex fallback: no snapshots.");
+            return;
+        }
+
+        if (index < 0 || index >= _snapshots.Count)
+        {
+            Debug.LogWarning($"[Rewind] DiscardAfterIndex fallback: index out of range. index={index}, count={_snapshots.Count}");
+            return;
+        }
+
+        int removeStart = index + 1;
+        int removeCount = _snapshots.Count - removeStart;
+        if (removeCount <= 0) return;
+
+        _snapshots.RemoveRange(removeStart, removeCount);
+        Debug.Log($"[Rewind] DiscardAfterIndex index={index}, removed={removeCount}, remain={_snapshots.Count}");
     }
 
     // ----- helpers -----

@@ -71,7 +71,7 @@ public class GameFlowOrchestrator : MonoBehaviour
 
     private void OnFlowStateChanged(E_GameFlowState state)
     {
-        // Debug.Log("[GameFlowOrchestrator] OnFlowStateChanged current state: " + _sm._currentId.ToString());
+        Debug.Log("[GameFlowOrchestrator] OnFlowStateChanged current state: " + _sm._currentId.ToString());
     }
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)

@@ -25,9 +25,18 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "TurnCancel",
+                    "name": "Cancel",
                     "type": "Button",
-                    "id": "950bbe60-21e2-4508-922d-a7cef792c2c7",
+                    "id": "9a192e1e-8915-46a7-a82a-29597485dafb",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "Press",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "RewindEnter",
+                    "type": "Button",
+                    "id": "10b42ea1-21c4-4eef-b459-0a24b95176f9",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "Press",
@@ -46,6 +55,24 @@
                     "name": "RewindNext",
                     "type": "Button",
                     "id": "bc7a9358-70af-4946-ba3e-803a4a0caec5",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "Press",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "RewindCommit",
+                    "type": "Button",
+                    "id": "6899f3d0-0238-4e20-8a8a-000e3862f98b",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "Press",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "RewindCancel",
+                    "type": "Button",
+                    "id": "75bcdc7a-f403-4bf7-ae55-b6d01d3c5fde",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "Press",
@@ -198,28 +225,6 @@
                 },
                 {
                     "name": "",
-                    "id": "b967c8de-6438-4450-93d0-3431b050d998",
-                    "path": "<Keyboard>/escape",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": ";Keyboard&Mouse",
-                    "action": "TurnCancel",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "712f7b9e-aae4-42da-89dc-295aac886fc1",
-                    "path": "<Gamepad>/buttonEast",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": ";Gamepad",
-                    "action": "TurnCancel",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
                     "id": "a2eca485-4626-4df7-81f2-b5cefc59f4fb",
                     "path": "<Keyboard>/q",
                     "interactions": "",
@@ -281,6 +286,105 @@
                     "processors": "",
                     "groups": ";Gamepad",
                     "action": "RewindNext",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "f27fb1ae-b7fa-431d-bfaa-28086cea2af5",
+                    "path": "<Keyboard>/r",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "RewindEnter",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "15f7218c-17a7-4971-9393-be3c83f1060c",
+                    "path": "<Gamepad>/buttonNorth",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Gamepad",
+                    "action": "RewindEnter",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "8b016450-dfc4-4193-a00c-407c47d42287",
+                    "path": "<Keyboard>/space",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "RewindCommit",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "7601f733-11fb-42fa-8204-4311d4b0d570",
+                    "path": "<Keyboard>/enter",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "RewindCommit",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "e65067d9-2584-43a6-8912-25c3438080d3",
+                    "path": "<Gamepad>/buttonSouth",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Gamepad",
+                    "action": "RewindCommit",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "85ef24f2-8b5a-42b3-8392-d50fffa0d23b",
+                    "path": "<Keyboard>/escape",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "RewindCancel",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "4fdc5139-ca8c-4e2a-a2fd-6f6e9474d2e7",
+                    "path": "<Gamepad>/buttonEast",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Gamepad",
+                    "action": "RewindCancel",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "19ece15a-c6a8-4f79-9698-865dade3e621",
+                    "path": "<Keyboard>/escape",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "Cancel",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "1b770dd8-6afa-4088-b35a-ae849a4afc71",
+                    "path": "<Gamepad>/buttonEast",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Gamepad",
+                    "action": "Cancel",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

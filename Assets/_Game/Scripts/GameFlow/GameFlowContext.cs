@@ -10,8 +10,7 @@ public class GameFlowContext
     public int _stageIndex;
     public bool _isEnding;
 
-    // ===== Runtime/Config (나중에 실제 타입으로 교체) =====
-    // 지금은 뼈대 단계라 object로 두고, SO 구축 끝나면 GameConfig/StageDefinition 등으로 바꿔라.
+    // ===== Runtime/Config =====
     public GameConfig _gameConfig;
     public ChapterVisualProfile _chapterVisualProfile;
     public StageDefinition _stageDefinition;
@@ -26,4 +25,19 @@ public class GameFlowContext
     public IStageLoader _stageLoader;
     public IStageProgression _progression;
     public object _ui;
+
+    /// <summary>
+    /// 정책: 챕터 1, 스테이지 1(인덱스 0,0)으로 진행도를 리셋.
+    /// StageLoad가 이 값을 보고 로드한다.
+    /// </summary>
+    public void ResetToChapterStart()
+    {
+        _chapterIndex = 0;
+        _stageIndex = 0;
+        _isEnding = false;
+
+        // 진행도가 바뀌었으니, 캐시된 정의는 무효화 (StageLoad에서 다시 채움)
+        _chapterVisualProfile = null;
+        _stageDefinition = null;
+    }
 }

@@ -6,9 +6,12 @@ public enum E_TurnCommandType
     MoveLeft,
     MoveRight,
     Interact,
-    TurnCancel,
+    Cancel,
+    RewindEnter,
     RewindPrev,
     RewindNext,
+    RewindCommit,
+    RewindCancel,
 }
 
 public readonly struct TurnCommand

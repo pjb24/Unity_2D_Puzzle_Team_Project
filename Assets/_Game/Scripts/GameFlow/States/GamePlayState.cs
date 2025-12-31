@@ -15,8 +15,11 @@ public class GamePlayState : IGameFlowState
     private IGameFlowState _stageLoad; // 실패 시 이동용
 
     private TurnDriver _turnDriver;
+    private RewindController _rewind;
 
     private GameFlowContext _ctx;
+
+    public E_GameFlowState Id => E_GameFlowState.Play;
 
     public GamePlayState(GameFlowStateMachine sm)
     {
@@ -33,8 +36,6 @@ public class GamePlayState : IGameFlowState
         _stageLoad = stageLoad;
     }
 
-    public E_GameFlowState Id => E_GameFlowState.Play;
-
     public void Enter(GameFlowContext ctx)
     {
         _ctx = ctx;
@@ -50,6 +51,11 @@ public class GamePlayState : IGameFlowState
         // 2) Router/Snapshot 찾기 (같은 씬 고정 배치)
         var router = Object.FindFirstObjectByType<TurnInputRouter>();
         var snapshot = Object.FindFirstObjectByType<TurnSnapshotRecorder>();
+        _rewind = Object.FindFirstObjectByType<RewindController>();
+
+        if (router == null) Debug.LogWarning("[GamePlayState] TurnInputRouter not found.");
+        if (snapshot == null) Debug.LogWarning("[GamePlayState] TurnSnapshotRecorder not found.");
+        if (_rewind == null) Debug.LogWarning("[GamePlayState] RewindController not found. StageFailed_Rewind will fallback to StageLoad.");
 
         // 3) StageRuntime에서 Father/Child 컨트롤러 꺼내서 바인딩
         var rt = ctx._stageRuntime;
@@ -62,13 +68,17 @@ public class GamePlayState : IGameFlowState
         // DifficultyProfile 결정(프로토타입: DefaultDifficulty 사용)
         var cfg = ctx._gameConfig;
         var profile = (cfg != null) ? cfg.GetProfile(cfg.DefaultDifficulty) : null;
+        if (profile == null)
+            Debug.LogWarning("[GamePlayState] DifficultyProfile is null. Resolve outcome may be wrong.");
 
         _turnDriver.Bind(rt._fatherController, rt._childController, snapshot, router, profile);
 
-        // 구독 (Bind 이후에 해라: TurnDriver 존재/초기화 보장)
-        _turnDriver.AddListenerOnResolved(OnTurnResolved);
+        // ExitPort 바인딩
+        if (_rewind != null)
+            _rewind.BindExitPort(new RewindExitPort_GameFlow(_sm, ctx, _stageLoad));
 
-        // (기존 프로토타입 C키 클리어는 유지 가능)
+        // 구독 (Bind 이후에 수행: TurnDriver 존재/초기화 보장)
+        _turnDriver.AddListenerOnResolved(OnTurnResolved);
     }
 
     public void Exit(GameFlowContext ctx)
@@ -82,6 +92,7 @@ public class GamePlayState : IGameFlowState
         }
 
         _turnDriver = null;
+        _rewind = null;
     }
 
     public void Tick(GameFlowContext ctx)
@@ -109,8 +120,17 @@ public class GamePlayState : IGameFlowState
                 break;
 
             case E_TurnResolveOutcome.StageFailed_Rewind:
-                // Normal: Rewind 상태를 나중에 붙일 예정이면, 일단 StageLoad로 보내도 됨(프로토타입)
-                _sm.ChangeState(_ctx, _stageLoad);
+                // Normal: 자동 Rewind 진입
+                if (_rewind != null)
+                {
+                    _rewind.EnterRewind(E_RewindEnterSource.FailureAuto);
+                }
+                else
+                {
+                    // Rewind 시스템이 없으면 폴백
+                    Debug.LogWarning("[GamePlayState] RewindController is null. Normal rewind will fallback to StageLoad.");
+                    _sm.ChangeState(_ctx, _stageLoad);
+                }
                 break;
 
             case E_TurnResolveOutcome.Continue:

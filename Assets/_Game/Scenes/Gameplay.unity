@@ -163,6 +163,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4d60c587cb75d794ba22819000c5114e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _maxSnapshots: 64
 --- !u!1 &454478393
 GameObject:
   m_ObjectHideFlags: 0
@@ -174,7 +175,7 @@ GameObject:
   - component: {fileID: 454478394}
   - component: {fileID: 454478395}
   m_Layer: 0
-  m_Name: TrunSystem
+  m_Name: TrunDriver
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -428,6 +429,54 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &837744313
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 837744314}
+  - component: {fileID: 837744315}
+  m_Layer: 0
+  m_Name: RewindController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &837744314
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 837744313}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1523297882}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &837744315
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 837744313}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10deb50429a8d274a9b799eaed817ecb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _recorder: {fileID: 211024661}
+  _turnDriver: {fileID: 454478395}
+  _rewindMax: 1
+  _failToChapterReset: 3
 --- !u!1 &1523297881
 GameObject:
   m_ObjectHideFlags: 0
@@ -460,6 +509,7 @@ Transform:
   - {fileID: 1530621831}
   - {fileID: 454478394}
   - {fileID: 211024660}
+  - {fileID: 837744314}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1530621830
@@ -507,11 +557,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _turnDriver: {fileID: 454478395}
+  _rewind: {fileID: 837744315}
   _moveAction: {fileID: 6435916166747322715, guid: 66c81aaae250dcf4081da648a1dd312e, type: 3}
   _interactAction: {fileID: -8158701808267459545, guid: 66c81aaae250dcf4081da648a1dd312e, type: 3}
-  _turnCancel: {fileID: 458775966698276460, guid: 66c81aaae250dcf4081da648a1dd312e, type: 3}
+  _cancelAction: {fileID: 6759318345473547059, guid: 66c81aaae250dcf4081da648a1dd312e, type: 3}
+  _rewindEnter: {fileID: 7964470365606553529, guid: 66c81aaae250dcf4081da648a1dd312e, type: 3}
   _rewindPrev: {fileID: -4174605568873996031, guid: 66c81aaae250dcf4081da648a1dd312e, type: 3}
   _rewindNext: {fileID: 5169199558829856389, guid: 66c81aaae250dcf4081da648a1dd312e, type: 3}
+  _rewindCommit: {fileID: -5364997947351382720, guid: 66c81aaae250dcf4081da648a1dd312e, type: 3}
+  _rewindCancel: {fileID: -9157056314693088911, guid: 66c81aaae250dcf4081da648a1dd312e, type: 3}
   _deadZone: 0.35
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

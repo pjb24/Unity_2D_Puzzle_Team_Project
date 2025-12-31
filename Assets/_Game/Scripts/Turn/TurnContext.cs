@@ -44,18 +44,35 @@ public class TurnContext
         ChildBlocked = false;
         TurnFailed = false;
         TurnCleared = false;
-        // Debug.Log($"[Turn] Tick TurnIndex={TurnIndex}, Cmd={cmd}");
+        Debug.Log($"[Turn] Tick TurnIndex={TurnIndex}, Cmd={cmd}");
     }
 
     public void SetInputLocked(bool locked)
     {
         IsInputLocked = locked;
-        // Debug.Log($"[Turn] InputLocked={(locked ? "ON" : "OFF")} (TurnIndex={TurnIndex})");
+        Debug.Log($"[Turn] InputLocked={(locked ? "ON" : "OFF")} (TurnIndex={TurnIndex})");
     }
 
     public void ClearAcceptedInput()
     {
         HasAcceptedInput = false;
         AcceptedCommand = default;
+    }
+
+    public void RollbackTurnBecauseFatherBlocked()
+    {
+        // BeginNewTurn에서 TurnIndex++ 했던 걸 되돌림
+        if (TurnIndex > 0)
+            TurnIndex--;
+
+        // 이번 턴은 없었던 것으로 처리
+        HasAcceptedInput = false;
+        AcceptedCommand = default;
+
+        ChildBlocked = false;
+        TurnFailed = false;
+        TurnCleared = false;
+
+        FatherResult = default;
     }
 }

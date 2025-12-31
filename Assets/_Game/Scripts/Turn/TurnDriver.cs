@@ -90,5 +90,8 @@ public class TurnDriver : MonoBehaviour
         _sm.Tick();
     }
 
-    public TurnInputBuffer GetInputBuffer() => _input;
+    public void ClearInputBuffer()
+    {
+        _input?.Clear();
+    }
 }
