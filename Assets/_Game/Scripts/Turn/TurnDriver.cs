@@ -19,6 +19,7 @@ public class TurnDriver : MonoBehaviour
     private TurnSignalBus _signals = new TurnSignalBus();
 
     public bool IsInputLocked => _ctx != null && _ctx.IsInputLocked;
+    public int TurnIndex => _ctx != null ? _ctx.TurnIndex : 0;
 
     public void AddListenerOnResolved(Action<E_TurnResolveOutcome, E_StageFailReason, int> cb)
     => _signals.AddListenerOnResolved(cb);

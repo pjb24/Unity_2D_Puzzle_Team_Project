@@ -22,6 +22,8 @@ public class GamePlayState : IGameFlowState
 
     public E_GameFlowState Id => E_GameFlowState.Play;
 
+    private GameplayUIRoot _uiRoot;
+
     public GamePlayState(GameFlowStateMachine sm)
     {
         _sm = sm;
@@ -94,6 +96,16 @@ public class GamePlayState : IGameFlowState
 
         _turnDriver.Bind(rt._fatherController, rt._childController, snapshot, router, _profile);
 
+        _uiRoot = Object.FindFirstObjectByType<GameplayUIRoot>();
+        if (_uiRoot == null)
+        {
+            Debug.LogWarning("[GamePlayState] GameplayUIRoot not found (fallback).");
+        }
+        else
+        {
+            _uiRoot.Bind(_ctx, _turnDriver, _rewind, _profile);
+        }
+
         // ExitPort 바인딩
         if (_rewind != null)
         {
@@ -114,6 +126,12 @@ public class GamePlayState : IGameFlowState
     public void Exit(GameFlowContext ctx)
     {
         _ctx = null;
+
+        if (_uiRoot != null)
+        {
+            _uiRoot.Unbind();
+            _uiRoot = null;
+        }
 
         if (_turnDriver != null)
         {
