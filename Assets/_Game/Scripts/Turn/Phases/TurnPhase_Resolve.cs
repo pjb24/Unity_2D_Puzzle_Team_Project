@@ -2,8 +2,7 @@
 /// <summary>
 /// Resolve → Snapshot
 /// 
-/// 난이도 정책까지는 나중에 붙이고,
-/// 지금은 ChildBlocked만 판정해서 TurnFailed/TurnCleared를 세팅.
+/// ChildBlocked를 판정해서 TurnFailed/TurnCleared를 세팅.
 /// Resolve 종료 시점에 입력 잠금 OFF.
 /// 
 /// Resolve에서 최소로 쓸만한 포인트는 2개:
@@ -32,7 +31,6 @@ public class TurnPhase_Resolve : ITurnPhase
 
             ctx._signals?.RaiseResolved(E_TurnResolveOutcome.StageCleared, E_StageFailReason.None, ctx.TurnIndex);
 
-            ctx.SetInputLocked(false);
             _sm.Change(E_TurnPhase.Snapshot);
             return;
         }
@@ -65,14 +63,20 @@ public class TurnPhase_Resolve : ITurnPhase
 
                 ctx._signals?.RaiseResolved(E_TurnResolveOutcome.Continue, E_StageFailReason.ChildBlocked, ctx.TurnIndex);
             }
+            // 실패면 자동턴 없음
+            ctx.PendingAutoTurns = 0;
         }
         else
         {
             ctx.TurnFailed = false;
+
+            // 3) 정상 진행: 턴 비용(2턴) 예약
+            int extra = Mathf.Max(0, ctx.FatherResult.ConsumedTurns - 1);
+            ctx.PendingAutoTurns = extra;
+
             ctx._signals?.RaiseResolved(E_TurnResolveOutcome.Continue, E_StageFailReason.None, ctx.TurnIndex);
         }
 
-        ctx.SetInputLocked(false); // 잠금 OFF (규칙: Resolve 종료)
         _sm.Change(E_TurnPhase.Snapshot);
     }
 

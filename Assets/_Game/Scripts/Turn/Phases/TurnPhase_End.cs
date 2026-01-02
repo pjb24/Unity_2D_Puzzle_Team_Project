@@ -14,8 +14,30 @@ public class TurnPhase_End : ITurnPhase
 
     public void Enter(TurnContext ctx)
     {
-        // TODO: 실패/클리어면 GameFlow/Play 상위 상태로 신호
+        ctx.SetInputLocked(false);
         ctx.ClearAcceptedInput();
+
+        // 실패/클리어면 자동턴 없음
+        if (ctx.TurnFailed || ctx.TurnCleared)
+        {
+            ctx.PendingAutoTurns = 0;
+            _sm.Change(E_TurnPhase.Input);
+            return;
+        }
+
+        // “턴 비용(2턴)” 처리: 입력 없이 자동 실행
+        if (ctx.PendingAutoTurns > 0)
+        {
+            ctx.PendingAutoTurns--;
+
+            ctx.BeginAutoTurn();
+            ctx.InvokeTurnBegin();
+
+            // 자동 턴은 ChildStep → Resolve → Snapshot만 수행
+            _sm.Change(E_TurnPhase.ChildStep);
+            return;
+        }
+
         _sm.Change(E_TurnPhase.Input);
     }
 

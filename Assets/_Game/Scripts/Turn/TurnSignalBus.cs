@@ -13,7 +13,7 @@ public enum E_TurnResolveOutcome
 
 public enum E_StageFailReason
 {
-    // 실패 원인(프로토타입은 ChildBlocked만 있어도 됨)
+    // 실패 원인
     None,
     ChildBlocked,
 }

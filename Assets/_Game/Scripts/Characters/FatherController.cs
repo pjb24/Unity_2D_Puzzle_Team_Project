@@ -8,6 +8,43 @@
 using System;
 using UnityEngine;
 
+public enum E_FatherActionResultCode
+{
+    None,
+    Moved,
+
+    Blocked_OutOfBounds,
+    Blocked_Cell,
+    Blocked_Occupied,
+}
+
+public readonly struct FatherActionResult
+{
+    public readonly E_FatherActionResultCode Code;  // 이동 성공/실패 원인(벽/장애물/바운더리/점유)
+    public readonly Vector2Int From;
+    public readonly Vector2Int To;
+    public readonly bool TriggerGoal;   // 트리거(Goal / 스위치 등)
+
+    // 2턴(늪) 지원: 기본 1
+    public readonly int ConsumedTurns;
+
+    public bool IsSuccess => Code == E_FatherActionResultCode.Moved;
+
+    public FatherActionResult(
+        E_FatherActionResultCode code,
+        Vector2Int from,
+        Vector2Int to,
+        bool triggerGoal,
+        int consumedTurns = 1)
+    {
+        Code = code;
+        From = from;
+        To = to;
+        TriggerGoal = triggerGoal;
+        ConsumedTurns = Mathf.Max(1, consumedTurns);
+    }
+}
+
 [DisallowMultipleComponent]
 public partial class FatherController : MonoBehaviour
 {
@@ -74,7 +111,6 @@ public partial class FatherController : MonoBehaviour
             return;
         }
 
-        // Move 외에는 일단 패스(확장 가능)
         Vector2Int dir = cmd.Type switch
         {
             E_TurnCommandType.MoveUp => Vector2Int.up,
@@ -131,6 +167,13 @@ public partial class FatherController : MonoBehaviour
             return;
         }
 
+        // 기믹 메타(Hole) 진입 불가
+        if (_grid.GetMeta(to).IsHole)
+        {
+            _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Cell, from, from, false, consumedTurns: 1);
+            return;
+        }
+
         if (_grid.GetOcc(to) != E_Occupant.None)
         {
             _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Occupied, from, from, false);
@@ -142,16 +185,24 @@ public partial class FatherController : MonoBehaviour
         _grid.SetOcc(to, E_Occupant.Father);
         Cell = to;
 
-        // 월드 이동 스냅(프로토타입)
+        // 월드 이동 스냅
         transform.position = _presenter.CellToWorld(Cell) + Vector3.up * 0.9f;
 
         bool triggerGoal = (cellType == E_CellType.Goal);
-        _lastResult = new FatherActionResult(E_FatherActionResultCode.Moved, from, to, triggerGoal);
+
+        // “턴 비용(2턴)” (늪 이탈 시 2)
+        int consumedTurns = 1;
+        var fromMeta = _grid.GetMeta(from);
+        var toMeta = _grid.GetMeta(to);
+        if (fromMeta.IsSwamp && !toMeta.IsSwamp)
+            consumedTurns = 2;
+
+        _lastResult = new FatherActionResult(E_FatherActionResultCode.Moved, from, to, triggerGoal, consumedTurns);
     }
 
     private void ApplyFacingVisual()
     {
-        // 프로토타입: 캡슐 회전으로 방향 표시
+        // 프로토타입: 회전으로 방향 표시
         float z = Facing switch
         {
             E_Facing.Up => 0f,

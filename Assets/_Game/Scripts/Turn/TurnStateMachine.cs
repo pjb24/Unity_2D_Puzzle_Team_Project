@@ -37,18 +37,19 @@ public class TurnStateMachine
     public void Start(E_TurnPhase entry = E_TurnPhase.Input)
     {
         if (_isStarted) return;
-        if (_phases == null) throw new InvalidOperationException("[Turn] SetPhases() first");
+        if (_phases == null || _phases.Length == 0)
+            throw new InvalidOperationException("[Turn] SetPhases() first");
 
         _current = Get(entry);
-        _current.Enter(_ctx);
         _isStarted = true;
 
-        Debug.Log($"[Turn] Start Phase = {_current.Phase}");
+        Debug.Log($"[Turn] Phase => {_current.Phase} (TurnIndex={_ctx.TurnIndex})");
+        _current.Enter(_ctx);
     }
 
     public void Tick()
     {
-        if (!_isStarted) return;
+        if (!_isStarted || _current == null) return;
         _current.Tick(_ctx);
     }
 
@@ -67,6 +68,7 @@ public class TurnStateMachine
     {
         for (int i = 0; i < _phases.Length; i++)
             if (_phases[i].Phase == phase) return _phases[i];
+
         throw new InvalidOperationException($"[Turn] Phase not found: {phase}");
     }
 }

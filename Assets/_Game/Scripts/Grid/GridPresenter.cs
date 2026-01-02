@@ -2,7 +2,6 @@
 ///
 /// 표현 레이어: “월드 좌표 ↔ 셀” 변환 규칙 고정
 /// DummyStageLoader가 타일을 “중앙 정렬 + tileSize”로 깔고 있다.
-/// 그 기준을 그대로 사용해서 **GridPresenter(뷰/변환 전담)**를 만든다.
 ///
 
 using UnityEngine;

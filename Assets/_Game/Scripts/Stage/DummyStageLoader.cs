@@ -2,6 +2,16 @@
 using System;
 using UnityEngine;
 
+public interface IStageGimmickInitializable
+{
+    void InitializeGimmick(StageRuntimeRefs refs, BoardGrid grid, GridPresenter presenter, InteractRegistry registry);
+}
+
+public interface ILinkBinder
+{
+    void BindAllLinks(StageRuntimeRefs refs);
+}
+
 public class DummyStageLoader : IStageLoader
 {
     // ===== Tunables =====
@@ -38,6 +48,7 @@ public class DummyStageLoader : IStageLoader
 
         // 3.1) InteractRegistry 생성(루트 하위)
         var registry = EnsureInteractRegistry(ctx);
+        ctx._stageRuntime._interactRegistry = registry;
 
         // 4) 더미 보드 생성
         CreateDummyBoard(ctx, stageDef);
@@ -52,16 +63,24 @@ public class DummyStageLoader : IStageLoader
         // 6.1) Father에 InteractPort 주입
         BindFatherInteractPort(ctx, registry);
 
-        // 6.2) 씬에 존재하는 다수 Interactable 등록(프리팹 배치 + 런타임 생성 모두 커버)
+        // ---- (0-5) 기믹 초기화 파이프라인 ----
+        // 1) BoardStateRewindable 추가(보드 자체 변화 복원)
+        EnsureBoardStateRewindable(ctx, registry);
+
+        // 2) 보드/프리젠터 생성 후 기믹 Initialize
+        InitializeGimmicks(ctx, registry);
+
+        // 3) InteractRegistry.RebuildFromScene()
+        // 3) 씬에 존재하는 다수 Interactable 등록(프리팹 배치 + 런타임 생성 모두 커버)
         // - 런타임 생성 Interactable이 Initialize에서 Register를 안 해도 여기서 잡힘
-        if (registry != null)
-        {
-            registry.RebuildFromScene();
-        }
-        else
-        {
-            Debug.LogWarning("[StageLoader] RegisterInteractables fallback: registry is null.");
-        }
+        if (registry != null) registry.RebuildFromScene();
+        else Debug.LogWarning("[StageLoader] Registry rebuild skipped (fallback): registry is null.");
+
+        // 4) 링크(스위치→문 등) 바인딩
+        BindLinks(ctx);
+
+        // 5) TurnSystem(ITurnTickable) 수집
+        CollectTurnSystems(ctx);
 
         onComplete?.Invoke();
     }
@@ -80,6 +99,95 @@ public class DummyStageLoader : IStageLoader
                 UnityEngine.Object.Destroy(ctx._stageRuntime._root);
 
             ctx._stageRuntime = null;
+        }
+    }
+
+    // ---- helpers ----
+
+    private void EnsureBoardStateRewindable(GameFlowContext ctx, InteractRegistry registry)
+    {
+        if (ctx?._stageRuntime?._root == null)
+        {
+            Debug.LogWarning("[StageLoader] EnsureBoardStateRewindable fallback: stage root is null.");
+            return;
+        }
+
+        var root = ctx._stageRuntime._root;
+
+        var bsr = root.GetComponent<BoardStateRewindable>();
+        if (bsr == null) bsr = root.AddComponent<BoardStateRewindable>();
+
+        bsr.Initialize(ctx._stageRuntime._grid, registry);
+
+        // RewindKey 보장
+        EnsureRewindKey(root);
+
+        ctx._stageRuntime._boardStateRewindable = bsr;
+    }
+
+    private void InitializeGimmicks(GameFlowContext ctx, InteractRegistry registry)
+    {
+        if (ctx?._stageRuntime?._root == null) return;
+
+        var stageRoot = ctx._stageRuntime._root;
+        var behaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+
+        for (int i = 0; i < behaviours.Length; i++)
+        {
+            if (behaviours[i] is not IStageGimmickInitializable init) continue;
+
+            // 같은 씬 + (스테이지 루트 하위거나, 스테이지 씬 오브젝트)
+            if (behaviours[i].gameObject.scene != stageRoot.scene) continue;
+
+            try
+            {
+                init.InitializeGimmick(ctx._stageRuntime, ctx._stageRuntime._grid, ctx._stageRuntime._gridPresenter, registry);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[StageLoader] Gimmick Initialize failed. ex={ex.Message}");
+            }
+        }
+    }
+
+    private void BindLinks(GameFlowContext ctx)
+    {
+        if (ctx?._stageRuntime?._root == null) return;
+
+        var stageRoot = ctx._stageRuntime._root;
+        var behaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+
+        for (int i = 0; i < behaviours.Length; i++)
+        {
+            if (behaviours[i] is not ILinkBinder binder) continue;
+            if (behaviours[i].gameObject.scene != stageRoot.scene) continue;
+
+            try
+            {
+                binder.BindAllLinks(ctx._stageRuntime);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[StageLoader] Link bind failed. ex={ex.Message}");
+            }
+        }
+    }
+
+    private void CollectTurnSystems(GameFlowContext ctx)
+    {
+        if (ctx?._stageRuntime?._root == null) return;
+
+        ctx._stageRuntime._turnSystems.Clear();
+
+        var stageRoot = ctx._stageRuntime._root;
+        var behaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+
+        for (int i = 0; i < behaviours.Length; i++)
+        {
+            if (behaviours[i] is not ITurnTickable sys) continue;
+            if (behaviours[i].gameObject.scene != stageRoot.scene) continue;
+
+            ctx._stageRuntime._turnSystems.Add(sys);
         }
     }
 

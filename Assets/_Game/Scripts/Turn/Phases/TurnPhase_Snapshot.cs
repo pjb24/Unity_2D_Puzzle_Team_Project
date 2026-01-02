@@ -5,6 +5,7 @@
 /// Snapshot은 “항상 턴 종료 직전 1회 저장” 원칙.
 /// 저장 후 End로 전이.
 ///
+using UnityEngine;
 
 public class TurnPhase_Snapshot : ITurnPhase
 {
@@ -15,7 +16,18 @@ public class TurnPhase_Snapshot : ITurnPhase
 
     public void Enter(TurnContext ctx)
     {
-        ctx.SnapshotRecorder.Capture(ctx.TurnIndex);
+        // 턴 종료 훅(스냅샷 저장 전에 수행)
+        ctx.InvokeTurnEnd();
+
+        if (ctx.SnapshotRecorder == null)
+        {
+            Debug.LogWarning("[TurnPhase_Snapshot] fallback: SnapshotRecorder is null.");
+        }
+        else
+        {
+            ctx.SnapshotRecorder.Capture(ctx.TurnIndex);
+        }
+
         _sm.Change(E_TurnPhase.End);
     }
 

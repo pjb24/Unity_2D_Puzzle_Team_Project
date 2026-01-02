@@ -54,6 +54,9 @@ public class TurnPhase_FatherAction : ITurnPhase
             return;
         }
 
+        // 여기부터 “실제 턴 소비”가 발생한 시점
+        _ctx.InvokeTurnBegin();
+
         // 정상 턴 진행
         _sm.Change(E_TurnPhase.ChildStep);
     }

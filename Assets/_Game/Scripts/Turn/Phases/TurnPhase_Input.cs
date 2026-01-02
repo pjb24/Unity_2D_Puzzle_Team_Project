@@ -21,12 +21,18 @@ public class TurnPhase_Input : ITurnPhase
         _sm = sm;
     }
 
-    public void Enter(TurnContext ctx) { }
+    public void Enter(TurnContext ctx)
+    {
+        ctx.SetInputLocked(false);
+        ctx.ClearAcceptedInput();
+    }
+
     public void Exit(TurnContext ctx) { }
 
     public void Tick(TurnContext ctx)
     {
         if (ctx.IsInputLocked) return;
+        if (_input == null) return;
 
         if (_input.TryDequeue(out TurnCommand cmd))
         {

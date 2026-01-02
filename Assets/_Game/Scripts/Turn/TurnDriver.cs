@@ -4,6 +4,7 @@
 ///
 
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -31,7 +32,8 @@ public class TurnDriver : MonoBehaviour
         ChildController child,
         TurnSnapshotRecorder snapshot,
         TurnInputRouter router,
-        DifficultyProfile profile)
+        DifficultyProfile profile,
+        IReadOnlyList<ITurnTickable> turnSystems = null)
     {
         if (_isBound) return;
 
@@ -43,6 +45,7 @@ public class TurnDriver : MonoBehaviour
         // Inject
         _ctx.InjectDifficulty(profile);
         _ctx.InjectSignals(_signals);
+        _ctx.InjectTurnSystems(turnSystems);
 
         _sm = new TurnStateMachine(_ctx);
 

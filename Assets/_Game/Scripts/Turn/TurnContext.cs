@@ -1,4 +1,6 @@
 // TurnContext.cs
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class TurnContext
@@ -15,6 +17,9 @@ public class TurnContext
     public bool TurnFailed { get; set; }
     public bool TurnCleared { get; set; }
 
+    // 2턴(늪) 지원: 입력 없는 자동 턴 예약
+    public int PendingAutoTurns { get; set; }
+
     // 의존 참조
     public FatherController Father { get; }
     public ChildController Child { get; }
@@ -25,8 +30,23 @@ public class TurnContext
     public DifficultyProfile _profile { get; private set; }
     public TurnSignalBus _signals { get; private set; }
 
+    private List<ITurnTickable> _turnSystems = new List<ITurnTickable>(8);
+
+    private int _lastBeginTurnIndex = int.MinValue;
+    private int _lastEndTurnIndex = int.MinValue;
+
     public void InjectDifficulty(DifficultyProfile profile) => _profile = profile;
     public void InjectSignals(TurnSignalBus signals) => _signals = signals;
+
+    public void InjectTurnSystems(IReadOnlyList<ITurnTickable> systems)
+    {
+        _turnSystems.Clear();
+        if (systems == null) return;
+
+        for (int i = 0; i < systems.Count; i++)
+            if (systems[i] != null)
+                _turnSystems.Add(systems[i]);
+    }
 
     public TurnContext(FatherController father,
         ChildController child,
@@ -35,6 +55,9 @@ public class TurnContext
         Father = father;
         Child = child;
         SnapshotRecorder = snapshotRecorder;
+
+        TurnIndex = 0;
+        PendingAutoTurns = 0;
     }
 
     public void BeginNewTurn(TurnCommand cmd)
@@ -42,10 +65,27 @@ public class TurnContext
         TurnIndex++;
         HasAcceptedInput = true;
         AcceptedCommand = cmd;
-        ChildBlocked = false;
-        TurnFailed = false;
-        TurnCleared = false;
-        Debug.Log($"[Turn] Tick TurnIndex={TurnIndex}, Cmd={cmd}");
+
+        ClearTurnResults();
+
+        // 예약 자동 턴은 Resolve에서 세팅한다(턴 결과 확정 후)
+        PendingAutoTurns = 0;
+
+        Debug.Log($"[Turn] Tick TurnIndex={TurnIndex}, Cmd={cmd.Type}");
+    }
+
+    public void BeginAutoTurn()
+    {
+        TurnIndex++;
+
+        ClearAcceptedInput();
+
+        ClearTurnResults();
+
+        // 자동 턴은 FatherResult를 재사용하면 안 됨
+        FatherResult = default;
+
+        Debug.Log($"[Turn] AutoTick TurnIndex={TurnIndex}");
     }
 
     public void SetInputLocked(bool locked)
@@ -60,6 +100,13 @@ public class TurnContext
         AcceptedCommand = default;
     }
 
+    private void ClearTurnResults()
+    {
+        ChildBlocked = false;
+        TurnFailed = false;
+        TurnCleared = false;
+    }
+
     public void RollbackTurnBecauseFatherBlocked()
     {
         // BeginNewTurn에서 TurnIndex++ 했던 걸 되돌림
@@ -67,14 +114,43 @@ public class TurnContext
             TurnIndex--;
 
         // 이번 턴은 없었던 것으로 처리
-        HasAcceptedInput = false;
-        AcceptedCommand = default;
+        ClearAcceptedInput();
 
-        ChildBlocked = false;
-        TurnFailed = false;
-        TurnCleared = false;
+        ClearTurnResults();
+        PendingAutoTurns = 0;
+
+        // 훅 중복 방지 인덱스도 롤백
+        _lastBeginTurnIndex = int.MinValue;
+        _lastEndTurnIndex = int.MinValue;
 
         FatherResult = default;
+
+        Debug.Log($"[Turn] Rollback because Father blocked. TurnIndex={TurnIndex}");
+    }
+
+    // 턴 훅 호출(중복 방지)
+    public void InvokeTurnBegin()
+    {
+        if (_lastBeginTurnIndex == TurnIndex) return;
+        _lastBeginTurnIndex = TurnIndex;
+
+        for (int i = 0; i < _turnSystems.Count; i++)
+        {
+            try { _turnSystems[i].OnTurnBegin(TurnIndex); }
+            catch (Exception ex) { Debug.LogWarning($"[Turn] OnTurnBegin system failed. ex={ex.Message}"); }
+        }
+    }
+
+    public void InvokeTurnEnd()
+    {
+        if (_lastEndTurnIndex == TurnIndex) return;
+        _lastEndTurnIndex = TurnIndex;
+
+        for (int i = 0; i < _turnSystems.Count; i++)
+        {
+            try { _turnSystems[i].OnTurnEnd(TurnIndex); }
+            catch (Exception ex) { Debug.LogWarning($"[Turn] OnTurnEnd system failed. ex={ex.Message}"); }
+        }
     }
 
     public void SetTurnIndexFromRewind(int turnIndex)
@@ -82,13 +158,18 @@ public class TurnContext
         TurnIndex = Mathf.Max(0, turnIndex);
 
         IsInputLocked = false;
-        HasAcceptedInput = false;
-        AcceptedCommand = default;
 
-        ChildBlocked = false;
-        TurnFailed = false;
-        TurnCleared = false;
+        ClearTurnResults();
+
+        // 훅 중복 방지 인덱스도 리셋
+        _lastBeginTurnIndex = int.MinValue;
+        _lastEndTurnIndex = int.MinValue;
+
+        PendingAutoTurns = 0;
+        ClearAcceptedInput();
 
         FatherResult = default;
+
+        Debug.Log($"[Turn] Sync from snapshot. TurnIndex={TurnIndex}");
     }
 }
