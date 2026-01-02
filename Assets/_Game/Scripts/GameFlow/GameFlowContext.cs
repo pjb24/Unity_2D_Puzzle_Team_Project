@@ -26,6 +26,10 @@ public class GameFlowContext
     public IStageProgression _progression;
     public object _ui;
 
+    // ===== FX / Audio =====
+    public StageTransitionFx _transitionFx;
+    public AudioHub _audioHub;
+
     // ===== Fail Streak (Normal) =====
     private int _failStreak;
     private int _failStreakLimit; // 0이면 비활성

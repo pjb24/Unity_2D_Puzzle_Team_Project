@@ -5,7 +5,13 @@ public class StageProgression : IStageProgression
 {
     public E_StageAdvanceResult EvaluateNext(GameFlowContext ctx)
     {
-        var cfg = ctx._config.LoadGameConfig();
+        var cfg = ctx._gameConfig;
+        if (cfg == null)
+        {
+            ctx._gameConfig = ctx._config.LoadGameConfig();
+            cfg = ctx._gameConfig;
+        }
+
         if (cfg == null)
         {
             Debug.LogError("[Progression] GameConfig is null. Treat as Ending.");

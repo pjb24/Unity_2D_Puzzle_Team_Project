@@ -28,8 +28,7 @@ public class BootState : IGameFlowState
 
     public void Enter(GameFlowContext ctx)
     {
-        var cfg = ctx._config.LoadGameConfig();
-        if (cfg == null)
+        if (ctx._gameConfig == null)
         {
             Debug.LogError("[Boot] GameConfig load failed. Flow stopped.");
             return;

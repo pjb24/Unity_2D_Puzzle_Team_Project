@@ -14,12 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _chapters:
   - ChapterId: Chapter_01
-    VisualProfile: {fileID: 0}
+    VisualProfile: {fileID: 11400000, guid: d00934c87d45b8743b11cb4a0afbde11, type: 2}
     Stages:
     - {fileID: 11400000, guid: a29837bdb11495447be2489d7453e870, type: 2}
     - {fileID: 11400000, guid: 4daaa2cc6d2a3c5468a0e535c627aaaf, type: 2}
   - ChapterId: Chapter_02
-    VisualProfile: {fileID: 0}
+    VisualProfile: {fileID: 11400000, guid: cf958409b171f644687b8f211da2ee8e, type: 2}
     Stages:
     - {fileID: 11400000, guid: 1e570960d39d43e44b5c5889d3b5d513, type: 2}
     - {fileID: 11400000, guid: 7d6a71ee152053b4ca4e1b965c71df8f, type: 2}
@@ -28,15 +28,19 @@ MonoBehaviour:
     RewindMax: 3
     FailOnChildBlocked: 0
     HardResetStage: 0
+    _failStreakToReturnChapterStart: 0
     ChildStepDelay: 0
   - _difficulty: 1
     RewindMax: 3
     FailOnChildBlocked: 1
     HardResetStage: 0
+    _failStreakToReturnChapterStart: 0
     ChildStepDelay: 0
   - _difficulty: 2
     RewindMax: 3
     FailOnChildBlocked: 1
     HardResetStage: 0
+    _failStreakToReturnChapterStart: 0
     ChildStepDelay: 0
   _defaultDifficulty: 1
+  _ironmanHardReturnToChapterStart: 0

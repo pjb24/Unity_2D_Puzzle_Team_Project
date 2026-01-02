@@ -42,10 +42,11 @@ public class DummyStageLoader : IStageLoader
         // 4) 더미 보드 생성
         CreateDummyBoard(ctx, stageDef);
 
-        // 5) 더미 경로 생성
+        // 5) 테두리 경로 생성(더미 마커)
         CreateDummyPath(ctx, stageDef);
 
         // 6) 스폰(그리드/프리젠터/컨트롤러 포함)
+        // 6) Father/Child 생성 + 초기화
         SpawnDummyCharacters(ctx);
 
         // 6.1) Father에 InteractPort 주입
@@ -103,7 +104,184 @@ public class DummyStageLoader : IStageLoader
         return go.AddComponent<InteractRegistry>();
     }
 
-    // ===== (3) Father에 포트 주입 =====
+    // ===== (4) 보드 생성 =====
+    private void CreateDummyBoard(GameFlowContext ctx, StageDefinition stageDef)
+    {
+        if (ctx == null || ctx._stageRuntime == null || ctx._stageRuntime._root == null)
+        {
+            Debug.LogWarning("[StageLoader] CreateDummyBoard fallback: runtime/root is null.");
+            return;
+        }
+
+        int w = Mathf.Max(1, stageDef.BoardSize.x);
+        int h = Mathf.Max(1, stageDef.BoardSize.y);
+
+        var tilesRoot = new GameObject("[Tiles]");
+        tilesRoot.transform.SetParent(ctx._stageRuntime._root.transform, false);
+        ctx._stageRuntime._tilesRoot = tilesRoot.transform;
+
+        ctx._stageRuntime._tiles.Clear();
+
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                var tile = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                tile.name = $"Tile_{x}_{y}";
+                tile.transform.SetParent(tilesRoot.transform, false);
+
+                Vector3 local = GetTileCenterLocal(stageDef, x, y);
+                tile.transform.localPosition = local;
+                tile.transform.localScale = Vector3.one * _tileSize;
+
+                ctx._stageRuntime._tiles.Add(tile.transform);
+            }
+        }
+    }
+
+    // ===== (5) 테두리 경로 생성 =====
+    private void CreateDummyPath(GameFlowContext ctx, StageDefinition stageDef)
+    {
+        if (ctx == null || ctx._stageRuntime == null || ctx._stageRuntime._root == null)
+        {
+            Debug.LogWarning("[StageLoader] CreateDummyPath fallback: runtime/root is null.");
+            return;
+        }
+
+        int w = Mathf.Max(1, stageDef.BoardSize.x);
+        int h = Mathf.Max(1, stageDef.BoardSize.y);
+
+        var pathRoot = new GameObject("[Path]");
+        pathRoot.transform.SetParent(ctx._stageRuntime._root.transform, false);
+        ctx._stageRuntime._pathRoot = pathRoot.transform;
+
+        // PathFadeFx 부착(프로토타입 대체 연출)
+        if (pathRoot.GetComponent<PathFadeFx>() == null)
+            pathRoot.AddComponent<PathFadeFx>();
+
+        ctx._stageRuntime._pathPoints.Clear();
+
+        // 테두리(오른쪽→위→왼쪽→아래) 셀 경로
+        void AddCell(int x, int y)
+        {
+            Vector3 local = GetTileCenterLocal(stageDef, x, y);
+            ctx._stageRuntime._pathPoints.Add(ToWorld(ctx, local));
+
+            var marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            marker.name = $"Path_{x}_{y}";
+            marker.transform.SetParent(pathRoot.transform, false);
+            marker.transform.localPosition = local + Vector3.back * 0.1f;
+            marker.transform.localScale = Vector3.one * 0.2f;
+        }
+
+        // bottom (0,0) -> (w-1,0)
+        for (int x = 0; x < w; x++) AddCell(x, 0);
+        // right (w-1,1) -> (w-1,h-1)
+        for (int y = 1; y < h; y++) AddCell(w - 1, y);
+        // top (w-2,h-1) -> (0,h-1)
+        for (int x = w - 2; x >= 0; x--) AddCell(x, h - 1);
+        // left (0,h-2) -> (0,1)
+        for (int y = h - 2; y >= 1; y--) AddCell(0, y);
+    }
+
+    // ===== (6) 캐릭터 생성 + Initialize =====
+    private void SpawnDummyCharacters(GameFlowContext ctx)
+    {
+        if (ctx == null || ctx._stageRuntime == null || ctx._stageRuntime._root == null)
+        {
+            Debug.LogWarning("[StageLoader] SpawnDummyCharacters fallback: runtime/root is null.");
+            return;
+        }
+
+        var stageDef = ctx._stageDefinition;
+        if (stageDef == null)
+        {
+            Debug.LogWarning("[StageLoader] SpawnDummyCharacters fallback: stageDef is null.");
+            return;
+        }
+
+        var profile = ctx._chapterVisualProfile;
+        if (profile == null)
+            Debug.LogWarning("[StageLoader] ChapterVisualProfile is null. Use primitive visuals (fallback).");
+
+        // Father
+        ctx._stageRuntime._father = SpawnVisual(profile != null ? profile.FatherPrefab : null,
+                                               profile != null ? profile.FatherSprite : null,
+                                               "Father(Dummy)",
+                                               ctx._stageRuntime._root.transform);
+
+        // Child
+        ctx._stageRuntime._child = SpawnVisual(profile != null ? profile.ChildPrefab : null,
+                                              profile != null ? profile.ChildSprite : null,
+                                              "Child(Dummy)",
+                                              ctx._stageRuntime._root.transform);
+
+        // Grid 생성(Cells 배열 기반)
+        int w = Mathf.Max(1, stageDef.BoardSize.x);
+        int h = Mathf.Max(1, stageDef.BoardSize.y);
+        ctx._stageRuntime._grid = new BoardGrid(w, h, stageDef.Cells);
+        ctx._stageRuntime._gridPresenter = new GridPresenter(ctx._stageRuntime._root.transform, w, h, _tileSize);
+
+        // FatherController 부착 + 초기화
+        ctx._stageRuntime._fatherController = ctx._stageRuntime._father.GetComponent<FatherController>();
+        EnsureRewindKey(ctx._stageRuntime._father);
+        if (ctx._stageRuntime._fatherController == null)
+            ctx._stageRuntime._fatherController = ctx._stageRuntime._father.AddComponent<FatherController>();
+
+        var fatherCtrl = ctx._stageRuntime._fatherController;
+        fatherCtrl.Initialize(ctx._stageRuntime._grid, ctx._stageRuntime._gridPresenter, stageDef.FatherSpawn._cell);
+
+        // ChildPathRuntime 생성
+        var pathRuntime = new ChildPathRuntime(ctx._stageRuntime._grid, ctx._stageRuntime._gridPresenter);
+
+        // blocked steps: StageDefinition에 추가한 BlockedPathSteps 사용
+        var blocked = stageDef.BlockedPathSteps; // IReadOnlyList<int>
+
+        // ChildController 부착 + 초기화
+        ctx._stageRuntime._childController = ctx._stageRuntime._child.GetComponent<ChildController>();
+        EnsureRewindKey(ctx._stageRuntime._child);
+        if (ctx._stageRuntime._childController == null)
+            ctx._stageRuntime._childController = ctx._stageRuntime._child.AddComponent<ChildController>();
+
+        var childCtrl = ctx._stageRuntime._childController;
+        childCtrl.Initialize(pathRuntime, blocked, startPos: 0);
+    }
+
+    private GameObject SpawnVisual(GameObject prefab, Sprite sprite, string name, Transform parent)
+    {
+        GameObject go;
+
+        if (prefab != null)
+        {
+            go = UnityEngine.Object.Instantiate(prefab, parent, true);
+            go.name = name;
+            return go;
+        }
+
+        Debug.LogWarning($"[StageLoader] {name} prefab missing. Create primitive (fallback).");
+        go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+        go.name = name;
+        go.transform.SetParent(parent, true);
+
+        if (sprite != null)
+        {
+            var sr = go.GetComponent<SpriteRenderer>();
+            if (sr == null) sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = sprite;
+        }
+
+        return go;
+    }
+
+    private void EnsureRewindKey(GameObject go)
+    {
+        if (go == null) return;
+
+        if (go.GetComponent<RewindKey>() == null)
+            go.AddComponent<RewindKey>();
+    }
+
+    // ===== (6.1) Father InteractPort 주입 =====
     private void BindFatherInteractPort(GameFlowContext ctx, InteractRegistry registry)
     {
         if (ctx == null || ctx._stageRuntime == null)
@@ -125,145 +303,7 @@ public class DummyStageLoader : IStageLoader
             return;
         }
 
-        // FatherController에 아래 API가 있어야 함:
         fatherCtrl.BindInteractPort(new InteractPort_Registry(registry));
-    }
-
-    private void CreateDummyBoard(GameFlowContext ctx, StageDefinition stageDef)
-    {
-        if (ctx == null || ctx._stageRuntime == null || ctx._stageRuntime._root == null)
-        {
-            Debug.LogWarning("[StageLoader] CreateDummyBoard fallback: runtime/root is null.");
-            return;
-        }
-
-        int w = Mathf.Max(1, stageDef.BoardSize.x);
-        int h = Mathf.Max(1, stageDef.BoardSize.y);
-
-        var tilesRoot = new GameObject("[Tiles]");
-        tilesRoot.transform.SetParent(ctx._stageRuntime._root.transform, false);
-
-        // 원점 기준 중앙정렬
-        Vector3 origin = new Vector3(-(w - 1) * 0.5f * _tileSize, -(h - 1) * 0.5f * _tileSize, 0f);
-
-        for (int y = 0; y < h; y++)
-        {
-            for (int x = 0; x < w; x++)
-            {
-                var tile = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                tile.name = $"Tile_{x}_{y}";
-                tile.transform.SetParent(tilesRoot.transform, false);
-                tile.transform.localScale = new Vector3(_tileSize, _tileSize, 0.1f);
-                tile.transform.localPosition = origin + new Vector3(x * _tileSize, y * _tileSize, 0f);
-
-                // 충돌이 필요없으면 제거 가능(지금은 바닥으로 사용 가능)
-                ctx._stageRuntime._tiles.Add(tile.transform);
-            }
-        }
-    }
-
-    private void CreateDummyPath(GameFlowContext ctx, StageDefinition stageDef)
-    {
-        if (ctx == null || ctx._stageRuntime == null || ctx._stageRuntime._root == null)
-        {
-            Debug.LogWarning("[StageLoader] CreateDummyPath fallback: runtime/root is null.");
-            return;
-        }
-
-        int w = Mathf.Max(1, stageDef.BoardSize.x);
-        int h = Mathf.Max(1, stageDef.BoardSize.y);
-
-        var indices = PerimeterPathBuilder.Build(w, h);
-        if (indices == null || indices.Count <= 0)
-        {
-            Debug.LogWarning("[StageLoader] CreateDummyPath fallback: perimeter indices is null/empty.");
-            return;
-        }
-
-        ctx._stageRuntime._pathPoints.Clear();
-
-        for (int i = 0; i < indices.Count; i++)
-        {
-            int idx = indices[i];
-            int x = idx % w;
-            int y = idx / w;
-
-            Vector3 pLocal = GetTileCenterLocal(stageDef, x, y);
-            ctx._stageRuntime._pathPoints.Add(ToWorld(ctx, pLocal));
-        }
-
-        // 디버그용 path marker 생성(선택)
-        var pathRoot = new GameObject("[Path]");
-        pathRoot.transform.SetParent(ctx._stageRuntime._root.transform, false);
-
-        for (int i = 0; i < ctx._stageRuntime._pathPoints.Count; i++)
-        {
-            var marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            marker.name = $"Path_{i}";
-            marker.transform.SetParent(pathRoot.transform, false);
-            marker.transform.position = ctx._stageRuntime._pathPoints[i] + Vector3.up * 0.2f;
-            marker.transform.localScale = Vector3.one * 0.2f;
-
-            // 물리 필요 없으면 콜라이더 제거
-            var col = marker.GetComponent<Collider>();
-            if (col != null) UnityEngine.Object.Destroy(col);
-        }
-    }
-
-    private void SpawnDummyCharacters(GameFlowContext ctx)
-    {
-        if (ctx == null || ctx._stageRuntime == null || ctx._stageRuntime._root == null)
-        {
-            Debug.LogWarning("[StageLoader] SpawnDummyCharacters fallback: runtime/root is null.");
-            return;
-        }
-
-        var stageDef = ctx._stageDefinition;
-        if (stageDef == null)
-        {
-            Debug.LogWarning("[StageLoader] SpawnDummyCharacters fallback: stageDef is null.");
-            return;
-        }
-
-        // Father
-        ctx._stageRuntime._father = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        ctx._stageRuntime._father.name = "Father(Dummy)";
-        ctx._stageRuntime._father.transform.SetParent(ctx._stageRuntime._root.transform, true);
-
-        // Child
-        ctx._stageRuntime._child = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        ctx._stageRuntime._child.name = "Child(Dummy)";
-        ctx._stageRuntime._child.transform.SetParent(ctx._stageRuntime._root.transform, true);
-
-        // Grid 생성(Cells 배열 기반)
-        int w = Mathf.Max(1, stageDef.BoardSize.x);
-        int h = Mathf.Max(1, stageDef.BoardSize.y);
-        ctx._stageRuntime._grid = new BoardGrid(w, h, stageDef.Cells);
-        ctx._stageRuntime._gridPresenter = new GridPresenter(ctx._stageRuntime._root.transform, w, h, _tileSize);
-
-        // FatherController 부착 + 초기화
-        ctx._stageRuntime._fatherController = ctx._stageRuntime._father.GetComponent<FatherController>();
-        ctx._stageRuntime._father.AddComponent<RewindKey>();
-        if (ctx._stageRuntime._fatherController == null)
-            ctx._stageRuntime._fatherController = ctx._stageRuntime._father.AddComponent<FatherController>();
-        
-        var fatherCtrl = ctx._stageRuntime._fatherController;
-        fatherCtrl.Initialize(ctx._stageRuntime._grid, ctx._stageRuntime._gridPresenter, stageDef.FatherSpawn._cell);
-
-        // ChildPathRuntime 생성
-        var pathRuntime = new ChildPathRuntime(ctx._stageRuntime._grid, ctx._stageRuntime._gridPresenter);
-
-        // blocked steps: StageDefinition에 추가한 BlockedPathSteps 사용
-        var blocked = stageDef.BlockedPathSteps; // IReadOnlyList<int>
-
-        // ChildController 부착 + 초기화
-        ctx._stageRuntime._childController = ctx._stageRuntime._child.GetComponent<ChildController>();
-        ctx._stageRuntime._child.AddComponent<RewindKey>();
-        if (ctx._stageRuntime._childController == null)
-            ctx._stageRuntime._childController = ctx._stageRuntime._child.AddComponent<ChildController>();
-
-        var childCtrl = ctx._stageRuntime._childController;
-        childCtrl.Initialize(pathRuntime, blocked, startPos: 0);
     }
 
     private Vector3 GetTileCenterLocal(StageDefinition stageDef, int x, int y)

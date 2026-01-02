@@ -6,11 +6,13 @@
 /// Stage 끝이면 Chapter++ / Stage=0
 /// Chapter 끝이면 MainMenu로 복귀(엔딩은 나중에 확장)
 ///
+using UnityEngine;
 
 public class StageClearState : IGameFlowState
 {
     private readonly GameFlowStateMachine _sm;
     private IGameFlowState _stageLoad;
+    private IGameFlowState _chapterLoad;
     private IGameFlowState _mainMenu;
 
     public StageClearState(GameFlowStateMachine sm)
@@ -23,6 +25,11 @@ public class StageClearState : IGameFlowState
         _stageLoad = stageLoad;
     }
 
+    public void SetChapterLoadState(IGameFlowState chapterLoad)
+    {
+        _chapterLoad = chapterLoad;
+    }
+
     public void SetMainMenuState(IGameFlowState mainMenu)
     {
         _mainMenu = mainMenu;
@@ -32,10 +39,23 @@ public class StageClearState : IGameFlowState
 
     public void Enter(GameFlowContext ctx)
     {
-        // 1) 현재 스테이지 정리
-        ctx._stageLoader.UnloadStage(ctx);
+        if (ctx == null)
+        {
+            Debug.LogError("[StageClearState] ctx is null.");
+            return;
+        }
 
-        // 2) 다음 분기 판단
+        if (ctx._progression == null)
+        {
+            Debug.LogWarning("[StageClearState] ctx._progression is null. Go MainMenu (fallback).");
+            _sm.ChangeState(ctx, _mainMenu);
+            return;
+        }
+
+        // 여기서 UnloadStage를 호출하지 않는다.
+        // 이유: StageLoad에서 Out 연출 동안 현재 스테이지가 화면에 남아야 한다.
+
+        // 다음 분기 판단
         var result = ctx._progression.EvaluateNext(ctx);
 
         switch (result)
@@ -50,7 +70,21 @@ public class StageClearState : IGameFlowState
                 {
                     ctx._chapterIndex++;
                     ctx._stageIndex = 0;
-                    _sm.ChangeState(ctx, _stageLoad); // ChapterLoad를 따로 쓸 거면 거기로 전환
+
+                    // 새 챕터/스테이지 재조회 유도
+                    ctx._chapterVisualProfile = null;
+                    ctx._stageDefinition = null;
+
+                    if (_chapterLoad == null)
+                    {
+                        Debug.LogWarning("[StageClearState] ChapterLoadState is null. Jump to StageLoad (fallback).");
+                        _sm.ChangeState(ctx, _stageLoad);
+                    }
+                    else
+                    {
+                        _sm.ChangeState(ctx, _chapterLoad);
+                    }
+
                     break;
                 }
             case E_StageAdvanceResult.Ending:
@@ -68,13 +102,7 @@ public class StageClearState : IGameFlowState
         }
     }
 
-    public void Exit(GameFlowContext ctx)
-    {
+    public void Exit(GameFlowContext ctx) { }
 
-    }
-
-    public void Tick(GameFlowContext ctx)
-    {
-
-    }
+    public void Tick(GameFlowContext ctx) { }
 }

@@ -8,11 +8,13 @@ public class StageRuntimeRefs
     public GameObject _root;
 
     // ===== Board =====
+    public Transform _tilesRoot; // Slide 대상
     public List<Transform> _tiles = new();
     public BoardGrid _grid;
     public GridPresenter _gridPresenter;
 
     // ===== Path =====
+    public Transform _pathRoot; // Path Fade 대상
     public List<Vector3> _pathPoints = new();
 
     // ===== Characters =====
