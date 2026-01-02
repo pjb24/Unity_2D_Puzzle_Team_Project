@@ -18,6 +18,7 @@ public enum E_Occupant
     Father,
     Child,
     Blocker,
+    GapFillerBlock, // 추가
 }
 
 // 기믹용 “동적/속성” 레이어
@@ -188,6 +189,24 @@ public class BoardGrid
                     _onMetaChanged?.Invoke(c, GetMeta(c));
                 }
         }
+    }
+
+    public E_Occupant[] CopyOccArray()
+    {
+        var copy = new E_Occupant[_occ.Length];
+        Array.Copy(_occ, copy, _occ.Length);
+        return copy;
+    }
+
+    public void RestoreOccArray(E_Occupant[] occArray)
+    {
+        if (occArray == null || occArray.Length != _occ.Length)
+        {
+            Debug.LogWarning("[BoardGrid] RestoreOccArray fallback: occArray is null or size mismatch.");
+            return;
+        }
+
+        Array.Copy(occArray, _occ, _occ.Length);
     }
 
     /// 동적 변화 적용 API

@@ -57,16 +57,19 @@ public partial class FatherController : MonoBehaviour
     public E_Facing Facing { get; private set; } = E_Facing.Down;
 
     public FatherActionResult LastResult => _lastResult;
-
     private FatherActionResult _lastResult;
 
     private BoardGrid _grid;
     private GridPresenter _presenter;
 
     private IInteractPort _interactPort;
-
     public void BindInteractPort(IInteractPort port) => _interactPort = port;
     public void UnbindInteractPort() => _interactPort = null;
+
+    // ===== GapFiller =====
+    private GapFillerBlockRegistry _gapFillerRegistry;
+    public void BindGapFillerRegistry(GapFillerBlockRegistry registry) => _gapFillerRegistry = registry;
+    public void UnbindGapFillerRegistry() => _gapFillerRegistry = null;
 
     public void Initialize(BoardGrid grid, GridPresenter presenter, Vector2Int spawnCell)
     {
@@ -174,10 +177,45 @@ public partial class FatherController : MonoBehaviour
             return;
         }
 
-        if (_grid.GetOcc(to) != E_Occupant.None)
+        // ===== 앞칸이 블록이면 “밀기 시도” =====
+        var occ = _grid.GetOcc(to);
+        if (occ != E_Occupant.None)
         {
-            _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Occupied, from, from, false);
-            return;
+            if (occ == E_Occupant.GapFillerBlock)
+            {
+                if (_gapFillerRegistry == null)
+                {
+                    Debug.LogWarning("[FatherController] Push fallback: GapFillerBlockRegistry is null.");
+                    _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Occupied, from, from, false);
+                    return;
+                }
+
+                if (!_gapFillerRegistry.TryGet(to, out var block) || block == null)
+                {
+                    Debug.LogWarning($"[FatherController] Push fallback: block not found in registry. cell={to}");
+                    _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Occupied, from, from, false);
+                    return;
+                }
+
+                if (!block.TryPush(dir))
+                {
+                    _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Occupied, from, from, false);
+                    return;
+                }
+
+                // 밀기 성공 후, Father가 들어갈 칸(to)은 비어 있어야 함
+                if (_grid.GetOcc(to) != E_Occupant.None)
+                {
+                    Debug.LogWarning($"[FatherController] Push fallback: to still occupied after push. cell={to}");
+                    _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Occupied, from, from, false);
+                    return;
+                }
+            }
+            else
+            {
+                _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Occupied, from, from, false);
+                return;
+            }
         }
 
         // 점유 갱신

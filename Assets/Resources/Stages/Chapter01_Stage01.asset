@@ -24,3 +24,8 @@ MonoBehaviour:
     _world: {x: 0, y: 0, z: 0}
   _blockedPathSteps: 14000000
   _transitionType: 1
+  _holeCells:
+  - {x: 3, y: 1}
+  - {x: 4, y: 1}
+  _gapFillerBlockCells:
+  - {x: 2, y: 1}

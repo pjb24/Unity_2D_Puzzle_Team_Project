@@ -34,7 +34,7 @@ public class BoardStateRewindable : MonoBehaviour, IRewindable
 
         return new BoardState
         {
-            _meta = _grid.CopyMetaArray()
+            _meta = _grid.CopyMetaArray(),
         };
     }
 

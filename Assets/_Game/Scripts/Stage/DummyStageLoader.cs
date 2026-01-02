@@ -19,6 +19,7 @@ public class DummyStageLoader : IStageLoader
 
     // Registry GameObject name (under StageRuntime root)
     private const string InteractRegistryName = "InteractRegistry";
+    private const string GapFillerRegistryName = "GapFillerBlockRegistry";
 
     public void LoadStage(GameFlowContext ctx, Action onComplete)
     {
@@ -292,7 +293,7 @@ public class DummyStageLoader : IStageLoader
         for (int y = h - 2; y >= 1; y--) AddCell(0, y);
     }
 
-    // ===== (6) 캐릭터 생성 + Initialize =====
+    // ===== (6) 캐릭터 생성 + Initialize + GapFiller =====
     private void SpawnDummyCharacters(GameFlowContext ctx)
     {
         if (ctx == null || ctx._stageRuntime == null || ctx._stageRuntime._root == null)
@@ -353,6 +354,130 @@ public class DummyStageLoader : IStageLoader
 
         var childCtrl = ctx._stageRuntime._childController;
         childCtrl.Initialize(pathRuntime, blocked, startPos: 0);
+
+        // Hole 적용 + 메움 블록 스폰/바인딩
+        ApplyHolesFromStageDef(ctx, stageDef);
+
+        var gapRegistry = EnsureGapFillerRegistry(ctx);
+        SpawnGapFillerBlocks(ctx, stageDef, gapRegistry);
+
+        if (fatherCtrl != null)
+            fatherCtrl.BindGapFillerRegistry(gapRegistry);
+        else
+            Debug.LogWarning("[StageLoader] GapFiller bind skipped (fallback): fatherCtrl is null.");
+    }
+
+    private void ApplyHolesFromStageDef(GameFlowContext ctx, StageDefinition stageDef)
+    {
+        if (ctx?._stageRuntime?._grid == null)
+        {
+            Debug.LogWarning("[StageLoader] ApplyHoles fallback: grid is null.");
+            return;
+        }
+
+        var holes = stageDef.GetHoleCells_Runtime();
+        if (holes == null || holes.Length == 0) return;
+
+        var grid = ctx._stageRuntime._grid;
+
+        for (int i = 0; i < holes.Length; i++)
+        {
+            var c = holes[i];
+            if (!grid.IsInBounds(c))
+            {
+                Debug.LogWarning($"[StageLoader] ApplyHoles fallback: out of bounds. cell={c}");
+                continue;
+            }
+
+            // 정적 지형이 막힘이면 Hole 금지(데이터가 잘못된 상태)
+            var cellType = grid.GetCell(c);
+            if (grid.IsBlockedCell(cellType) || cellType == E_CellType.Goal)
+            {
+                Debug.LogWarning($"[StageLoader] ApplyHoles fallback: invalid static cell for hole. cell={c} cellType={cellType}");
+                continue;
+            }
+
+            var meta = grid.GetMeta(c);
+            meta._surface = E_CellSurface.Hole;
+            grid.SetMeta(c, meta, notify: true);
+        }
+    }
+
+    private GapFillerBlockRegistry EnsureGapFillerRegistry(GameFlowContext ctx)
+    {
+        if (ctx == null || ctx._stageRuntime == null || ctx._stageRuntime._root == null)
+        {
+            Debug.LogWarning("[StageLoader] EnsureGapFillerRegistry fallback: runtime/root is null.");
+            return null;
+        }
+
+        var root = ctx._stageRuntime._root.transform;
+
+        var existing = root.GetComponentInChildren<GapFillerBlockRegistry>(includeInactive: true);
+        if (existing != null)
+            return existing;
+
+        var go = new GameObject(GapFillerRegistryName);
+        go.transform.SetParent(root, false);
+        return go.AddComponent<GapFillerBlockRegistry>();
+    }
+
+    private void SpawnGapFillerBlocks(GameFlowContext ctx, StageDefinition stageDef, GapFillerBlockRegistry gapRegistry)
+    {
+        if (ctx?._stageRuntime?._grid == null || ctx._stageRuntime._gridPresenter == null || ctx._stageRuntime._root == null)
+        {
+            Debug.LogWarning("[StageLoader] SpawnGapFillerBlocks fallback: grid/presenter/root is null.");
+            return;
+        }
+
+        if (gapRegistry == null)
+        {
+            Debug.LogWarning("[StageLoader] SpawnGapFillerBlocks fallback: gapRegistry is null.");
+            return;
+        }
+
+        var blocks = stageDef.GetGapFillerBlockCells_Runtime();
+        if (blocks == null || blocks.Length == 0) return;
+
+        var grid = ctx._stageRuntime._grid;
+        var presenter = ctx._stageRuntime._gridPresenter;
+        var parent = ctx._stageRuntime._root.transform;
+
+        for (int i = 0; i < blocks.Length; i++)
+        {
+            var c = blocks[i];
+            if (!grid.IsInBounds(c))
+            {
+                Debug.LogWarning($"[StageLoader] Block spawn fallback: out of bounds. cell={c}");
+                continue;
+            }
+
+            // Hole 위 스폰 금지
+            if (grid.GetMeta(c).IsHole)
+            {
+                Debug.LogWarning($"[StageLoader] Block spawn fallback: on Hole cell. cell={c}");
+                continue;
+            }
+
+            // 점유 중이면 스폰 금지
+            if (grid.GetOcc(c) != E_Occupant.None)
+            {
+                Debug.LogWarning($"[StageLoader] Block spawn fallback: occupied. cell={c} occ={grid.GetOcc(c)}");
+                continue;
+            }
+
+            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            go.name = $"GapFillerBlock({c.x},{c.y})";
+            go.transform.SetParent(parent, worldPositionStays: false);
+
+            // 보기용 크기
+            go.transform.localScale = Vector3.one * 0.85f;
+
+            EnsureRewindKey(go);
+
+            var ctrl = go.AddComponent<GapFillerBlockController>();
+            ctrl.Initialize(grid, presenter, gapRegistry, c);
+        }
     }
 
     private GameObject SpawnVisual(GameObject prefab, Sprite sprite, string name, Transform parent)

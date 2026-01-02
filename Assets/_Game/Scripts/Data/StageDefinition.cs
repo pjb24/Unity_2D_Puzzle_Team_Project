@@ -52,6 +52,9 @@ public class StageDefinition : ScriptableObject
     [Header("Transition")]
     [SerializeField] private E_StageTransitionType _transitionType = E_StageTransitionType.Fade;
 
+    [SerializeField] private Vector2Int[] _holeCells;
+    [SerializeField] private Vector2Int[] _gapFillerBlockCells;
+
     // ===== Public getters =====
     public string StageId => _stageId;
     public Vector2Int BoardSize => _boardSize;
@@ -61,6 +64,10 @@ public class StageDefinition : ScriptableObject
     public SpawnInfo ChildSpawn => _childSpawn;
     public IReadOnlyList<int> BlockedPathSteps => _blockedPathSteps;
     public E_StageTransitionType TransitionType => _transitionType;
+
+    // 런타임에서만 정제된 결과를 쓰도록 새 API 제공
+    public Vector2Int[] GetHoleCells_Runtime() => SanitizeCells(_holeCells, _boardSize, "[StageDefinition] HoleCells");
+    public Vector2Int[] GetGapFillerBlockCells_Runtime() => SanitizeCells(_gapFillerBlockCells, _boardSize, "[StageDefinition] GapFillerBlockCells");
 
     private void OnValidate()
     {
@@ -111,6 +118,45 @@ public class StageDefinition : ScriptableObject
                 if (n > 0 && s >= n) _blockedPathSteps[i] = n - 1;
             }
         }
+
+        // Inspector 편집 방해 금지: Remove/재할당 금지
+        ValidateCellsInBounds_NoRemove(_holeCells, _boardSize, "[StageDefinition] HoleCells");
+        ValidateCellsInBounds_NoRemove(_gapFillerBlockCells, _boardSize, "[StageDefinition] GapFillerBlockCells");
+
+        // 데이터 상호 모순은 Warning만
+        ValidateBlockOnHole_NoRemove();
+    }
+
+    private void ValidateCellsInBounds_NoRemove(Vector2Int[] arr, Vector2Int boardSize, string tag)
+    {
+        if (arr == null) return;
+
+        var set = new HashSet<Vector2Int>();
+        for (int i = 0; i < arr.Length; i++)
+        {
+            var c = arr[i];
+
+            // 범위 체크: Warning만
+            if ((uint)c.x >= (uint)boardSize.x || (uint)c.y >= (uint)boardSize.y)
+                Debug.LogWarning($"{tag} out of bounds. index={i} cell={c} boardSize={boardSize}", this);
+
+            // 중복 체크: Warning만
+            if (!set.Add(c))
+                Debug.LogWarning($"{tag} duplicated cell. index={i} cell={c}", this);
+        }
+    }
+
+    private void ValidateBlockOnHole_NoRemove()
+    {
+        if (_holeCells == null || _gapFillerBlockCells == null) return;
+
+        var holeSet = new HashSet<Vector2Int>(_holeCells);
+        for (int i = 0; i < _gapFillerBlockCells.Length; i++)
+        {
+            var c = _gapFillerBlockCells[i];
+            if (holeSet.Contains(c))
+                Debug.LogWarning($"[StageDefinition] GapFillerBlock on Hole (data conflict). index={i} cell={c}", this);
+        }
     }
 
     private void ValidateCellInBoard(Vector2Int cell, string label)
@@ -119,5 +165,35 @@ public class StageDefinition : ScriptableObject
         {
             Debug.LogWarning($"[StageDefinition] {label} out of board: {cell} ({name})", this);
         }
+    }
+
+    // 런타임 정제: out-of-bounds 제거 + 중복 제거 (원본 배열은 손대지 않음)
+    private static Vector2Int[] SanitizeCells(Vector2Int[] src, Vector2Int boardSize, string tag)
+    {
+        if (src == null || src.Length == 0) return System.Array.Empty<Vector2Int>();
+
+        var set = new HashSet<Vector2Int>();
+        var list = new List<Vector2Int>(src.Length);
+
+        for (int i = 0; i < src.Length; i++)
+        {
+            var c = src[i];
+
+            if ((uint)c.x >= (uint)boardSize.x || (uint)c.y >= (uint)boardSize.y)
+            {
+                Debug.LogWarning($"{tag} runtime sanitize: removed out of bounds. index={i} cell={c} boardSize={boardSize}");
+                continue;
+            }
+
+            if (!set.Add(c))
+            {
+                Debug.LogWarning($"{tag} runtime sanitize: removed duplicate. index={i} cell={c}");
+                continue;
+            }
+
+            list.Add(c);
+        }
+
+        return list.ToArray();
     }
 }
