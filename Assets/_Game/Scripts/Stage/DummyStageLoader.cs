@@ -1,5 +1,6 @@
 // DummyStageLoader.cs
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public interface IStageGimmickInitializable
@@ -20,6 +21,28 @@ public class DummyStageLoader : IStageLoader
     // Registry GameObject name (under StageRuntime root)
     private const string InteractRegistryName = "InteractRegistry";
     private const string GapFillerRegistryName = "GapFillerBlockRegistry";
+    private const string HolesRootName = "[Holes]";
+
+    // Sorting order (2D)
+    private const int Sorting_Tile = 0;
+    private const int Sorting_Hole = 1;
+    private const int Sorting_Path = 2;
+    private const int Sorting_Block = 3;
+    private const int Sorting_Character = 4;
+
+    // Colors (구분 가능)
+    private static readonly Color Color_Floor = new(0.85f, 0.85f, 0.85f, 1f);
+    private static readonly Color Color_Wall = new(0.15f, 0.15f, 0.15f, 1f);
+    private static readonly Color Color_Obstacle = new(0.35f, 0.35f, 0.35f, 1f);
+    private static readonly Color Color_Goal = new(0.25f, 1.00f, 0.25f, 1f);
+    private static readonly Color Color_Path = new(1.00f, 0.80f, 0.10f, 1f);
+    private static readonly Color Color_Father = new(0.10f, 0.80f, 1.00f, 1f);
+    private static readonly Color Color_Child = new(1.00f, 0.20f, 1.00f, 1f);
+    private static readonly Color Color_Block = new(0.70f, 0.40f, 0.10f, 1f);
+    private static readonly Color Color_Hole = new(0.05f, 0.05f, 0.05f, 1f);
+
+    private static Sprite _whiteSprite;
+    private static Texture2D _whiteTex;
 
     public void LoadStage(GameFlowContext ctx, Action onComplete)
     {
@@ -51,10 +74,10 @@ public class DummyStageLoader : IStageLoader
         var registry = EnsureInteractRegistry(ctx);
         ctx._stageRuntime._interactRegistry = registry;
 
-        // 4) 더미 보드 생성
+        // 4) 더미 보드 생성(2D Sprite)
         CreateDummyBoard(ctx, stageDef);
 
-        // 5) 테두리 경로 생성(더미 마커)
+        // 5) 테두리 경로 생성(2D Sprite 마커)
         CreateDummyPath(ctx, stageDef);
 
         // 6) 스폰(그리드/프리젠터/컨트롤러 포함)
@@ -71,7 +94,6 @@ public class DummyStageLoader : IStageLoader
         // 2) 보드/프리젠터 생성 후 기믹 Initialize
         InitializeGimmicks(ctx, registry);
 
-        // 3) InteractRegistry.RebuildFromScene()
         // 3) 씬에 존재하는 다수 Interactable 등록(프리팹 배치 + 런타임 생성 모두 커버)
         // - 런타임 생성 Interactable이 Initialize에서 Register를 안 해도 여기서 잡힘
         if (registry != null) registry.RebuildFromScene();
@@ -213,7 +235,7 @@ public class DummyStageLoader : IStageLoader
         return go.AddComponent<InteractRegistry>();
     }
 
-    // ===== (4) 보드 생성 =====
+    // ===== (4) 보드 생성 (2D Sprite) =====
     private void CreateDummyBoard(GameFlowContext ctx, StageDefinition stageDef)
     {
         if (ctx == null || ctx._stageRuntime == null || ctx._stageRuntime._root == null)
@@ -235,20 +257,45 @@ public class DummyStageLoader : IStageLoader
         {
             for (int x = 0; x < w; x++)
             {
-                var tile = GameObject.CreatePrimitive(PrimitiveType.Quad);
-                tile.name = $"Tile_{x}_{y}";
-                tile.transform.SetParent(tilesRoot.transform, false);
+                Color col = GetTileColor(stageDef, x, y);
 
                 Vector3 local = GetTileCenterLocal(stageDef, x, y);
-                tile.transform.localPosition = local;
-                tile.transform.localScale = Vector3.one * _tileSize;
+
+                var tile = CreateSpriteObject(
+                    name: $"Tile_{x}_{y}",
+                    parent: tilesRoot.transform,
+                    localPosition: local,
+                    localScale: Vector3.one * _tileSize,
+                    sprite: GetWhiteSprite(),
+                    color: col,
+                    sortingOrder: Sorting_Tile);
 
                 ctx._stageRuntime._tiles.Add(tile.transform);
             }
         }
     }
 
-    // ===== (5) 테두리 경로 생성 =====
+    private Color GetTileColor(StageDefinition stageDef, int x, int y)
+    {
+        int w = Mathf.Max(1, stageDef.BoardSize.x);
+        int h = Mathf.Max(1, stageDef.BoardSize.y);
+        int idx = y * w + x;
+
+        var cells = stageDef.Cells;
+        if (cells == null || cells.Length <= idx)
+            return Color_Floor;
+
+        return cells[idx] switch
+        {
+            E_CellType.Empty => Color_Floor,
+            E_CellType.Wall => Color_Wall,
+            E_CellType.Obstacle => Color_Obstacle,
+            E_CellType.Goal => Color_Goal,
+            _ => Color_Floor
+        };
+    }
+
+    // ===== (5) 테두리 경로 생성 (2D Sprite 마커) =====
     private void CreateDummyPath(GameFlowContext ctx, StageDefinition stageDef)
     {
         if (ctx == null || ctx._stageRuntime == null || ctx._stageRuntime._root == null)
@@ -276,11 +323,17 @@ public class DummyStageLoader : IStageLoader
             Vector3 local = GetTileCenterLocal(stageDef, x, y);
             ctx._stageRuntime._pathPoints.Add(ToWorld(ctx, local));
 
-            var marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            marker.name = $"Path_{x}_{y}";
-            marker.transform.SetParent(pathRoot.transform, false);
-            marker.transform.localPosition = local + Vector3.back * 0.1f;
-            marker.transform.localScale = Vector3.one * 0.2f;
+            var marker = CreateSpriteObject(
+                name: $"Path_{x}_{y}",
+                parent: pathRoot.transform,
+                localPosition: local,
+                localScale: Vector3.one * 0.22f,
+                sprite: GetWhiteSprite(),
+                color: Color_Path,
+                sortingOrder: Sorting_Path);
+
+            // 경로 마커는 타일 위에 올라오게(시각적)
+            marker.transform.localPosition = new Vector3(marker.transform.localPosition.x, marker.transform.localPosition.y, -0.05f);
         }
 
         // bottom (0,0) -> (w-1,0)
@@ -311,19 +364,23 @@ public class DummyStageLoader : IStageLoader
 
         var profile = ctx._chapterVisualProfile;
         if (profile == null)
-            Debug.LogWarning("[StageLoader] ChapterVisualProfile is null. Use primitive visuals (fallback).");
+            Debug.LogWarning("[StageLoader] ChapterVisualProfile is null. Use sprite fallback visuals.");
 
         // Father
-        ctx._stageRuntime._father = SpawnVisual(profile != null ? profile.FatherPrefab : null,
-                                               profile != null ? profile.FatherSprite : null,
-                                               "Father(Dummy)",
-                                               ctx._stageRuntime._root.transform);
+        ctx._stageRuntime._father = SpawnVisual(
+            prefab: profile != null ? profile.FatherPrefab : null,
+            sprite: profile != null ? profile.FatherSprite : null,
+            name: "Father(Dummy)",
+            parent: ctx._stageRuntime._root.transform,
+            fallbackColor: Color_Father);
 
         // Child
-        ctx._stageRuntime._child = SpawnVisual(profile != null ? profile.ChildPrefab : null,
-                                              profile != null ? profile.ChildSprite : null,
-                                              "Child(Dummy)",
-                                              ctx._stageRuntime._root.transform);
+        ctx._stageRuntime._child = SpawnVisual(
+            prefab: profile != null ? profile.ChildPrefab : null,
+            sprite: profile != null ? profile.ChildSprite : null,
+            name: "Child(Dummy)",
+            parent: ctx._stageRuntime._root.transform,
+            fallbackColor: Color_Child);
 
         // Grid 생성(Cells 배열 기반)
         int w = Mathf.Max(1, stageDef.BoardSize.x);
@@ -357,6 +414,7 @@ public class DummyStageLoader : IStageLoader
 
         // Hole 적용 + 메움 블록 스폰/바인딩
         ApplyHolesFromStageDef(ctx, stageDef);
+        EnsureHoleVisualLayer(ctx); // Hole 변화(메움/복원)도 화면에 반영
 
         var gapRegistry = EnsureGapFillerRegistry(ctx);
         SpawnGapFillerBlocks(ctx, stageDef, gapRegistry);
@@ -400,6 +458,73 @@ public class DummyStageLoader : IStageLoader
             var meta = grid.GetMeta(c);
             meta._surface = E_CellSurface.Hole;
             grid.SetMeta(c, meta, notify: true);
+        }
+    }
+
+    private void EnsureHoleVisualLayer(GameFlowContext ctx)
+    {
+        if (ctx?._stageRuntime?._root == null || ctx._stageRuntime._grid == null || ctx._stageRuntime._gridPresenter == null)
+        {
+            Debug.LogWarning("[StageLoader] EnsureHoleVisualLayer fallback: root/grid/presenter is null.");
+            return;
+        }
+
+        var root = ctx._stageRuntime._root.transform;
+        var existing = root.Find(HolesRootName);
+        if (existing != null) return; // 중복 생성 방지
+
+        int w = ctx._stageRuntime._grid._w;
+        int h = ctx._stageRuntime._grid._h;
+
+        var holesRoot = new GameObject(HolesRootName);
+        holesRoot.transform.SetParent(root, false);
+
+        // 인덱스로 빠르게 접근 (딕셔너리지만 셀 수가 작아서 충분)
+        var map = new Dictionary<int, SpriteRenderer>(w * h);
+
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                int idx = y * w + x;
+                var cell = new Vector2Int(x, y);
+
+                Vector3 world = ctx._stageRuntime._gridPresenter.CellToWorld(cell);
+                var go = new GameObject($"Hole_{x}_{y}");
+                go.transform.SetParent(holesRoot.transform, false);
+                go.transform.position = new Vector3(world.x, world.y, -0.02f);
+
+                var sr = go.AddComponent<SpriteRenderer>();
+                sr.sprite = GetWhiteSprite();
+                sr.color = Color_Hole;
+                sr.sortingOrder = Sorting_Hole;
+                go.transform.localScale = Vector3.one * 0.92f;
+
+                // 초기 비활성(아래에서 Refresh)
+                sr.enabled = false;
+
+                map[idx] = sr;
+            }
+        }
+
+        // meta 변경에 따라 표시 갱신
+        ctx._stageRuntime._grid.AddListenerOnMetaChanged((cell, meta) =>
+        {
+            int idx = cell.y * w + cell.x;
+            if (!map.TryGetValue(idx, out var sr)) return;
+            sr.enabled = meta.IsHole;
+        });
+
+        // 초기 상태 반영
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                var cell = new Vector2Int(x, y);
+                int idx = y * w + x;
+                if (!map.TryGetValue(idx, out var sr)) continue;
+                sr.enabled = ctx._stageRuntime._grid.GetMeta(cell).IsHole;
+            }
         }
     }
 
@@ -466,12 +591,19 @@ public class DummyStageLoader : IStageLoader
                 continue;
             }
 
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            go.name = $"GapFillerBlock({c.x},{c.y})";
-            go.transform.SetParent(parent, worldPositionStays: false);
+            // 2D Sprite 블록
+            var go = CreateSpriteObject(
+                name: $"GapFillerBlock({c.x},{c.y})",
+                parent: parent,
+                localPosition: Vector3.zero,
+                localScale: Vector3.one * 0.85f,
+                sprite: GetWhiteSprite(),
+                color: Color_Block,
+                sortingOrder: Sorting_Block);
 
-            // 보기용 크기
-            go.transform.localScale = Vector3.one * 0.85f;
+            // 시각상 셀 위치로 이동(컨트롤러가 SnapToCell도 수행)
+            go.transform.position = presenter.CellToWorld(c) + Vector3.up * 0.9f;
+            go.transform.position = new Vector3(go.transform.position.x, go.transform.position.y, -0.01f);
 
             EnsureRewindKey(go);
 
@@ -480,7 +612,7 @@ public class DummyStageLoader : IStageLoader
         }
     }
 
-    private GameObject SpawnVisual(GameObject prefab, Sprite sprite, string name, Transform parent)
+    private GameObject SpawnVisual(GameObject prefab, Sprite sprite, string name, Transform parent, Color fallbackColor)
     {
         GameObject go;
 
@@ -491,17 +623,19 @@ public class DummyStageLoader : IStageLoader
             return go;
         }
 
-        Debug.LogWarning($"[StageLoader] {name} prefab missing. Create primitive (fallback).");
-        go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        go.name = name;
+        Debug.LogWarning($"[StageLoader] {name} prefab missing. Create 2D sprite (fallback).");
+
+        go = new GameObject(name);
         go.transform.SetParent(parent, true);
 
-        if (sprite != null)
-        {
-            var sr = go.GetComponent<SpriteRenderer>();
-            if (sr == null) sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = sprite;
-        }
+        var sr = go.GetComponent<SpriteRenderer>();
+        if (sr == null) sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = sprite != null ? sprite : GetWhiteSprite();
+        sr.color = fallbackColor;
+        sr.sortingOrder = Sorting_Character;
+
+        // 기본 크기(프로필 프리팹 없을 때만)
+        go.transform.localScale = Vector3.one * 0.85f;
 
         return go;
     }
@@ -552,5 +686,40 @@ public class DummyStageLoader : IStageLoader
     {
         // StageRuntime root 기준 로컬 좌표를 월드로 변환
         return ctx._stageRuntime._root.transform.TransformPoint(localInRoot);
+    }
+
+    private static GameObject CreateSpriteObject(
+        string name,
+        Transform parent,
+        Vector3 localPosition,
+        Vector3 localScale,
+        Sprite sprite,
+        Color color,
+        int sortingOrder)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = localPosition;
+        go.transform.localScale = localScale;
+
+        var sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = sprite != null ? sprite : GetWhiteSprite();
+        sr.color = color;
+        sr.sortingOrder = sortingOrder;
+
+        return go;
+    }
+
+    private static Sprite GetWhiteSprite()
+    {
+        if (_whiteSprite != null) return _whiteSprite;
+
+        _whiteTex = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+        _whiteTex.SetPixel(0, 0, Color.white);
+        _whiteTex.Apply();
+
+        _whiteSprite = Sprite.Create(_whiteTex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1f);
+        _whiteSprite.name = "RuntimeWhiteSprite";
+        return _whiteSprite;
     }
 }

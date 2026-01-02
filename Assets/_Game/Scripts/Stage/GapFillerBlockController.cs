@@ -19,6 +19,8 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
     [SerializeField] private Vector2Int _cell;
     [SerializeField] private bool _isAlive = true;
 
+    private SpriteRenderer _sr;
+
     public Vector2Int Cell => _cell;
     public bool IsAlive => _isAlive;
 
@@ -33,6 +35,8 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
             Debug.LogWarning("[GapFillerBlock] Initialize fallback: grid/presenter is null.");
             return;
         }
+
+        _sr = Proto2DVisual.EnsureSpriteRenderer(gameObject, (int)E_ProtoSort.Actor, Proto2DVisual.GapBlock);
 
         _cell = spawnCell;
 
@@ -87,7 +91,7 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
         if (occ != E_Occupant.None)
             return false;
 
-        // Hole이면: 블록 소멸 + Hole -> Floor
+        // Hole이면: 블록 소멸 + Hole -> Floor(타일색 갱신)
         var meta = _grid.GetMeta(to);
         if (meta.IsHole)
         {
@@ -95,6 +99,8 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
 
             meta._surface = E_CellSurface.Normal;
             _grid.SetMeta(to, meta, notify: true);
+
+            _presenter.RefreshTile(_grid, to); // 색 즉시 반영
 
             _registry?.Unregister(from, this);
 
@@ -164,6 +170,8 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
 
         _cell = newCell;
         _isAlive = s._isAlive;
+
+        _sr = Proto2DVisual.EnsureSpriteRenderer(gameObject, (int)E_ProtoSort.Actor, Proto2DVisual.GapBlock);
 
         if (_isAlive)
         {
