@@ -2,8 +2,10 @@
 ///
 /// 표현 레이어: “월드 좌표 ↔ 셀” 변환 규칙 고정
 /// DummyStageLoader가 타일을 “중앙 정렬 + tileSize”로 깔고 있다.
+/// 타일 생성 파이프라인을 GridPresenter.BuildTiles() 하나로 통일
 ///
 
+using System.Collections.Generic;
 using UnityEngine;
 
 public class GridPresenter
@@ -15,6 +17,10 @@ public class GridPresenter
     private readonly int _h;
 
     private readonly SpriteRenderer[] _tileRenderers;
+
+    private Transform _tilesRoot;
+    private BoardGrid _boundGrid;
+    private System.Action<Vector2Int, CellMeta> _metaListener;
 
     public GridPresenter(Transform root, int w, int h, float tileSize)
     {
@@ -36,16 +42,30 @@ public class GridPresenter
         return _root.TransformPoint(local);
     }
 
-    public void BuildTiles(BoardGrid grid)
+    public Transform BuildTiles(BoardGrid grid, List<Transform> outTiles = null)
     {
         if (grid == null)
         {
             Debug.LogWarning("[GridPresenter] BuildTiles fallback: grid is null.");
-            return;
+            return null;
         }
 
-        var tilesRoot = new GameObject("[Tiles2D]");
-        tilesRoot.transform.SetParent(_root, false);
+        // 기존 바인딩 정리
+        UnbindMetaListener();
+
+        // 기존 타일 루트가 있으면 제거(중복 방지)
+        if (_tilesRoot != null)
+        {
+            Debug.LogWarning("[GridPresenter] BuildTiles: previous tilesRoot exists. Destroy and rebuild.");
+            Object.Destroy(_tilesRoot.gameObject);
+            _tilesRoot = null;
+        }
+
+        var goRoot = new GameObject("[Tiles]");
+        goRoot.transform.SetParent(_root, false);
+        _tilesRoot = goRoot.transform;
+
+        if (outTiles != null) outTiles.Clear();
 
         for (int y = 0; y < _h; y++)
         {
@@ -56,7 +76,7 @@ public class GridPresenter
 
                 var go = Proto2DVisual.CreateSpriteObject(
                     name: $"Tile({x},{y})",
-                    parent: tilesRoot.transform,
+                    parent: _tilesRoot,
                     sortingOrder: (int)E_ProtoSort.Tile,
                     color: Proto2DVisual.TileFloor,
                     localScale: new Vector3(_tileSize, _tileSize, 1f)
@@ -66,9 +86,14 @@ public class GridPresenter
 
                 _tileRenderers[idx] = go.GetComponent<SpriteRenderer>();
 
+                outTiles?.Add(go.transform);
+
                 RefreshTile(grid, cell);
             }
         }
+
+        BindMetaListener(grid);
+        return _tilesRoot;
     }
 
     public void RefreshTile(BoardGrid grid, Vector2Int cell)
@@ -98,6 +123,7 @@ public class GridPresenter
         Color baseColor = cellType switch
         {
             E_CellType.Wall => Proto2DVisual.TileWall,
+            E_CellType.Obstacle => Proto2DVisual.TileObstacle,
             E_CellType.Goal => Proto2DVisual.TileGoal,
             _ => Proto2DVisual.TileFloor
         };
@@ -108,5 +134,27 @@ public class GridPresenter
             sr.color = Proto2DVisual.TileHole;
         else
             sr.color = baseColor;
+    }
+
+    private void BindMetaListener(BoardGrid grid)
+    {
+        _boundGrid = grid;
+
+        _metaListener = (cell, meta) =>
+        {
+            // cell만 갱신
+            RefreshTile(_boundGrid, cell);
+        };
+
+        _boundGrid.AddListenerOnMetaChanged(_metaListener);
+    }
+
+    private void UnbindMetaListener()
+    {
+        if (_boundGrid != null && _metaListener != null)
+            _boundGrid.RemoveListenerOnMetaChanged(_metaListener);
+
+        _boundGrid = null;
+        _metaListener = null;
     }
 }

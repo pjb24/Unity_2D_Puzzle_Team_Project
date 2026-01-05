@@ -23,6 +23,7 @@ public static class Proto2DVisual
     // ===== 색상 규칙(구분용) =====
     public static readonly Color TileFloor = new Color(0.85f, 0.85f, 0.85f, 1f);
     public static readonly Color TileWall = new Color(0.20f, 0.20f, 0.20f, 1f);
+    public static readonly Color TileObstacle = new Color(0.35f, 0.35f, 0.35f, 1f); // 추가
     public static readonly Color TileGoal = new Color(1.00f, 0.85f, 0.20f, 1f);
     public static readonly Color TileHole = new Color(0.05f, 0.05f, 0.05f, 1f);
 

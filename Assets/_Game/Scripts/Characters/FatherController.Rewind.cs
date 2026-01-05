@@ -63,7 +63,7 @@ public partial class FatherController : IRewindable
         Cell = to;
         Facing = s._facing;
 
-        transform.position = _presenter.CellToWorld(Cell) + Vector3.up * 0.9f;
+        transform.position = _presenter.CellToWorld(Cell);
         ApplyFacingVisual();
     }
 }

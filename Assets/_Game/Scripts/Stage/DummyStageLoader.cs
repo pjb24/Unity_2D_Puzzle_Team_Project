@@ -46,64 +46,32 @@ public class DummyStageLoader : IStageLoader
 
     public void LoadStage(GameFlowContext ctx, Action onComplete)
     {
-        if (ctx == null)
-        {
-            Debug.LogWarning("[StageLoader] LoadStage fallback: ctx is null.");
-            return;
-        }
+        if (!ValidateLoadContext(ctx)) return;
 
         // 1) 이전 스테이지 정리
         UnloadStage(ctx);
 
         // 2) StageDefinition 가져오기
-        var stageDef = ctx._config.GetStageDefinition(ctx._chapterIndex, ctx._stageIndex);
-        if (stageDef == null)
-        {
-            Debug.LogError("[StageLoader] StageDefinition is null");
-            return;
-        }
+        var stageDef = GetStageDefinitionOrFail(ctx);
+        if (stageDef == null) return;
 
         Debug.Log("[StageLoader] Chapter: " + ctx._chapterIndex + " , Stage: " + ctx._stageIndex);
 
         // 3) 런타임 refs 생성
-        ctx._stageRuntime = new StageRuntimeRefs();
-        ctx._stageRuntime._root = new GameObject($"[StageRuntime] C{ctx._chapterIndex}_S{ctx._stageIndex}");
-        ctx._stageDefinition = stageDef;
+        CreateStageRuntime(ctx, stageDef);
 
         // 3.1) InteractRegistry 생성(루트 하위)
         var registry = EnsureInteractRegistry(ctx);
         ctx._stageRuntime._interactRegistry = registry;
 
-        // 4) 더미 보드 생성(2D Sprite)
-        CreateDummyBoard(ctx, stageDef);
-
         // 5) 테두리 경로 생성(2D Sprite 마커)
         CreateDummyPath(ctx, stageDef);
 
         // 6) 스폰(그리드/프리젠터/컨트롤러 포함)
-        // 6) Father/Child 생성 + 초기화
-        SpawnDummyCharacters(ctx);
-
-        // 6.1) Father에 InteractPort 주입
-        BindFatherInteractPort(ctx, registry);
+        SpawnStageActorsAndSystems(ctx, stageDef, registry);
 
         // ---- (0-5) 기믹 초기화 파이프라인 ----
-        // 1) BoardStateRewindable 추가(보드 자체 변화 복원)
-        EnsureBoardStateRewindable(ctx, registry);
-
-        // 2) 보드/프리젠터 생성 후 기믹 Initialize
-        InitializeGimmicks(ctx, registry);
-
-        // 3) 씬에 존재하는 다수 Interactable 등록(프리팹 배치 + 런타임 생성 모두 커버)
-        // - 런타임 생성 Interactable이 Initialize에서 Register를 안 해도 여기서 잡힘
-        if (registry != null) registry.RebuildFromScene();
-        else Debug.LogWarning("[StageLoader] Registry rebuild skipped (fallback): registry is null.");
-
-        // 4) 링크(스위치→문 등) 바인딩
-        BindLinks(ctx);
-
-        // 5) TurnSystem(ITurnTickable) 수집
-        CollectTurnSystems(ctx);
+        RunPostSpawnPipeline(ctx, registry);
 
         onComplete?.Invoke();
     }
@@ -123,6 +91,169 @@ public class DummyStageLoader : IStageLoader
 
             ctx._stageRuntime = null;
         }
+    }
+
+    private bool ValidateLoadContext(GameFlowContext ctx)
+    {
+        if (ctx == null)
+        {
+            Debug.LogWarning("[StageLoader] LoadStage fallback: ctx is null.");
+            return false;
+        }
+
+        if (ctx._config == null)
+        {
+            Debug.LogError("[StageLoader] LoadStage failed: ctx._config is null.");
+            return false;
+        }
+
+        return true;
+    }
+
+    private StageDefinition GetStageDefinitionOrFail(GameFlowContext ctx)
+    {
+        var stageDef = ctx._config.GetStageDefinition(ctx._chapterIndex, ctx._stageIndex);
+        if (stageDef == null)
+        {
+            Debug.LogError("[StageLoader] StageDefinition is null");
+            return null;
+        }
+        return stageDef;
+    }
+
+    private void CreateStageRuntime(GameFlowContext ctx, StageDefinition stageDef)
+    {
+        ctx._stageRuntime = new StageRuntimeRefs();
+        ctx._stageRuntime._root = new GameObject($"[StageRuntime] C{ctx._chapterIndex}_S{ctx._stageIndex}");
+        ctx._stageDefinition = stageDef;
+    }
+
+    // ===== (6) 캐릭터 생성 + Initialize + GapFiller =====
+    private void SpawnStageActorsAndSystems(GameFlowContext ctx, StageDefinition stageDef, InteractRegistry registry)
+    {
+        var profile = ctx._chapterVisualProfile;
+        if (profile == null)
+            Debug.LogWarning("[StageLoader] ChapterVisualProfile is null. Use sprite fallback visuals.");
+
+        // 6) Father/Child 생성 + 초기화
+        SpawnActorVisuals(ctx, profile);
+        // ===== (4) 보드 생성 (2D Sprite) =====
+        BuildGridAndTiles(ctx, stageDef);
+        InitializeControllers(ctx, stageDef);
+
+        // 6.1) Father에 InteractPort 주입
+        BindFatherInteractPort(ctx, registry);
+
+        // Hole 적용 + 메움 블록 스폰/바인딩
+        ApplyHolesFromStageDef(ctx, stageDef);
+        EnsureHoleVisualLayer(ctx); // Hole 변화(메움/복원)도 화면에 반영
+
+        var gapRegistry = EnsureGapFillerRegistry(ctx);
+        SpawnGapFillerBlocks(ctx, stageDef, gapRegistry);
+        BindGapFillerToFather(ctx, gapRegistry);
+    }
+
+    private void RunPostSpawnPipeline(GameFlowContext ctx, InteractRegistry registry)
+    {
+        // 1) BoardStateRewindable 추가(보드 자체 변화 복원)
+        EnsureBoardStateRewindable(ctx, registry);
+        // 2) 보드/프리젠터 생성 후 기믹 Initialize
+        InitializeGimmicks(ctx, registry);
+
+        // 3) 씬에 존재하는 다수 Interactable 등록(프리팹 배치 + 런타임 생성 모두 커버)
+        // - 런타임 생성 Interactable이 Initialize에서 Register를 안 해도 여기서 잡힘
+        if (registry != null) registry.RebuildFromScene();
+        else Debug.LogWarning("[StageLoader] Registry rebuild skipped (fallback): registry is null.");
+
+        // 4) 링크(스위치→문 등) 바인딩
+        BindLinks(ctx);
+        // 5) TurnSystem(ITurnTickable) 수집
+        CollectTurnSystems(ctx);
+    }
+
+    private void SpawnActorVisuals(GameFlowContext ctx, ChapterVisualProfile profile)
+    {
+        // Father
+        ctx._stageRuntime._father = SpawnVisual(
+            prefab: profile != null ? profile.FatherPrefab : null,
+            sprite: profile != null ? profile.FatherSprite : null,
+            name: "Father(Dummy)",
+            parent: ctx._stageRuntime._root.transform,
+            fallbackColor: Color_Father);
+
+        // Child
+        ctx._stageRuntime._child = SpawnVisual(
+            prefab: profile != null ? profile.ChildPrefab : null,
+            sprite: profile != null ? profile.ChildSprite : null,
+            name: "Child(Dummy)",
+            parent: ctx._stageRuntime._root.transform,
+            fallbackColor: Color_Child);
+    }
+
+    // ===== (4) 보드 생성 (2D Sprite) =====
+    private void BuildGridAndTiles(GameFlowContext ctx, StageDefinition stageDef)
+    {
+        // Grid 생성(Cells 배열 기반)
+        int w = Mathf.Max(1, stageDef.BoardSize.x);
+        int h = Mathf.Max(1, stageDef.BoardSize.y);
+
+        ctx._stageRuntime._grid = new BoardGrid(w, h, stageDef.Cells);
+        ctx._stageRuntime._gridPresenter = new GridPresenter(ctx._stageRuntime._root.transform, w, h, _tileSize);
+
+        // ===== 타일 생성 =====
+        ctx._stageRuntime._tilesRoot = ctx._stageRuntime._gridPresenter.BuildTiles(ctx._stageRuntime._grid, ctx._stageRuntime._tiles);
+        if (ctx._stageRuntime._tilesRoot == null)
+            Debug.LogWarning("[StageLoader] Tiles build skipped (fallback): tilesRoot is null.");
+    }
+
+    private void InitializeControllers(GameFlowContext ctx, StageDefinition stageDef)
+    {
+        // FatherController 부착 + 초기화
+        ctx._stageRuntime._fatherController = EnsureController<FatherController>(ctx._stageRuntime._father);
+        EnsureRewindKey(ctx._stageRuntime._father);
+
+        ctx._stageRuntime._fatherController.Initialize(
+            ctx._stageRuntime._grid,
+            ctx._stageRuntime._gridPresenter,
+            stageDef.FatherSpawn._cell);
+
+        // ChildController 부착 + 초기화
+        ctx._stageRuntime._childController = EnsureController<ChildController>(ctx._stageRuntime._child);
+        EnsureRewindKey(ctx._stageRuntime._child);
+
+        // ChildPathRuntime 생성
+        var pathRuntime = new ChildPathRuntime(ctx._stageRuntime._grid, ctx._stageRuntime._gridPresenter);
+        // blocked steps: StageDefinition에 추가한 BlockedPathSteps 사용
+        var blocked = stageDef.BlockedPathSteps; // IReadOnlyList<int>
+
+        ctx._stageRuntime._childController.Initialize(pathRuntime, blocked, startPos: 0);
+    }
+
+    private T EnsureController<T>(GameObject go) where T : MonoBehaviour
+    {
+        if (go == null) return null;
+
+        var c = go.GetComponent<T>();
+        if (c == null) c = go.AddComponent<T>();
+        return c;
+    }
+
+    private void BindGapFillerToFather(GameFlowContext ctx, GapFillerBlockRegistry gapRegistry)
+    {
+        var fatherCtrl = ctx?._stageRuntime?._fatherController;
+        if (fatherCtrl == null)
+        {
+            Debug.LogWarning("[StageLoader] GapFiller bind skipped (fallback): fatherCtrl is null.");
+            return;
+        }
+
+        if (gapRegistry == null)
+        {
+            Debug.LogWarning("[StageLoader] GapFiller bind skipped (fallback): gapRegistry is null.");
+            return;
+        }
+
+        fatherCtrl.BindGapFillerRegistry(gapRegistry);
     }
 
     // ---- helpers ----
@@ -235,64 +366,23 @@ public class DummyStageLoader : IStageLoader
         return go.AddComponent<InteractRegistry>();
     }
 
-    // ===== (4) 보드 생성 (2D Sprite) =====
-    private void CreateDummyBoard(GameFlowContext ctx, StageDefinition stageDef)
+    private GapFillerBlockRegistry EnsureGapFillerRegistry(GameFlowContext ctx)
     {
         if (ctx == null || ctx._stageRuntime == null || ctx._stageRuntime._root == null)
         {
-            Debug.LogWarning("[StageLoader] CreateDummyBoard fallback: runtime/root is null.");
-            return;
+            Debug.LogWarning("[StageLoader] EnsureGapFillerRegistry fallback: runtime/root is null.");
+            return null;
         }
 
-        int w = Mathf.Max(1, stageDef.BoardSize.x);
-        int h = Mathf.Max(1, stageDef.BoardSize.y);
+        var root = ctx._stageRuntime._root.transform;
 
-        var tilesRoot = new GameObject("[Tiles]");
-        tilesRoot.transform.SetParent(ctx._stageRuntime._root.transform, false);
-        ctx._stageRuntime._tilesRoot = tilesRoot.transform;
+        var existing = root.GetComponentInChildren<GapFillerBlockRegistry>(includeInactive: true);
+        if (existing != null)
+            return existing;
 
-        ctx._stageRuntime._tiles.Clear();
-
-        for (int y = 0; y < h; y++)
-        {
-            for (int x = 0; x < w; x++)
-            {
-                Color col = GetTileColor(stageDef, x, y);
-
-                Vector3 local = GetTileCenterLocal(stageDef, x, y);
-
-                var tile = CreateSpriteObject(
-                    name: $"Tile_{x}_{y}",
-                    parent: tilesRoot.transform,
-                    localPosition: local,
-                    localScale: Vector3.one * _tileSize,
-                    sprite: GetWhiteSprite(),
-                    color: col,
-                    sortingOrder: Sorting_Tile);
-
-                ctx._stageRuntime._tiles.Add(tile.transform);
-            }
-        }
-    }
-
-    private Color GetTileColor(StageDefinition stageDef, int x, int y)
-    {
-        int w = Mathf.Max(1, stageDef.BoardSize.x);
-        int h = Mathf.Max(1, stageDef.BoardSize.y);
-        int idx = y * w + x;
-
-        var cells = stageDef.Cells;
-        if (cells == null || cells.Length <= idx)
-            return Color_Floor;
-
-        return cells[idx] switch
-        {
-            E_CellType.Empty => Color_Floor,
-            E_CellType.Wall => Color_Wall,
-            E_CellType.Obstacle => Color_Obstacle,
-            E_CellType.Goal => Color_Goal,
-            _ => Color_Floor
-        };
+        var go = new GameObject(GapFillerRegistryName);
+        go.transform.SetParent(root, false);
+        return go.AddComponent<GapFillerBlockRegistry>();
     }
 
     // ===== (5) 테두리 경로 생성 (2D Sprite 마커) =====
@@ -346,85 +436,6 @@ public class DummyStageLoader : IStageLoader
         for (int y = h - 2; y >= 1; y--) AddCell(0, y);
     }
 
-    // ===== (6) 캐릭터 생성 + Initialize + GapFiller =====
-    private void SpawnDummyCharacters(GameFlowContext ctx)
-    {
-        if (ctx == null || ctx._stageRuntime == null || ctx._stageRuntime._root == null)
-        {
-            Debug.LogWarning("[StageLoader] SpawnDummyCharacters fallback: runtime/root is null.");
-            return;
-        }
-
-        var stageDef = ctx._stageDefinition;
-        if (stageDef == null)
-        {
-            Debug.LogWarning("[StageLoader] SpawnDummyCharacters fallback: stageDef is null.");
-            return;
-        }
-
-        var profile = ctx._chapterVisualProfile;
-        if (profile == null)
-            Debug.LogWarning("[StageLoader] ChapterVisualProfile is null. Use sprite fallback visuals.");
-
-        // Father
-        ctx._stageRuntime._father = SpawnVisual(
-            prefab: profile != null ? profile.FatherPrefab : null,
-            sprite: profile != null ? profile.FatherSprite : null,
-            name: "Father(Dummy)",
-            parent: ctx._stageRuntime._root.transform,
-            fallbackColor: Color_Father);
-
-        // Child
-        ctx._stageRuntime._child = SpawnVisual(
-            prefab: profile != null ? profile.ChildPrefab : null,
-            sprite: profile != null ? profile.ChildSprite : null,
-            name: "Child(Dummy)",
-            parent: ctx._stageRuntime._root.transform,
-            fallbackColor: Color_Child);
-
-        // Grid 생성(Cells 배열 기반)
-        int w = Mathf.Max(1, stageDef.BoardSize.x);
-        int h = Mathf.Max(1, stageDef.BoardSize.y);
-        ctx._stageRuntime._grid = new BoardGrid(w, h, stageDef.Cells);
-        ctx._stageRuntime._gridPresenter = new GridPresenter(ctx._stageRuntime._root.transform, w, h, _tileSize);
-
-        // FatherController 부착 + 초기화
-        ctx._stageRuntime._fatherController = ctx._stageRuntime._father.GetComponent<FatherController>();
-        EnsureRewindKey(ctx._stageRuntime._father);
-        if (ctx._stageRuntime._fatherController == null)
-            ctx._stageRuntime._fatherController = ctx._stageRuntime._father.AddComponent<FatherController>();
-
-        var fatherCtrl = ctx._stageRuntime._fatherController;
-        fatherCtrl.Initialize(ctx._stageRuntime._grid, ctx._stageRuntime._gridPresenter, stageDef.FatherSpawn._cell);
-
-        // ChildPathRuntime 생성
-        var pathRuntime = new ChildPathRuntime(ctx._stageRuntime._grid, ctx._stageRuntime._gridPresenter);
-
-        // blocked steps: StageDefinition에 추가한 BlockedPathSteps 사용
-        var blocked = stageDef.BlockedPathSteps; // IReadOnlyList<int>
-
-        // ChildController 부착 + 초기화
-        ctx._stageRuntime._childController = ctx._stageRuntime._child.GetComponent<ChildController>();
-        EnsureRewindKey(ctx._stageRuntime._child);
-        if (ctx._stageRuntime._childController == null)
-            ctx._stageRuntime._childController = ctx._stageRuntime._child.AddComponent<ChildController>();
-
-        var childCtrl = ctx._stageRuntime._childController;
-        childCtrl.Initialize(pathRuntime, blocked, startPos: 0);
-
-        // Hole 적용 + 메움 블록 스폰/바인딩
-        ApplyHolesFromStageDef(ctx, stageDef);
-        EnsureHoleVisualLayer(ctx); // Hole 변화(메움/복원)도 화면에 반영
-
-        var gapRegistry = EnsureGapFillerRegistry(ctx);
-        SpawnGapFillerBlocks(ctx, stageDef, gapRegistry);
-
-        if (fatherCtrl != null)
-            fatherCtrl.BindGapFillerRegistry(gapRegistry);
-        else
-            Debug.LogWarning("[StageLoader] GapFiller bind skipped (fallback): fatherCtrl is null.");
-    }
-
     private void ApplyHolesFromStageDef(GameFlowContext ctx, StageDefinition stageDef)
     {
         if (ctx?._stageRuntime?._grid == null)
@@ -473,11 +484,21 @@ public class DummyStageLoader : IStageLoader
         var existing = root.Find(HolesRootName);
         if (existing != null) return; // 중복 생성 방지
 
-        int w = ctx._stageRuntime._grid._w;
-        int h = ctx._stageRuntime._grid._h;
+        var grid = ctx._stageRuntime._grid;
+        var presenter = ctx._stageRuntime._gridPresenter;
 
         var holesRoot = new GameObject(HolesRootName);
         holesRoot.transform.SetParent(root, false);
+
+        var map = BuildHoleRenderersMap(holesRoot.transform, grid, presenter);
+        SubscribeHoleVisualUpdates(grid, map);
+        RefreshHoleVisualsAll(grid, map);
+    }
+
+    private Dictionary<int, SpriteRenderer> BuildHoleRenderersMap(Transform holesRoot, BoardGrid grid, GridPresenter presenter)
+    {
+        int w = grid._w;
+        int h = grid._h;
 
         // 인덱스로 빠르게 접근 (딕셔너리지만 셀 수가 작아서 충분)
         var map = new Dictionary<int, SpriteRenderer>(w * h);
@@ -489,17 +510,17 @@ public class DummyStageLoader : IStageLoader
                 int idx = y * w + x;
                 var cell = new Vector2Int(x, y);
 
-                Vector3 world = ctx._stageRuntime._gridPresenter.CellToWorld(cell);
+                Vector3 world = presenter.CellToWorld(cell);
+
                 var go = new GameObject($"Hole_{x}_{y}");
-                go.transform.SetParent(holesRoot.transform, false);
+                go.transform.SetParent(holesRoot, false);
                 go.transform.position = new Vector3(world.x, world.y, -0.02f);
+                go.transform.localScale = Vector3.one * 0.92f;
 
                 var sr = go.AddComponent<SpriteRenderer>();
                 sr.sprite = GetWhiteSprite();
                 sr.color = Color_Hole;
                 sr.sortingOrder = Sorting_Hole;
-                go.transform.localScale = Vector3.one * 0.92f;
-
                 // 초기 비활성(아래에서 Refresh)
                 sr.enabled = false;
 
@@ -507,13 +528,26 @@ public class DummyStageLoader : IStageLoader
             }
         }
 
+        return map;
+    }
+
+    private void SubscribeHoleVisualUpdates(BoardGrid grid, Dictionary<int, SpriteRenderer> map)
+    {
+        int w = grid._w;
+
         // meta 변경에 따라 표시 갱신
-        ctx._stageRuntime._grid.AddListenerOnMetaChanged((cell, meta) =>
+        grid.AddListenerOnMetaChanged((cell, meta) =>
         {
             int idx = cell.y * w + cell.x;
             if (!map.TryGetValue(idx, out var sr)) return;
             sr.enabled = meta.IsHole;
         });
+    }
+
+    private void RefreshHoleVisualsAll(BoardGrid grid, Dictionary<int, SpriteRenderer> map)
+    {
+        int w = grid._w;
+        int h = grid._h;
 
         // 초기 상태 반영
         for (int y = 0; y < h; y++)
@@ -522,29 +556,11 @@ public class DummyStageLoader : IStageLoader
             {
                 var cell = new Vector2Int(x, y);
                 int idx = y * w + x;
+
                 if (!map.TryGetValue(idx, out var sr)) continue;
-                sr.enabled = ctx._stageRuntime._grid.GetMeta(cell).IsHole;
+                sr.enabled = grid.GetMeta(cell).IsHole;
             }
         }
-    }
-
-    private GapFillerBlockRegistry EnsureGapFillerRegistry(GameFlowContext ctx)
-    {
-        if (ctx == null || ctx._stageRuntime == null || ctx._stageRuntime._root == null)
-        {
-            Debug.LogWarning("[StageLoader] EnsureGapFillerRegistry fallback: runtime/root is null.");
-            return null;
-        }
-
-        var root = ctx._stageRuntime._root.transform;
-
-        var existing = root.GetComponentInChildren<GapFillerBlockRegistry>(includeInactive: true);
-        if (existing != null)
-            return existing;
-
-        var go = new GameObject(GapFillerRegistryName);
-        go.transform.SetParent(root, false);
-        return go.AddComponent<GapFillerBlockRegistry>();
     }
 
     private void SpawnGapFillerBlocks(GameFlowContext ctx, StageDefinition stageDef, GapFillerBlockRegistry gapRegistry)
@@ -602,7 +618,7 @@ public class DummyStageLoader : IStageLoader
                 sortingOrder: Sorting_Block);
 
             // 시각상 셀 위치로 이동(컨트롤러가 SnapToCell도 수행)
-            go.transform.position = presenter.CellToWorld(c) + Vector3.up * 0.9f;
+            go.transform.position = presenter.CellToWorld(c);
             go.transform.position = new Vector3(go.transform.position.x, go.transform.position.y, -0.01f);
 
             EnsureRewindKey(go);

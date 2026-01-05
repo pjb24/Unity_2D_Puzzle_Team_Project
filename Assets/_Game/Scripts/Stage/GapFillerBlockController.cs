@@ -125,7 +125,7 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
         if (_presenter == null)
             return;
 
-        transform.position = _presenter.CellToWorld(_cell) + Vector3.up * 0.9f;
+        transform.position = _presenter.CellToWorld(_cell);
     }
 
     public object CaptureState()

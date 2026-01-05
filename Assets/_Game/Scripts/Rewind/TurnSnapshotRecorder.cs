@@ -176,7 +176,7 @@ public class TurnSnapshotRecorder : MonoBehaviour
         var result = new List<(Guid, IRewindable)>();
 
         // 프로토타입: 씬 전수 조사로 충분 (최적화는 나중)
-        var behaviours = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+        var behaviours = FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         for (int i = 0; i < behaviours.Length; i++)
         {
             if (behaviours[i] is not IRewindable rw) continue;
@@ -194,7 +194,7 @@ public class TurnSnapshotRecorder : MonoBehaviour
     {
         var dict = new Dictionary<Guid, IRewindable>();
 
-        var behaviours = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+        var behaviours = FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         for (int i = 0; i < behaviours.Length; i++)
         {
             if (behaviours[i] is not IRewindable rw) continue;

@@ -96,7 +96,7 @@ public partial class FatherController : MonoBehaviour
         _grid.SetOcc(Cell, E_Occupant.Father);
 
         // 위치 스냅
-        transform.position = _presenter.CellToWorld(Cell) + Vector3.up * 0.9f; // 더미 캡슐 높이 보정
+        transform.position = _presenter.CellToWorld(Cell);
         ApplyFacingVisual();
     }
 
@@ -224,7 +224,7 @@ public partial class FatherController : MonoBehaviour
         Cell = to;
 
         // 월드 이동 스냅
-        transform.position = _presenter.CellToWorld(Cell) + Vector3.up * 0.9f;
+        transform.position = _presenter.CellToWorld(Cell);
 
         bool triggerGoal = (cellType == E_CellType.Goal);
 

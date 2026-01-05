@@ -18,7 +18,7 @@ public enum E_Occupant
     Father,
     Child,
     Blocker,
-    GapFillerBlock, // 추가
+    GapFillerBlock,
 }
 
 // 기믹용 “동적/속성” 레이어
@@ -94,7 +94,7 @@ public class BoardGrid
     public readonly int _w;
     public readonly int _h;
 
-    private readonly E_CellType[] _cells; // from StageDefinition.Cells, 정적 지형
+    private readonly E_CellType[] _cells; // 정적 지형
     private readonly CellMeta[] _meta;    // 동적/기믹 속성
     private readonly E_Occupant[] _occ;
 
@@ -129,10 +129,38 @@ public class BoardGrid
 
     public int ToIndex(Vector2Int c) => c.y * _w + c.x;
 
-    public E_CellType GetCell(Vector2Int c) => _cells[ToIndex(c)];
-    public E_Occupant GetOcc(Vector2Int c) => _occ[ToIndex(c)];
+    public E_CellType GetCell(Vector2Int c)
+    {
+        if (!IsInBounds(c))
+        {
+            Debug.LogWarning($"[BoardGrid] GetCell fallback: out of bounds. c={c}");
+            return E_CellType.Wall; // 안전: “막힘”으로 취급
+        }
 
-    public void SetOcc(Vector2Int c, E_Occupant occ) => _occ[ToIndex(c)] = occ;
+        return _cells[ToIndex(c)];
+    }
+
+    public E_Occupant GetOcc(Vector2Int c)
+    {
+        if (!IsInBounds(c))
+        {
+            Debug.LogWarning($"[BoardGrid] GetOcc fallback: out of bounds. c={c}");
+            return E_Occupant.Blocker; // 안전: 점유/막힘으로 취급
+        }
+
+        return _occ[ToIndex(c)];
+    }
+
+    public void SetOcc(Vector2Int c, E_Occupant occ)
+    {
+        if (!IsInBounds(c))
+        {
+            Debug.LogWarning($"[BoardGrid] SetOcc fallback: out of bounds. c={c} occ={occ}");
+            return;
+        }
+
+        _occ[ToIndex(c)] = occ;
+    }
 
     public bool IsBlockedCell(E_CellType t) => (t == E_CellType.Wall || t == E_CellType.Obstacle);
 

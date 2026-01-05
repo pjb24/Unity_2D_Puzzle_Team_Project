@@ -94,7 +94,7 @@ public class GamePlayState : IGameFlowState
 
         _rewind?.ResetForStageStart(_profile != null ? _profile.RewindMax : 0);
 
-        _turnDriver.Bind(rt._fatherController, rt._childController, snapshot, router, _profile);
+        _turnDriver.Bind(rt._fatherController, rt._childController, snapshot, router, _profile, rt._turnSystems);
 
         _uiRoot = Object.FindFirstObjectByType<GameplayUIRoot>();
         if (_uiRoot == null)

@@ -30,7 +30,7 @@ public class ChildPathRuntime
             // 범위 밖이면 일단 클램프/스킵 중 택1. 프로토타입은 스킵 권장.
             if (!grid.IsInBounds(c)) continue;
 
-            Vector3 p = presenter.CellToWorld(c) + Vector3.up * 0.9f; // 캡슐 높이 보정(기존 Father와 동일 컨셉)
+            Vector3 p = presenter.CellToWorld(c);
             _points.Add(p);
         }
     }
