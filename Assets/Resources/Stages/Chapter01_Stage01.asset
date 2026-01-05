@@ -22,7 +22,7 @@ MonoBehaviour:
   _childSpawn:
     _cell: {x: 0, y: 0}
     _world: {x: 0, y: 0, z: 0}
-  _blockedPathSteps: 140000000d000000
+  _blockedPathSteps: 140000000c000000
   _transitionType: 1
   _holeCells:
   - {x: 3, y: 1}
@@ -36,8 +36,8 @@ MonoBehaviour:
     _startOpen: 1
     _guid: 60b7fb0fc75c477aa48a2be68409dac1
   - _anchor: 1
-    _cell: {x: 5, y: 6}
-    _pathStep: 13
+    _cell: {x: 6, y: 6}
+    _pathStep: 12
     _startOpen: 0
     _guid: 68f3ba3aa9f04181858ffe66971f181e
   _toggleSwitchSpawns:

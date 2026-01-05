@@ -1,0 +1,88 @@
+{
+  "outerSize": 7,
+  "gap": 1,
+  "innerW": 3,
+  "innerH": 3,
+  "innerBase": [
+    [
+      0,
+      0,
+      2
+    ],
+    [
+      0,
+      2,
+      1
+    ],
+    [
+      0,
+      0,
+      2
+    ]
+  ],
+  "blocks": [],
+  "ringTiles": [
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "childStartIndex": 0,
+  "goalIndex": 12,
+  "fatherSpawn": {
+    "x": 0,
+    "y": 0
+  },
+  "tileMeta": {},
+  "switchLinks": {
+    "2,0": {
+      "disable": [
+        2,
+        4
+      ],
+      "enable": [],
+      "invert": []
+    },
+    "1,1": {
+      "disable": [
+        6,
+        8
+      ],
+      "enable": [],
+      "invert": []
+    },
+    "2,2": {
+      "disable": [
+        10
+      ],
+      "enable": [],
+      "invert": []
+    }
+  },
+  "deviceLinks": {},
+  "powerLinks": {},
+  "pistons": [],
+  "meta": {
+    "version": 2
+  }
+}

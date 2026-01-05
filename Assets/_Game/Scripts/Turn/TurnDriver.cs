@@ -28,12 +28,14 @@ public class TurnDriver : MonoBehaviour
     public void RemoveListenerOnResolved(Action<E_TurnResolveOutcome, E_StageFailReason, int> cb)
         => _signals.RemoveListenerOnResolved(cb);
 
-    public void Bind(FatherController father,
+    public void Bind(
+        FatherController father,
         ChildController child,
         TurnSnapshotRecorder snapshot,
         TurnInputRouter router,
         DifficultyProfile profile,
-        IReadOnlyList<ITurnTickable> turnSystems = null)
+        IReadOnlyList<ITurnTickable> turnSystems = null,
+        int childGoalPathStep = -1)
     {
         if (_isBound) return;
 
@@ -46,6 +48,7 @@ public class TurnDriver : MonoBehaviour
         _ctx.InjectDifficulty(profile);
         _ctx.InjectSignals(_signals);
         _ctx.InjectTurnSystems(turnSystems);
+        _ctx.InjectChildGoalPathStep(childGoalPathStep);
 
         _sm = new TurnStateMachine(_ctx);
 

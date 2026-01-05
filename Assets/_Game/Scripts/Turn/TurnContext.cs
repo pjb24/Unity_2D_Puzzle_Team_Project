@@ -39,6 +39,8 @@ public class TurnContext
     public E_StageFailReason PendingFailReason { get; private set; } = E_StageFailReason.None;
     public bool HasPendingOutcome { get; private set; } = false;
 
+    public int ChildGoalPathStep { get; private set; } = -1;
+
     public void InjectDifficulty(DifficultyProfile profile) => _profile = profile;
     public void InjectSignals(TurnSignalBus signals) => _signals = signals;
 
@@ -51,6 +53,8 @@ public class TurnContext
             if (systems[i] != null)
                 _turnSystems.Add(systems[i]);
     }
+
+    public void InjectChildGoalPathStep(int step) => ChildGoalPathStep = step;
 
     public TurnContext(FatherController father,
         ChildController child,

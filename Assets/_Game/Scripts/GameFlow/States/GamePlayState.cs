@@ -96,7 +96,16 @@ public class GamePlayState : IGameFlowState
 
         _rewind?.ResetForStageStart(_profile != null ? _profile.RewindMax : 0);
 
-        _turnDriver.Bind(rt._fatherController, rt._childController, snapshot, router, _profile, rt._turnSystems);
+        int goalStep = (_ctx != null && _ctx._stageDefinition != null) ? _ctx._stageDefinition.ChildGoalPathStep : -1;
+
+        _turnDriver.Bind(
+            rt._fatherController,
+            rt._childController,
+            snapshot,
+            router,
+            _profile,
+            rt._turnSystems,
+            childGoalPathStep: goalStep);
 
         _uiRoot = Object.FindFirstObjectByType<GameplayUIRoot>();
         if (_uiRoot == null)

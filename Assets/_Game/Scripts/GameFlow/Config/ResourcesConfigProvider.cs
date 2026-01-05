@@ -6,12 +6,16 @@
 /// 없으면 Resources 경로 규칙으로 로드
 ///
 
+using System.Collections.Generic;
 using UnityEngine;
 
 public class ResourcesConfigProvider : IConfigProvider
 {
     private const string _gameConfigPath = "Configs/GameConfig"; // Resources/Configs/GameConfig.asset
     private GameConfig _cachedGameConfig;
+
+    // JSON -> StageDefinition 캐시
+    private readonly Dictionary<string, StageDefinition> _jsonStageCache = new();
 
     public GameConfig LoadGameConfig()
     {
@@ -52,15 +56,34 @@ public class ResourcesConfigProvider : IConfigProvider
         // 2) 비어있으면 파일명 규칙으로 Resources에서 로드
         // 규칙: Resources/Stages/ChapterXX_StageYY.asset
         string chapterId = chapter.ChapterId; // "Chapter01"
-        string stageId = $"Stage{(stageIndex + 1):00}"; // "Stage01"
-        string path = $"Stages/{chapterId}_{stageId}";
+        string stageIdAsset = $"Stage{(stageIndex + 1):00}"; // "Stage01"
+        string assetPath = $"Stages/{chapterId}_{stageIdAsset}";
 
-        def = Resources.Load<StageDefinition>(path);
-        if (def == null)
+        def = Resources.Load<StageDefinition>(assetPath);
+        if (def != null) return def;
+
+
+        // 3) JSON 폴백 규칙: Resources/Stages/{N}stage.json
+        // - 요구사항: 1stage.json~4stage.json
+        string jsonKey = $"{(stageIndex + 1)}stage";
+        if (_jsonStageCache.TryGetValue(jsonKey, out var cached) && cached != null)
+            return cached;
+
+        var textAsset = Resources.Load<TextAsset>($"Stages/{jsonKey}");
+        if (textAsset == null)
         {
-            Debug.LogError($"[Config] StageDefinition not found. Resources/{path}.asset");
+            Debug.LogError($"[Config] StageDefinition not found. asset={assetPath}.asset, json=Resources/Stages/{jsonKey}.json");
+            return null;
         }
 
-        return def;
+        var runtimeStage = StageJsonStageFactory.BuildOrNull(jsonKey, textAsset.text);
+        if (runtimeStage == null)
+        {
+            Debug.LogError($"[Config] JSON stage build failed. key={jsonKey}");
+            return null;
+        }
+
+        _jsonStageCache[jsonKey] = runtimeStage;
+        return runtimeStage;
     }
 }

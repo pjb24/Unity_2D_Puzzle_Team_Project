@@ -23,16 +23,32 @@ public class TurnPhase_Resolve : ITurnPhase
     public void Enter(TurnContext ctx)
     {
         // 1) Clear 우선, Goal 체크
-        if (ctx.FatherResult.TriggerGoal)
+        if (ctx != null && ctx.Child != null && !ctx.ChildBlocked && ctx.ChildGoalPathStep >= 0)
         {
-            ctx.TurnCleared = true;
-            ctx.TurnFailed = false;
+            if (ctx.Child.PathPos == ctx.ChildGoalPathStep)
+            {
+                ctx.TurnCleared = true;
+                ctx.TurnFailed = false;
 
-            // 여기서 즉시 RaiseResolved 하지 않음 (Snapshot 이후로 지연)
-            ctx.SetPendingOutcome(E_TurnResolveOutcome.StageCleared, E_StageFailReason.None);
+                ctx.SetPendingOutcome(E_TurnResolveOutcome.StageCleared, E_StageFailReason.None);
 
-            _sm.Change(E_TurnPhase.Snapshot);
-            return;
+                _sm.Change(E_TurnPhase.Snapshot);
+                return;
+            }
+        }
+        else
+        {
+            // 골 정보가 없으면 기존 Father TriggerGoal로 폴백(무음 금지)
+            if (ctx != null && ctx.ChildGoalPathStep < 0 && ctx.FatherResult.TriggerGoal)
+            {
+                Debug.LogWarning("[TurnPhase_Resolve] ChildGoalPathStep is not set. Fallback to FatherResult.TriggerGoal.");
+                ctx.TurnCleared = true;
+                ctx.TurnFailed = false;
+
+                ctx.SetPendingOutcome(E_TurnResolveOutcome.StageCleared, E_StageFailReason.None);
+                _sm.Change(E_TurnPhase.Snapshot);
+                return;
+            }
         }
 
         // 2) ChildBlocked 분기

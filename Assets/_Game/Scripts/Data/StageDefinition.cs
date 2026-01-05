@@ -62,6 +62,27 @@ public struct ToggleSwitchSpawnData
     public string[] _targetDoorGuids;
 }
 
+public struct StageDefinitionRuntimeData
+{
+    public string StageId;
+    public Vector2Int BoardSize;
+    public E_CellType[] Cells;
+
+    public Vector2Int FatherSpawnCell;
+    public Vector2Int ChildSpawnCell;
+
+    public int ChildStartPathStep;
+    public int ChildGoalPathStep;
+
+    public int[] BlockedPathSteps;
+
+    public Vector2Int[] HoleCells;
+    public Vector2Int[] GapFillerBlockCells;
+
+    public DoorSpawnData[] DoorSpawns;
+    public ToggleSwitchSpawnData[] ToggleSwitchSpawns;
+}
+
 [CreateAssetMenu(menuName = "Puzzle/Data/Stage Definition")]
 public class StageDefinition : ScriptableObject
 {
@@ -99,6 +120,11 @@ public class StageDefinition : ScriptableObject
     [Header("Gimmicks: Toggle Switches")]
     [SerializeField] private ToggleSwitchSpawnData[] _toggleSwitchSpawns;
 
+    [Header("Child Path (Runtime)")]
+    [SerializeField] private int _childStartPathStep = 0;
+
+    [SerializeField] private int _childGoalPathStep = -1;
+
     // ===== Public getters =====
     public string StageId => _stageId;
     public Vector2Int BoardSize => _boardSize;
@@ -114,6 +140,9 @@ public class StageDefinition : ScriptableObject
     // 런타임에서만 정제된 결과를 쓰도록 새 API 제공
     public Vector2Int[] GetHoleCells_Runtime() => SanitizeCells(_holeCells, _boardSize, "[StageDefinition] HoleCells");
     public Vector2Int[] GetGapFillerBlockCells_Runtime() => SanitizeCells(_gapFillerBlockCells, _boardSize, "[StageDefinition] GapFillerBlockCells");
+
+    public int ChildStartPathStep => _childStartPathStep;
+    public int ChildGoalPathStep => _childGoalPathStep;
 
     private void OnValidate()
     {
@@ -431,5 +460,38 @@ public class StageDefinition : ScriptableObject
         if (Guid.TryParseExact(raw, "D", out guid)) return true;
 
         return Guid.TryParse(raw, out guid);
+    }
+
+    // 런타임 JSON 생성 스테이지용
+    public void ApplyRuntimeData(in StageDefinitionRuntimeData data)
+    {
+        _stageId = string.IsNullOrWhiteSpace(data.StageId) ? "RuntimeStage" : data.StageId;
+
+        _boardSize = new Vector2Int(Mathf.Max(1, data.BoardSize.x), Mathf.Max(1, data.BoardSize.y));
+
+        int total = _boardSize.x * _boardSize.y;
+
+        _cells = new E_CellType[total];
+        if (data.Cells != null)
+        {
+            int n = Mathf.Min(data.Cells.Length, total);
+            for (int i = 0; i < n; i++)
+                _cells[i] = data.Cells[i];
+        }
+
+        _boardText = string.Empty;
+
+        _fatherSpawn = new SpawnInfo { _cell = data.FatherSpawnCell, _world = Vector3.zero };
+        _childSpawn = new SpawnInfo { _cell = data.ChildSpawnCell, _world = Vector3.zero };
+
+        _childStartPathStep = data.ChildStartPathStep;
+        _childGoalPathStep = data.ChildGoalPathStep;
+
+        _blockedPathSteps = data.BlockedPathSteps ?? System.Array.Empty<int>();
+        _holeCells = data.HoleCells ?? System.Array.Empty<Vector2Int>();
+        _gapFillerBlockCells = data.GapFillerBlockCells ?? System.Array.Empty<Vector2Int>();
+
+        _doorSpawns = data.DoorSpawns ?? System.Array.Empty<DoorSpawnData>();
+        _toggleSwitchSpawns = data.ToggleSwitchSpawns ?? System.Array.Empty<ToggleSwitchSpawnData>();
     }
 }

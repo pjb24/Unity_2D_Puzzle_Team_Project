@@ -1,0 +1,181 @@
+{
+  "outerSize": 9,
+  "gap": 1,
+  "innerW": 5,
+  "innerH": 5,
+  "innerBase": [
+    [
+      2,
+      1,
+      0,
+      0,
+      0
+    ],
+    [
+      2,
+      0,
+      0,
+      0,
+      2
+    ],
+    [
+      2,
+      0,
+      0,
+      0,
+      2
+    ],
+    [
+      2,
+      0,
+      0,
+      0,
+      2
+    ],
+    [
+      2,
+      0,
+      0,
+      1,
+      0
+    ]
+  ],
+  "blocks": [
+    {
+      "x": 2,
+      "y": 1
+    },
+    {
+      "x": 1,
+      "y": 2
+    },
+    {
+      "x": 2,
+      "y": 3
+    },
+    {
+      "x": 3,
+      "y": 2
+    },
+    {
+      "x": 1,
+      "y": 3
+    },
+    {
+      "x": 3,
+      "y": 1
+    }
+  ],
+  "ringTiles": [
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "childStartIndex": 0,
+  "goalIndex": 0,
+  "fatherSpawn": {
+    "x": 2,
+    "y": 2
+  },
+  "tileMeta": {},
+  "switchLinks": {
+    "1,1": {
+      "disable": [],
+      "enable": [
+        24
+      ],
+      "invert": []
+    },
+    "0,0": {
+      "disable": [
+        24
+      ],
+      "enable": [],
+      "invert": []
+    },
+    "0,1": {
+      "disable": [
+        25
+      ],
+      "enable": [],
+      "invert": []
+    },
+    "0,2": {
+      "disable": [
+        26
+      ],
+      "enable": [],
+      "invert": []
+    },
+    "0,3": {
+      "disable": [
+        27
+      ],
+      "enable": [],
+      "invert": []
+    },
+    "0,4": {
+      "disable": [
+        28
+      ],
+      "enable": [],
+      "invert": []
+    },
+    "4,3": {
+      "disable": [
+        29
+      ],
+      "enable": [],
+      "invert": []
+    },
+    "4,2": {
+      "disable": [
+        30
+      ],
+      "enable": [],
+      "invert": []
+    },
+    "4,1": {
+      "disable": [
+        31
+      ],
+      "enable": [],
+      "invert": []
+    }
+  },
+  "deviceLinks": {},
+  "powerLinks": {},
+  "pistons": [],
+  "meta": {
+    "version": 2
+  }
+}

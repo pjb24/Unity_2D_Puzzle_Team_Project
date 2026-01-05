@@ -258,6 +258,14 @@ public class DummyStageLoader : IStageLoader
         // 런타임 블로커 레지스트리 생성(초기값 = StageDefinition.BlockedPathSteps)
         ctx._stageRuntime._childPathBlockers = new ChildPathBlockerRegistry(stageDef.BlockedPathSteps, pathRuntime.Count);
 
+        int startPos = 0;
+        if (stageDef != null)
+        {
+            startPos = Mathf.Clamp(stageDef.ChildStartPathStep, 0, Mathf.Max(0, pathRuntime.Count - 1));
+            if (startPos != stageDef.ChildStartPathStep)
+                Debug.LogWarning($"[StageLoader] ChildStartPathStep clamped. raw={stageDef.ChildStartPathStep} clamped={startPos}");
+        }
+
         // ChildController는 Registry 버전 Initialize 사용
         ctx._stageRuntime._childController.Initialize(pathRuntime, ctx._stageRuntime._childPathBlockers, startPos: 0);
     }
