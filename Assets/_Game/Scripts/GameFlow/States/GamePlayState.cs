@@ -90,7 +90,9 @@ public class GamePlayState : IGameFlowState
         }
 
         // ===== (5) Stage Start Reset 고정 =====
-        snapshot?.ClearAll();
+        // StageLoad에서 "ClearAll + Capture(0)"를 이미 수행함
+        // 폴백: 누락된 경우에만 여기서 보정
+        EnsureStageCreatedSnapshot(snapshot);
 
         _rewind?.ResetForStageStart(_profile != null ? _profile.RewindMax : 0);
 
@@ -121,6 +123,19 @@ public class GamePlayState : IGameFlowState
 
         // 구독 (Bind 이후에 수행: TurnDriver 존재/초기화 보장)
         _turnDriver.AddListenerOnResolved(OnTurnResolved);
+    }
+
+    private void EnsureStageCreatedSnapshot(TurnSnapshotRecorder snapshot)
+    {
+        if (snapshot == null)
+            return;
+
+        if (snapshot.Count > 0)
+            return;
+
+        Debug.LogWarning("[GamePlayState] Snapshot is empty on Enter. Fallback: capture stage-created snapshot now (turnIndex=0).");
+        snapshot.ClearAll();
+        snapshot.Capture(0);
     }
 
     public void Exit(GameFlowContext ctx)
@@ -186,7 +201,7 @@ public class GamePlayState : IGameFlowState
                     // Normal: 자동 Rewind 진입
                     if (_rewind != null)
                     {
-                        _rewind.EnterRewind(E_RewindEnterSource.FailureAuto);
+                        _rewind.EnterRewindDeferredFailureAuto();
                     }
                     else
                     {

@@ -2,7 +2,7 @@
 ///
 /// 작업
 /// TurnSnapshotRecorder에 스냅샷 리스트, MaxN(링버퍼), Capture 구현
-/// 캡처 시점은 이미 TurnPhase_Snapshot에서 1회 호출됨
+/// 캡처 시점은 TurnPhase_Snapshot에서 1회 호출됨
 ///
 using System;
 using System.Collections.Generic;

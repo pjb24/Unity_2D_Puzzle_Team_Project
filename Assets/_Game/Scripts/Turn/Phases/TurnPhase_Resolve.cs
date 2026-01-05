@@ -22,14 +22,14 @@ public class TurnPhase_Resolve : ITurnPhase
 
     public void Enter(TurnContext ctx)
     {
-        // 1) Goal 체크
-        // 1) Clear 우선
+        // 1) Clear 우선, Goal 체크
         if (ctx.FatherResult.TriggerGoal)
         {
             ctx.TurnCleared = true;
             ctx.TurnFailed = false;
 
-            ctx._signals?.RaiseResolved(E_TurnResolveOutcome.StageCleared, E_StageFailReason.None, ctx.TurnIndex);
+            // 여기서 즉시 RaiseResolved 하지 않음 (Snapshot 이후로 지연)
+            ctx.SetPendingOutcome(E_TurnResolveOutcome.StageCleared, E_StageFailReason.None);
 
             _sm.Change(E_TurnPhase.Snapshot);
             return;
@@ -43,13 +43,20 @@ public class TurnPhase_Resolve : ITurnPhase
             {
                 ctx.TurnFailed = true;
 
+                // 실패 시에도 막힘 피드백은 찍어야 "막힘 비주얼"이 먼저 나옴
+                if (ctx.Child != null)
+                    ctx.Child.RequestBlockedFeedback();
+                else
+                    Debug.LogWarning("[TurnPhase_Resolve] ChildBlocked feedback skipped: ctx.Child is null (fallback).");
+
                 bool hardReset = ctx._profile != null && ctx._profile.HardResetStage;
 
                 var outcome = hardReset
                     ? E_TurnResolveOutcome.StageFailed_Reset
                     : E_TurnResolveOutcome.StageFailed_Rewind;
 
-                ctx._signals?.RaiseResolved(outcome, E_StageFailReason.ChildBlocked, ctx.TurnIndex);
+                // 여기서 즉시 RaiseResolved 하지 않음 (Snapshot 이후로 지연)
+                ctx.SetPendingOutcome(outcome, E_StageFailReason.ChildBlocked);
             }
             else
             {
@@ -61,6 +68,7 @@ public class TurnPhase_Resolve : ITurnPhase
                 else
                     Debug.LogWarning("[TurnPhase_Resolve] ChildBlocked feedback skipped: ctx.Child is null (fallback).");
 
+                // Continue는 기존처럼 즉시 알림 유지
                 ctx._signals?.RaiseResolved(E_TurnResolveOutcome.Continue, E_StageFailReason.ChildBlocked, ctx.TurnIndex);
             }
             // 실패면 자동턴 없음
@@ -74,6 +82,7 @@ public class TurnPhase_Resolve : ITurnPhase
             int extra = Mathf.Max(0, ctx.FatherResult.ConsumedTurns - 1);
             ctx.PendingAutoTurns = extra;
 
+            // Continue는 기존처럼 즉시 알림 유지
             ctx._signals?.RaiseResolved(E_TurnResolveOutcome.Continue, E_StageFailReason.None, ctx.TurnIndex);
         }
 

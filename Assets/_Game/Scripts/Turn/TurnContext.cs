@@ -35,6 +35,10 @@ public class TurnContext
     private int _lastBeginTurnIndex = int.MinValue;
     private int _lastEndTurnIndex = int.MinValue;
 
+    public E_TurnResolveOutcome PendingOutcome { get; private set; } = E_TurnResolveOutcome.Continue;
+    public E_StageFailReason PendingFailReason { get; private set; } = E_StageFailReason.None;
+    public bool HasPendingOutcome { get; private set; } = false;
+
     public void InjectDifficulty(DifficultyProfile profile) => _profile = profile;
     public void InjectSignals(TurnSignalBus signals) => _signals = signals;
 
@@ -171,5 +175,27 @@ public class TurnContext
         FatherResult = default;
 
         Debug.Log($"[Turn] Sync from snapshot. TurnIndex={TurnIndex}");
+    }
+
+    public void SetPendingOutcome(E_TurnResolveOutcome outcome, E_StageFailReason reason)
+    {
+        HasPendingOutcome = true;
+        PendingOutcome = outcome;
+        PendingFailReason = reason;
+    }
+
+    public bool TryConsumePendingOutcome(out E_TurnResolveOutcome outcome, out E_StageFailReason reason, out int turnIndex)
+    {
+        outcome = PendingOutcome;
+        reason = PendingFailReason;
+        turnIndex = TurnIndex;
+
+        if (!HasPendingOutcome)
+            return false;
+
+        HasPendingOutcome = false;
+        PendingOutcome = E_TurnResolveOutcome.Continue;
+        PendingFailReason = E_StageFailReason.None;
+        return true;
     }
 }

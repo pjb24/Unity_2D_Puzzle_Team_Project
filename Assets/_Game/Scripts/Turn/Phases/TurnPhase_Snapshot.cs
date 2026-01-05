@@ -28,6 +28,12 @@ public class TurnPhase_Snapshot : ITurnPhase
             ctx.SnapshotRecorder.Capture(ctx.TurnIndex);
         }
 
+        // 여기서 StageFailed / StageCleared 신호를 송출 (Resolve에서 미룸)
+        if (ctx.TryConsumePendingOutcome(out var outcome, out var reason, out var turnIndex))
+        {
+            ctx._signals?.RaiseResolved(outcome, reason, turnIndex);
+        }
+
         _sm.Change(E_TurnPhase.End);
     }
 

@@ -76,6 +76,9 @@ public class DummyStageLoader : IStageLoader
         // ---- (0-5) 기믹 초기화 파이프라인 ----
         RunPostSpawnPipeline(ctx, registry);
 
+        // Stage 생성 직후(턴 시작 전) 스냅샷 1회 저장 (turnIndex=0)
+        CaptureStageCreatedSnapshot(ctx);
+
         onComplete?.Invoke();
     }
 
@@ -94,6 +97,31 @@ public class DummyStageLoader : IStageLoader
 
             ctx._stageRuntime = null;
         }
+    }
+
+    private void CaptureStageCreatedSnapshot(GameFlowContext ctx)
+    {
+        if (ctx == null || ctx._stageRuntime == null)
+        {
+            Debug.LogWarning("[StageLoader] StageStart snapshot skipped (fallback): ctx/stageRuntime is null.");
+            return;
+        }
+
+        var snapshot = UnityEngine.Object.FindFirstObjectByType<TurnSnapshotRecorder>();
+        if (snapshot == null)
+        {
+            Debug.LogWarning("[StageLoader] StageStart snapshot skipped (fallback): TurnSnapshotRecorder not found in scene.");
+            return;
+        }
+
+        // 디버그/추적용으로 runtime refs에도 보관
+        ctx._stageRuntime._snapshot = snapshot;
+
+        // 정책: 스테이지마다 새로 시작해야 하므로 기존 스냅샷은 제거 후 0번 저장
+        snapshot.ClearAll();
+        snapshot.Capture(turnIndex: 0);
+
+        Debug.Log("[StageLoader] Captured stage-created snapshot (turnIndex=0).");
     }
 
     private bool ValidateLoadContext(GameFlowContext ctx)

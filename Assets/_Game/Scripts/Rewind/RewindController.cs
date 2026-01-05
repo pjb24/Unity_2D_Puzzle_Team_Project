@@ -6,6 +6,7 @@
 /// Next도 같이 넣어둠(라우터가 이미 갖고 있어서)
 ///
 using UnityEngine;
+using System.Collections;
 
 public enum E_RewindEnterSource
 {
@@ -34,6 +35,8 @@ public class RewindController : MonoBehaviour
 
     public bool IsRewindActive => _isRewindActive;
     public int RewindRemaining => _rewindRemaining;
+
+    private Coroutine _deferredEnterCo;
 
     private void Reset()
     {
@@ -225,5 +228,25 @@ public class RewindController : MonoBehaviour
         if (_turnDriver == null) return;
 
         _turnDriver.ClearInputBuffer();
+    }
+
+    public void EnterRewindDeferredFailureAuto()
+    {
+        if (_deferredEnterCo != null)
+        {
+            StopCoroutine(_deferredEnterCo);
+            _deferredEnterCo = null;
+        }
+
+        _deferredEnterCo = StartCoroutine(CoEnterRewindDeferredFailureAuto());
+    }
+
+    private IEnumerator CoEnterRewindDeferredFailureAuto()
+    {
+        // “막힘 비주얼”이 실제로 화면에 반영된 뒤 진입
+        yield return new WaitForEndOfFrame();
+
+        EnterRewind(E_RewindEnterSource.FailureAuto);
+        _deferredEnterCo = null;
     }
 }
