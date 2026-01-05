@@ -70,6 +70,9 @@ public class DummyStageLoader : IStageLoader
         // 6) 스폰(그리드/프리젠터/컨트롤러 포함)
         SpawnStageActorsAndSystems(ctx, stageDef, registry);
 
+        // 런타임 기믹 스폰(Doors + ToggleSwitches)
+        StageGimmickSpawner.SpawnDoorsAndToggleSwitches(ctx._stageRuntime, stageDef);
+
         // ---- (0-5) 기믹 초기화 파이프라인 ----
         RunPostSpawnPipeline(ctx, registry);
 
@@ -223,10 +226,12 @@ public class DummyStageLoader : IStageLoader
 
         // ChildPathRuntime 생성
         var pathRuntime = new ChildPathRuntime(ctx._stageRuntime._grid, ctx._stageRuntime._gridPresenter);
-        // blocked steps: StageDefinition에 추가한 BlockedPathSteps 사용
-        var blocked = stageDef.BlockedPathSteps; // IReadOnlyList<int>
 
-        ctx._stageRuntime._childController.Initialize(pathRuntime, blocked, startPos: 0);
+        // 런타임 블로커 레지스트리 생성(초기값 = StageDefinition.BlockedPathSteps)
+        ctx._stageRuntime._childPathBlockers = new ChildPathBlockerRegistry(stageDef.BlockedPathSteps, pathRuntime.Count);
+
+        // ChildController는 Registry 버전 Initialize 사용
+        ctx._stageRuntime._childController.Initialize(pathRuntime, ctx._stageRuntime._childPathBlockers, startPos: 0);
     }
 
     private T EnsureController<T>(GameObject go) where T : MonoBehaviour

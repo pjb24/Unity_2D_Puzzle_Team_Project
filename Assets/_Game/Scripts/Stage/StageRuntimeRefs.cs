@@ -32,4 +32,6 @@ public class StageRuntimeRefs
 
     public BoardStateRewindable _boardStateRewindable;
     public List<ITurnTickable> _turnSystems = new List<ITurnTickable>(8);
+
+    public ChildPathBlockerRegistry _childPathBlockers;
 }

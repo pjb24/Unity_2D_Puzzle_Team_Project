@@ -18,11 +18,48 @@ public enum E_CellType
     Goal,
 }
 
+public enum E_DoorAnchor
+{
+    Cell = 0,
+    ChildPathStep = 1,
+}
+
 [System.Serializable]
 public struct SpawnInfo
 {
     public Vector2Int _cell;   // 중앙 보드 좌표
     public Vector3 _world;     // 테두리/월드 스폰이 필요하면 사용(옵션)
+}
+
+[Serializable]
+public struct DoorSpawnData
+{
+    public E_DoorAnchor _anchor;
+
+    // anchor=Cell일 때만 직접 편집
+    public Vector2Int _cell;
+
+    // anchor=ChildPathStep일 때 사용
+    public int _pathStep;
+
+    public bool _startOpen;
+
+    // ToggleSwitch가 참조할 GUID (RewindKey GuidString, N or D)
+    public string _guid;
+}
+
+[Serializable]
+public struct ToggleSwitchSpawnData
+{
+    public Vector2Int _cell;
+
+    public E_SwitchMode _mode;
+
+    public bool _startOn;
+    public bool _allowManualInteract;
+
+    // DoorSpawnData._guid 목록과 매칭
+    public string[] _targetDoorGuids;
 }
 
 [CreateAssetMenu(menuName = "Puzzle/Data/Stage Definition")]
@@ -52,8 +89,15 @@ public class StageDefinition : ScriptableObject
     [Header("Transition")]
     [SerializeField] private E_StageTransitionType _transitionType = E_StageTransitionType.Fade;
 
+    [Header("Holes / GapFiller")]
     [SerializeField] private Vector2Int[] _holeCells;
     [SerializeField] private Vector2Int[] _gapFillerBlockCells;
+
+    [Header("Gimmicks: Doors")]
+    [SerializeField] private DoorSpawnData[] _doorSpawns;
+
+    [Header("Gimmicks: Toggle Switches")]
+    [SerializeField] private ToggleSwitchSpawnData[] _toggleSwitchSpawns;
 
     // ===== Public getters =====
     public string StageId => _stageId;
@@ -64,6 +108,8 @@ public class StageDefinition : ScriptableObject
     public SpawnInfo ChildSpawn => _childSpawn;
     public IReadOnlyList<int> BlockedPathSteps => _blockedPathSteps;
     public E_StageTransitionType TransitionType => _transitionType;
+    public DoorSpawnData[] DoorSpawns => _doorSpawns;
+    public ToggleSwitchSpawnData[] ToggleSwitchSpawns => _toggleSwitchSpawns;
 
     // 런타임에서만 정제된 결과를 쓰도록 새 API 제공
     public Vector2Int[] GetHoleCells_Runtime() => SanitizeCells(_holeCells, _boardSize, "[StageDefinition] HoleCells");
@@ -92,39 +138,214 @@ public class StageDefinition : ScriptableObject
         ValidateCellInBoard(_fatherSpawn._cell, nameof(_fatherSpawn));
         ValidateCellInBoard(_childSpawn._cell, nameof(_childSpawn));
 
-        // 5) (옵션) Goal 최소 1개 권장
-        if (_cells != null)
-        {
-            bool hasGoal = false;
-            for (int i = 0; i < _cells.Length; i++)
-            {
-                if (_cells[i] == E_CellType.Goal) { hasGoal = true; break; }
-            }
-            if (!hasGoal)
-                Debug.LogWarning($"[StageDefinition] No Goal cell: {name}", this);
-        }
+        // 4) ChildPath 길이 계산
+        int w = _boardSize.x;
+        int h = _boardSize.y;
+        var perimeter = PerimeterPathBuilder.Build(w, h);
+        int pathCount = perimeter?.Count ?? 0;
 
-        if (_blockedPathSteps != null)
-        {
-            int w = _boardSize.x;
-            int h = _boardSize.y;
-            var indices = PerimeterPathBuilder.Build(w, h);
+        // 5) BlockedPathSteps 클램프
+        ClampBlockedPathSteps(pathCount);
 
-            int n = indices?.Count ?? 0;
-            for (int i = 0; i < _blockedPathSteps.Length; i++)
-            {
-                int s = _blockedPathSteps[i];
-                if (s < 0) _blockedPathSteps[i] = 0;
-                if (n > 0 && s >= n) _blockedPathSteps[i] = n - 1;
-            }
-        }
+        // 6) Doors: GUID 자동 생성 + (ChildPathStep 앵커면) cell 자동 정렬 + blockedSteps 자동 동기화
+        ValidateDoorSpawnsAndSyncToBlockedSteps(perimeter, pathCount);
 
-        // Inspector 편집 방해 금지: Remove/재할당 금지
+        // 7) ToggleSwitch 검증
+        ValidateToggleSwitchSpawns();
+
+        // (옵션) Goal 최소 1개 권장
+        ValidateGoalRecommended();
+
+        // 8) Inspector 편집 방해 금지: Remove/재할당 금지
         ValidateCellsInBounds_NoRemove(_holeCells, _boardSize, "[StageDefinition] HoleCells");
         ValidateCellsInBounds_NoRemove(_gapFillerBlockCells, _boardSize, "[StageDefinition] GapFillerBlockCells");
-
-        // 데이터 상호 모순은 Warning만
         ValidateBlockOnHole_NoRemove();
+    }
+
+    private void ClampBlockedPathSteps(int pathCount)
+    {
+        if (_blockedPathSteps == null || _blockedPathSteps.Length == 0)
+            return;
+
+        for (int i = 0; i < _blockedPathSteps.Length; i++)
+        {
+            int s = _blockedPathSteps[i];
+            if (s < 0) _blockedPathSteps[i] = 0;
+            if (pathCount > 0 && s >= pathCount) _blockedPathSteps[i] = pathCount - 1;
+        }
+    }
+
+    private void ValidateDoorSpawnsAndSyncToBlockedSteps(List<int> perimeter, int pathCount)
+    {
+        if (_doorSpawns == null) return;
+
+        var guidSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var stepSet = new HashSet<int>();
+        var cellSet = new HashSet<Vector2Int>();
+
+        for (int i = 0; i < _doorSpawns.Length; i++)
+        {
+            var d = _doorSpawns[i];
+
+            // GUID 자동 생성(비어있을 때만)
+            if (string.IsNullOrWhiteSpace(d._guid))
+            {
+                d._guid = Guid.NewGuid().ToString("N");
+                _doorSpawns[i] = d;
+
+#if UNITY_EDITOR
+                UnityEditor.EditorUtility.SetDirty(this);
+#endif
+            }
+
+            if (!TryParseGuid(d._guid, out Guid g))
+            {
+                Debug.LogWarning($"[StageDefinition] DoorSpawns[{i}] guid invalid. raw={d._guid}", this);
+            }
+            else
+            {
+                string n = g.ToString("N");
+                if (!guidSet.Add(n))
+                    Debug.LogWarning($"[StageDefinition] DoorSpawns duplicated guid detected. guid={n} index={i}", this);
+            }
+
+            // ChildPathStep 앵커면: step -> cell 자동 정렬 + blockedSteps 자동 포함
+            if (d._anchor == E_DoorAnchor.ChildPathStep)
+            {
+                if (pathCount <= 0 || perimeter == null)
+                {
+                    Debug.LogWarning($"[StageDefinition] DoorSpawns[{i}] anchor=ChildPathStep but path is empty.", this);
+                    continue;
+                }
+
+                int step = d._pathStep;
+                if (step < 0) step = 0;
+                if (step >= pathCount) step = pathCount - 1;
+
+                if (step != d._pathStep)
+                {
+                    d._pathStep = step;
+                    _doorSpawns[i] = d;
+#if UNITY_EDITOR
+                    UnityEditor.EditorUtility.SetDirty(this);
+#endif
+                }
+
+                int idx = perimeter[step];
+                int x = idx % _boardSize.x;
+                int y = idx / _boardSize.x;
+                var cell = new Vector2Int(x, y);
+
+                if (d._cell != cell)
+                {
+                    d._cell = cell;
+                    _doorSpawns[i] = d;
+#if UNITY_EDITOR
+                    UnityEditor.EditorUtility.SetDirty(this);
+#endif
+                }
+
+                // step 중복 경고
+                if (!stepSet.Add(step))
+                    Debug.LogWarning($"[StageDefinition] DoorSpawns duplicated ChildPathStep. step={step} index={i}", this);
+
+                // blockedSteps에 없으면 자동 추가 + Warning(무음 금지)
+                if (!ContainsStep(_blockedPathSteps, step))
+                {
+                    Debug.LogWarning($"[StageDefinition] BlockedPathSteps auto-sync: added step from Door. step={step} doorIndex={i}", this);
+                    AppendBlockedStep(step);
+#if UNITY_EDITOR
+                    UnityEditor.EditorUtility.SetDirty(this);
+#endif
+                }
+
+                // cell 중복 경고
+                if (!cellSet.Add(cell))
+                    Debug.LogWarning($"[StageDefinition] DoorSpawns duplicated cell. cell={cell} index={i}", this);
+
+                continue;
+            }
+
+            // anchor=Cell: cell 범위만 검증
+            ValidateCellInBoard(d._cell, $"DoorSpawns[{i}] Cell");
+
+            if (!cellSet.Add(d._cell))
+                Debug.LogWarning($"[StageDefinition] DoorSpawns duplicated cell. cell={d._cell} index={i}", this);
+        }
+    }
+
+    private void AppendBlockedStep(int step)
+    {
+        if (_blockedPathSteps == null)
+        {
+            _blockedPathSteps = new[] { step };
+            return;
+        }
+
+        int n = _blockedPathSteps.Length;
+        var next = new int[n + 1];
+        Array.Copy(_blockedPathSteps, next, n);
+        next[n] = step;
+        _blockedPathSteps = next;
+    }
+
+    private static bool ContainsStep(int[] arr, int step)
+    {
+        if (arr == null) return false;
+        for (int i = 0; i < arr.Length; i++)
+        {
+            if (arr[i] == step)
+                return true;
+        }
+        return false;
+    }
+
+    private void ValidateToggleSwitchSpawns()
+    {
+        if (_toggleSwitchSpawns == null) return;
+
+        for (int i = 0; i < _toggleSwitchSpawns.Length; i++)
+        {
+            var s = _toggleSwitchSpawns[i];
+            ValidateCellInBoard(s._cell, $"ToggleSwitchSpawns[{i}] Cell");
+
+            if (s._targetDoorGuids == null || s._targetDoorGuids.Length == 0)
+            {
+                Debug.LogWarning($"[StageDefinition] ToggleSwitchSpawns[{i}] targetDoorGuids is empty. (switch will do nothing)", this);
+                continue;
+            }
+
+            for (int k = 0; k < s._targetDoorGuids.Length; k++)
+            {
+                string raw = s._targetDoorGuids[k];
+                if (string.IsNullOrWhiteSpace(raw))
+                {
+                    Debug.LogWarning($"[StageDefinition] ToggleSwitchSpawns[{i}] targetDoorGuids[{k}] is empty.", this);
+                    continue;
+                }
+
+                if (!TryParseGuid(raw, out _))
+                    Debug.LogWarning($"[StageDefinition] ToggleSwitchSpawns[{i}] targetDoorGuids[{k}] invalid. raw={raw}", this);
+            }
+        }
+    }
+
+    private void ValidateGoalRecommended()
+    {
+        if (_cells == null) return;
+
+        bool hasGoal = false;
+        for (int i = 0; i < _cells.Length; i++)
+        {
+            if (_cells[i] == E_CellType.Goal)
+            {
+                hasGoal = true;
+                break;
+            }
+        }
+
+        if (!hasGoal)
+            Debug.LogWarning($"[StageDefinition] Goal is recommended but not found. ({name})", this);
     }
 
     private void ValidateCellsInBounds_NoRemove(Vector2Int[] arr, Vector2Int boardSize, string tag)
@@ -195,5 +416,20 @@ public class StageDefinition : ScriptableObject
         }
 
         return list.ToArray();
+    }
+
+    private static bool TryParseGuid(string raw, out Guid guid)
+    {
+        guid = Guid.Empty;
+
+        if (string.IsNullOrWhiteSpace(raw))
+            return false;
+
+        raw = raw.Trim();
+
+        if (Guid.TryParseExact(raw, "N", out guid)) return true;
+        if (Guid.TryParseExact(raw, "D", out guid)) return true;
+
+        return Guid.TryParse(raw, out guid);
     }
 }

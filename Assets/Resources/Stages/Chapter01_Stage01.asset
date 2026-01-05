@@ -22,10 +22,29 @@ MonoBehaviour:
   _childSpawn:
     _cell: {x: 0, y: 0}
     _world: {x: 0, y: 0, z: 0}
-  _blockedPathSteps: 14000000
+  _blockedPathSteps: 140000000d000000
   _transitionType: 1
   _holeCells:
   - {x: 3, y: 1}
   - {x: 4, y: 1}
   _gapFillerBlockCells:
   - {x: 2, y: 1}
+  _doorSpawns:
+  - _anchor: 1
+    _cell: {x: 0, y: 4}
+    _pathStep: 20
+    _startOpen: 1
+    _guid: 60b7fb0fc75c477aa48a2be68409dac1
+  - _anchor: 1
+    _cell: {x: 5, y: 6}
+    _pathStep: 13
+    _startOpen: 0
+    _guid: 68f3ba3aa9f04181858ffe66971f181e
+  _toggleSwitchSpawns:
+  - _cell: {x: 2, y: 5}
+    _mode: 2
+    _startOn: 0
+    _allowManualInteract: 0
+    _targetDoorGuids:
+    - 60b7fb0fc75c477aa48a2be68409dac1
+    - 68f3ba3aa9f04181858ffe66971f181e

@@ -23,7 +23,7 @@ public partial class ChildController : MonoBehaviour
     public bool LastStepBlocked => _lastStepBlocked;
 
     private ChildPathRuntime _path;
-    private HashSet<int> _blockedSteps;
+    private ChildPathBlockerRegistry _pathBlockers;
 
     private int _pathPos;
     private bool _lastStepBlocked;
@@ -34,12 +34,22 @@ public partial class ChildController : MonoBehaviour
     [SerializeField] private bool _useLerp = true;
     [SerializeField] private float _lerpDuration = 0.12f;
 
-    public void Initialize(ChildPathRuntime path, IReadOnlyList<int> blockedSteps, int startPos = 0)
+    public void Initialize(ChildPathRuntime path, ChildPathBlockerRegistry blockers, int startPos = 0)
     {
         _path = path;
-        _blockedSteps = new HashSet<int>(blockedSteps ?? Array.Empty<int>());
+        _pathBlockers = blockers;
 
-        _pathPos = Mathf.Clamp(startPos, 0, (_path?.Count ?? 1) - 1);
+        int count = _path?.Count ?? 0;
+        if (_pathBlockers == null)
+        {
+            Debug.LogWarning("[ChildController] Initialize fallback: blockers is null. Child will never be blocked by path steps.");
+        }
+        else if (_pathBlockers.PathCount != count)
+        {
+            Debug.LogWarning($"[ChildController] Initialize fallback: blockers.PathCount mismatch. blockers={_pathBlockers.PathCount} path={count}");
+        }
+
+        _pathPos = Mathf.Clamp(startPos, 0, (count <= 0 ? 0 : count - 1));
         _lastStepBlocked = false;
 
         if (_path != null && _path.Count > 0)
@@ -62,9 +72,9 @@ public partial class ChildController : MonoBehaviour
         }
 
         // 최소 구현: 특정 인덱스가 Blocked면 막힘
-        if (_blockedSteps != null && _blockedSteps.Contains(next))
+        if (_pathBlockers != null && _pathBlockers.IsBlocked(next))
         {
-            Debug.Log("[ChildController] Blocked by Blocked Path Steps");
+            Debug.Log("[ChildController] Blocked by ChildPathBlockerRegistry");
             _lastStepBlocked = true;
             _onStepCompleted?.Invoke(true);
             return;
