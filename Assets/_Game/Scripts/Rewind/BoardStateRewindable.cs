@@ -54,15 +54,10 @@ public class BoardStateRewindable : MonoBehaviour, IRewindable
 
         _grid.RestoreMetaArray(s._meta, notifyAll: true);
 
-        // 정책: 회전/이동으로 좌표가 바뀔 수 있으니 “리빌드로 통일”
-        if (_registry != null)
-        {
-            _registry.RebuildFromScene();
-        }
-        else
-        {
-            Debug.LogWarning("[BoardStateRewindable] Registry rebuild skipped (fallback): registry is null.");
-        }
+        // NOTE:
+        // InteractRegistry 리빌드는 여기서 하지 않는다.
+        // RewindController에서 stageRoot 기준으로 1회 수행한다.
+        // (RebuildFromScene는 deprecated + 씬 전수 스캔은 언로드 잔존 재등록 원인)
 
         _onRestored?.Invoke();
     }

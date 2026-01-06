@@ -104,6 +104,13 @@ public class DummyStageLoader : IStageLoader
             Debug.LogWarning($"[StageLoader] UnloadStage cleanup warn. ex={ex.Message}");
         }
 
+        // 스냅샷은 스테이지 단위로 폐기(이전 스테이지 GUID가 다음 스테이지에서 “not found” 되는 원인 차단)
+        if (ctx._stageRuntime._snapshot != null)
+        {
+            ctx._stageRuntime._snapshot.ClearAll();
+            ctx._stageRuntime._snapshot.BindStageRoot(null);
+        }
+
         if (ctx._stageRuntime._interactRegistry != null)
             ctx._stageRuntime._interactRegistry.Clear();
 
@@ -138,6 +145,11 @@ public class DummyStageLoader : IStageLoader
 
         // 디버그/추적용으로 runtime refs에도 보관
         ctx._stageRuntime._snapshot = snapshot;
+
+        if (ctx._stageRuntime._root != null)
+            snapshot.BindStageRoot(ctx._stageRuntime._root.transform);
+        else
+            Debug.LogWarning("[StageLoader] Snapshot scope bind skipped (fallback): stageRoot is null.");
 
         // 정책: 스테이지마다 새로 시작해야 하므로 기존 스냅샷은 제거 후 0번 저장
         snapshot.ClearAll();
@@ -651,7 +663,7 @@ public class DummyStageLoader : IStageLoader
 
         var grid = ctx._stageRuntime._grid;
         var presenter = ctx._stageRuntime._gridPresenter;
-        var parent = ctx._stageRuntime._root.transform;
+        var parent = gapRegistry.transform;
 
         for (int i = 0; i < blocks.Length; i++)
         {

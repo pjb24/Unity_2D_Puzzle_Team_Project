@@ -68,6 +68,15 @@ public class GamePlayState : IGameFlowState
             return;
         }
 
+        // === Scope/Runtime 바인딩 (경고 해결 핵심) ===
+        if (snapshot != null && rt._root != null)
+            snapshot.BindStageRoot(rt._root.transform);
+        else
+            Debug.LogWarning("[GamePlayState] Snapshot scope bind skipped (fallback): snapshot/root is null.");
+
+        if (_rewind != null)
+            _rewind.BindStageRuntime(rt._root != null ? rt._root.transform : null, rt._interactRegistry, snapshot);
+
         // DifficultyProfile 결정
         _profile = null;
         if (_ctx._gameConfig == null)

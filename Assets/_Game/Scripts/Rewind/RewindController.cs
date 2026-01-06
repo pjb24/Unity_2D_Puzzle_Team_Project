@@ -21,6 +21,10 @@ public class RewindController : MonoBehaviour
     [SerializeField] private TurnSnapshotRecorder _recorder;
     [SerializeField] private TurnDriver _turnDriver;
 
+    [Header("Stage Runtime")]
+    [SerializeField] private Transform _stageRoot;
+    [SerializeField] private InteractRegistry _interactRegistry;
+
     [Header("Settings")]
     [SerializeField, Min(0)] private int _rewindMax = 10;
 
@@ -52,6 +56,20 @@ public class RewindController : MonoBehaviour
     public void BindExitPort(IRewindExitPort exitPort)
     {
         _exitPort = exitPort;
+    }
+
+    public void BindStageRuntime(Transform stageRoot, InteractRegistry registry, TurnSnapshotRecorder recorder = null)
+    {
+        _stageRoot = stageRoot;
+        _interactRegistry = registry;
+
+        if (recorder != null)
+            _recorder = recorder;
+
+        if (_recorder != null)
+            _recorder.BindStageRoot(_stageRoot);
+        else
+            Debug.LogWarning("[RewindController] BindStageRuntime fallback: recorder is null.");
     }
 
     /// <summary>
@@ -123,11 +141,11 @@ public class RewindController : MonoBehaviour
         if (_recorder == null) return;
         if (_recorder.Count <= 0) return;
 
-        int next = _cursorIndex - 1;
-        if (next < 0) next = 0;
-        if (next == _cursorIndex) return;
+        int prev = _cursorIndex - 1;
+        if (prev < 0) prev = 0;
+        if (prev == _cursorIndex) return;
 
-        _cursorIndex = next;
+        _cursorIndex = prev;
 
         RestoreAndSync(_cursorIndex);
 
@@ -157,41 +175,46 @@ public class RewindController : MonoBehaviour
     public void RequestCommit()
     {
         if (!_isRewindActive) return;
+        if (_recorder == null)
+        {
+            Debug.LogWarning("[RewindController] Commit fallback: recorder is null. Cannot discard snapshots.");
+            return;
+        }
+
+        if (_cursorIndex < 0 || _cursorIndex > _recorder.LatestIndex)
+        {
+            Debug.LogWarning($"[RewindController] Commit fallback: invalid cursor. cursor={_cursorIndex}");
+            return;
+        }
 
         // === Commit 시점에 “미래” 스냅샷 삭제 ===
-        if (_recorder != null)
-            _recorder.DiscardAfterIndex(_cursorIndex);
-        else
-            Debug.LogWarning("[RewindController] Commit fallback: recorder is null. Cannot discard snapshots.");
+        _recorder.DiscardAfterIndex(_cursorIndex);
 
         _isRewindActive = false;
 
-        _rewindRemaining--;
-        if (_rewindRemaining < 0) _rewindRemaining = 0;
-
-        _enterIndex = -1;
+        _rewindRemaining = Mathf.Max(0, _rewindRemaining - 1);
 
         ClearTurnInputBuffer();
-        Debug.Log($"[RewindController] Commit remaining={_rewindRemaining}");
+        Debug.Log($"[RewindController] Commit cursor={_cursorIndex} remaining={_rewindRemaining}");
     }
 
     public void RequestCancel()
     {
         if (!_isRewindActive) return;
+        if (_recorder == null) return;
+
+        if (_enterIndex < 0 || _enterIndex > _recorder.LatestIndex)
+        {
+            Debug.LogWarning($"[RewindController] Cancel fallback: invalid enterIndex. enterIndex={_enterIndex}");
+            return;
+        }
 
         // 진입 시점 상태로 복귀
-        if (_recorder != null && _enterIndex >= 0)
-        {
-            RestoreAndSync(_enterIndex);
-        }
-        else
-        {
-            Debug.LogWarning("[RewindController] Cancel fallback: cannot restore enter snapshot.");
-        }
+
+        _cursorIndex = _enterIndex;
+        RestoreAndSync(_cursorIndex);
 
         _isRewindActive = false;
-        _cursorIndex = _enterIndex;
-        _enterIndex = -1;
 
         ClearTurnInputBuffer();
         Debug.Log("[RewindController] Cancel -> restored enter snapshot and exit rewind.");
@@ -205,6 +228,11 @@ public class RewindController : MonoBehaviour
             return;
         }
 
+        if (_stageRoot == null)
+            Debug.LogWarning("[RewindController] RestoreAndSync fallback: stageRoot is null. (BindStageRuntime is recommended)");
+
+        _recorder.BindStageRoot(_stageRoot);
+
         var snap = _recorder.GetAt(index);
         if (snap == null)
         {
@@ -213,6 +241,12 @@ public class RewindController : MonoBehaviour
         }
 
         _recorder.Restore(snap);
+
+        // 복원 후 1회 리빌드(스테이지 루트 범위만)
+        if (_interactRegistry != null && _stageRoot != null)
+            _interactRegistry.RebuildFromRoot(_stageRoot);
+        else
+            Debug.LogWarning("[RewindController] InteractRegistry rebuild skipped (fallback): registry/root is null.");
 
         if (_turnDriver == null)
         {
