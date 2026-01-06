@@ -12,14 +12,36 @@ public class InteractRegistry : MonoBehaviour
         _map.Clear();
     }
 
+    // 기존 API 유지(호환용). 씬 전체 스캔은 "언로드 직후 잔존 오브젝트"를 다시 등록시키는 원인이라 Warning.
     public void RebuildFromScene()
     {
+        Debug.LogWarning("[InteractRegistry] RebuildFromScene is deprecated for stage runtime. Use RebuildFromRoot(root).");
         _map.Clear();
 
-        // interface는 직접 Find가 안 되므로 MonoBehaviour 전체 스캔 후 캐스팅
         var behaviours = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
         for (int i = 0; i < behaviours.Length; i++)
         {
+            if (behaviours[i] == null) continue;
+            if (behaviours[i] is IInteractable ia)
+                Register(ia);
+        }
+    }
+
+    // 스테이지 루트 하위만 스캔 (UnloadStage 문제 해결 핵심)
+    public void RebuildFromRoot(Transform root)
+    {
+        _map.Clear();
+
+        if (root == null)
+        {
+            Debug.LogWarning("[InteractRegistry] RebuildFromRoot fallback: root is null.");
+            return;
+        }
+
+        var behaviours = root.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
+        for (int i = 0; i < behaviours.Length; i++)
+        {
+            if (behaviours[i] == null) continue;
             if (behaviours[i] is IInteractable ia)
                 Register(ia);
         }

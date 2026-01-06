@@ -16,6 +16,9 @@ public enum E_FatherActionResultCode
     Blocked_OutOfBounds,
     Blocked_Cell,
     Blocked_Occupied,
+
+    // InnerBase 밖 이동 차단
+    Blocked_InnerBase,
 }
 
 public readonly struct FatherActionResult
@@ -71,7 +74,11 @@ public partial class FatherController : MonoBehaviour
     public void BindGapFillerRegistry(GapFillerBlockRegistry registry) => _gapFillerRegistry = registry;
     public void UnbindGapFillerRegistry() => _gapFillerRegistry = null;
 
-    public void Initialize(BoardGrid grid, GridPresenter presenter, Vector2Int spawnCell)
+    // ===== InnerBase bounds =====
+    private RectInt _moveBounds;
+    private bool _hasMoveBounds;
+
+    public void Initialize(BoardGrid grid, GridPresenter presenter, Vector2Int spawnCell, RectInt moveBounds)
     {
         _grid = grid;
         _presenter = presenter;
@@ -84,12 +91,36 @@ public partial class FatherController : MonoBehaviour
             return;
         }
 
+        // bounds 세팅 (유효하지 않으면 보드 전체로 폴백 + Warning)
+        if (moveBounds.width <= 0 || moveBounds.height <= 0)
+        {
+            Debug.LogWarning($"[FatherController] MoveBounds invalid. fallback to full board. raw={moveBounds}");
+            _moveBounds = new RectInt(0, 0, _grid._w, _grid._h);
+            _hasMoveBounds = true;
+        }
+        else
+        {
+            _moveBounds = ClampRectToGrid(moveBounds, _grid._w, _grid._h);
+            if (_moveBounds != moveBounds)
+                Debug.LogWarning($"[FatherController] MoveBounds clamped. raw={moveBounds} clamped={_moveBounds}");
+            _hasMoveBounds = true;
+        }
+
+        // 보드 bounds 보정
         if (!_grid.IsInBounds(Cell))
         {
             Debug.LogWarning($"[FatherController] Initialize fallback: spawn out of bounds. spawn={Cell}");
             Cell = new Vector2Int(
                 Mathf.Clamp(Cell.x, 0, _grid._w - 1),
                 Mathf.Clamp(Cell.y, 0, _grid._h - 1));
+        }
+
+        // InnerBase bounds 보정
+        if (_hasMoveBounds && !_moveBounds.Contains(Cell))
+        {
+            var clamped = ClampCellToRect(Cell, _moveBounds);
+            Debug.LogWarning($"[FatherController] Initialize fallback: spawn out of move bounds. spawn={Cell} -> clamp={clamped} rect={_moveBounds}");
+            Cell = clamped;
         }
 
         // 점유 등록
@@ -157,9 +188,17 @@ public partial class FatherController : MonoBehaviour
         Vector2Int from = Cell;
         Vector2Int to = from + dir;
 
+        // 1) 보드 bounds
         if (!_grid.IsInBounds(to))
         {
             _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_OutOfBounds, from, from, false);
+            return;
+        }
+
+        // 2) InnerBase bounds (요구사항)
+        if (_hasMoveBounds && !_moveBounds.Contains(to))
+        {
+            _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_InnerBase, from, from, false);
             return;
         }
 
@@ -250,5 +289,21 @@ public partial class FatherController : MonoBehaviour
             _ => 0f
         };
         transform.rotation = Quaternion.Euler(0f, 0f, z);
+    }
+
+    private static RectInt ClampRectToGrid(RectInt r, int w, int h)
+    {
+        int xMin = Mathf.Clamp(r.xMin, 0, w - 1);
+        int yMin = Mathf.Clamp(r.yMin, 0, h - 1);
+        int xMax = Mathf.Clamp(r.xMax, xMin + 1, w);
+        int yMax = Mathf.Clamp(r.yMax, yMin + 1, h);
+        return new RectInt(xMin, yMin, xMax - xMin, yMax - yMin);
+    }
+
+    private static Vector2Int ClampCellToRect(Vector2Int c, RectInt r)
+    {
+        int x = Mathf.Clamp(c.x, r.xMin, r.xMax - 1);
+        int y = Mathf.Clamp(c.y, r.yMin, r.yMax - 1);
+        return new Vector2Int(x, y);
     }
 }

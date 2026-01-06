@@ -55,6 +55,10 @@ public static class StageJsonStageFactory
         for (int i = 0; i < cells.Length; i++)
             cells[i] = E_CellType.Empty; // Floor
 
+        // Father 이동 bounds = InnerBase 영역 (요구사항)
+        RectInt fatherMoveRect = new RectInt(innerOffset, innerOffset, innerW, innerH);
+        fatherMoveRect = ClampRectToBoardOrFallback(stageId, fatherMoveRect, w, h);
+
         // ---------- innerBase ----------
         var toggleSwitchSpawns = new List<ToggleSwitchSpawnData>(8);
         var holeCells = new List<Vector2Int>(16);
@@ -92,7 +96,7 @@ public static class StageJsonStageFactory
                             toggleSwitchSpawns.Add(new ToggleSwitchSpawnData
                             {
                                 _cell = cell,
-                                _mode = E_SwitchMode.ToggleOnEnter,
+                                _mode = E_SwitchMode.HoldWhilePressed,
                                 _startOn = false,
                                 _allowManualInteract = false,
                                 _targetDoorGuids = Array.Empty<string>(),
@@ -207,6 +211,10 @@ public static class StageJsonStageFactory
         // ---------- father spawn ----------
         Vector2Int fatherCell = GetInnerCell(root, "fatherSpawn", innerOffset, w, h, stageId);
 
+        // father spawn이 InnerBase 밖이면 로더에서 clamp할 예정이지만, 여기서도 Warning을 남김
+        if (!fatherMoveRect.Contains(fatherCell))
+            Debug.LogWarning($"[StageJson] fatherSpawn out of InnerBase(FatherMoveRect). stageId={stageId} spawn={fatherCell} rect={fatherMoveRect}");
+
         // ---------- blocks ----------
         var gapBlocks = new List<Vector2Int>(16);
         if (root.TryGetValue("blocks", out object blocksObj) && blocksObj is List<object> blocksList)
@@ -272,6 +280,8 @@ public static class StageJsonStageFactory
             FatherSpawnCell = fatherCell,
             ChildSpawnCell = childSpawnCell,
 
+            FatherMoveRect = fatherMoveRect,
+
             ChildStartPathStep = childStartStep,
             ChildGoalPathStep = goalStep,
 
@@ -284,6 +294,27 @@ public static class StageJsonStageFactory
         });
 
         return stage;
+    }
+
+    private static RectInt ClampRectToBoardOrFallback(string stageId, RectInt r, int w, int h)
+    {
+        if (r.width <= 0 || r.height <= 0)
+        {
+            Debug.LogWarning($"[StageJson] FatherMoveRect invalid. stageId={stageId} raw={r} (fallback: full board)");
+            return new RectInt(0, 0, w, h);
+        }
+
+        int xMin = Mathf.Clamp(r.xMin, 0, w - 1);
+        int yMin = Mathf.Clamp(r.yMin, 0, h - 1);
+
+        int xMax = Mathf.Clamp(r.xMax, xMin + 1, w);
+        int yMax = Mathf.Clamp(r.yMax, yMin + 1, h);
+
+        var clamped = new RectInt(xMin, yMin, xMax - xMin, yMax - yMin);
+        if (clamped != r)
+            Debug.LogWarning($"[StageJson] FatherMoveRect clamped. stageId={stageId} raw={r} clamped={clamped}");
+
+        return clamped;
     }
 
     // ---------------- helpers ----------------

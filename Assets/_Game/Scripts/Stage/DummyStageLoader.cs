@@ -90,13 +90,35 @@ public class DummyStageLoader : IStageLoader
             return;
         }
 
-        if (ctx._stageRuntime != null)
-        {
-            if (ctx._stageRuntime._root != null)
-                UnityEngine.Object.Destroy(ctx._stageRuntime._root);
+        if (ctx._stageRuntime == null)
+            return;
 
-            ctx._stageRuntime = null;
+        // 1) 레지스트리/리스트 정리 (참조 끊기)
+        try
+        {
+            ctx._stageRuntime._fatherController?.UnbindInteractPort();
+            ctx._stageRuntime._fatherController?.UnbindGapFillerRegistry();
         }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[StageLoader] UnloadStage cleanup warn. ex={ex.Message}");
+        }
+
+        if (ctx._stageRuntime._interactRegistry != null)
+            ctx._stageRuntime._interactRegistry.Clear();
+
+        if (ctx._stageRuntime._turnSystems != null)
+            ctx._stageRuntime._turnSystems.Clear();
+
+        // 2) 즉시 화면에서 제거(다음 프레임 Destroy 지연 잔상 방지)
+        if (ctx._stageRuntime._root != null)
+            ctx._stageRuntime._root.SetActive(false);
+
+        // 3) 실제 파괴 예약
+        if (ctx._stageRuntime._root != null)
+            UnityEngine.Object.Destroy(ctx._stageRuntime._root);
+
+        ctx._stageRuntime = null;
     }
 
     private void CaptureStageCreatedSnapshot(GameFlowContext ctx)
@@ -193,8 +215,10 @@ public class DummyStageLoader : IStageLoader
 
         // 3) 씬에 존재하는 다수 Interactable 등록(프리팹 배치 + 런타임 생성 모두 커버)
         // - 런타임 생성 Interactable이 Initialize에서 Register를 안 해도 여기서 잡힘
-        if (registry != null) registry.RebuildFromScene();
-        else Debug.LogWarning("[StageLoader] Registry rebuild skipped (fallback): registry is null.");
+        if (registry != null && ctx?._stageRuntime?._root != null)
+            registry.RebuildFromRoot(ctx._stageRuntime._root.transform);
+        else
+            Debug.LogWarning("[StageLoader] Registry rebuild skipped (fallback): registry/root is null.");
 
         // 4) 링크(스위치→문 등) 바인딩
         BindLinks(ctx);
@@ -243,10 +267,16 @@ public class DummyStageLoader : IStageLoader
         ctx._stageRuntime._fatherController = EnsureController<FatherController>(ctx._stageRuntime._father);
         EnsureRewindKey(ctx._stageRuntime._father);
 
+        // Father bounds 주입 (InnerBase)
+        RectInt moveRect = stageDef != null ? stageDef.FatherMoveRect : default;
+        if (stageDef == null)
+            Debug.LogWarning("[StageLoader] FatherMoveRect fallback: stageDef is null. (use full board)");
+
         ctx._stageRuntime._fatherController.Initialize(
             ctx._stageRuntime._grid,
             ctx._stageRuntime._gridPresenter,
-            stageDef.FatherSpawn._cell);
+            stageDef.FatherSpawn._cell,
+            moveRect);
 
         // ChildController 부착 + 초기화
         ctx._stageRuntime._childController = EnsureController<ChildController>(ctx._stageRuntime._child);
@@ -324,15 +354,13 @@ public class DummyStageLoader : IStageLoader
     {
         if (ctx?._stageRuntime?._root == null) return;
 
-        var stageRoot = ctx._stageRuntime._root;
-        var behaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+        var root = ctx._stageRuntime._root.transform;
+        var behaviours = root.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
 
         for (int i = 0; i < behaviours.Length; i++)
         {
+            if (behaviours[i] == null) continue;
             if (behaviours[i] is not IStageGimmickInitializable init) continue;
-
-            // 같은 씬 + (스테이지 루트 하위거나, 스테이지 씬 오브젝트)
-            if (behaviours[i].gameObject.scene != stageRoot.scene) continue;
 
             try
             {
@@ -349,13 +377,13 @@ public class DummyStageLoader : IStageLoader
     {
         if (ctx?._stageRuntime?._root == null) return;
 
-        var stageRoot = ctx._stageRuntime._root;
-        var behaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+        var root = ctx._stageRuntime._root.transform;
+        var behaviours = root.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
 
         for (int i = 0; i < behaviours.Length; i++)
         {
+            if (behaviours[i] == null) continue;
             if (behaviours[i] is not ILinkBinder binder) continue;
-            if (behaviours[i].gameObject.scene != stageRoot.scene) continue;
 
             try
             {
@@ -374,13 +402,13 @@ public class DummyStageLoader : IStageLoader
 
         ctx._stageRuntime._turnSystems.Clear();
 
-        var stageRoot = ctx._stageRuntime._root;
-        var behaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+        var root = ctx._stageRuntime._root.transform;
+        var behaviours = root.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
 
         for (int i = 0; i < behaviours.Length; i++)
         {
+            if (behaviours[i] == null) continue;
             if (behaviours[i] is not ITurnTickable sys) continue;
-            if (behaviours[i].gameObject.scene != stageRoot.scene) continue;
 
             ctx._stageRuntime._turnSystems.Add(sys);
         }

@@ -16,8 +16,10 @@ MonoBehaviour:
   - ChapterId: Chapter_01
     VisualProfile: {fileID: 11400000, guid: d00934c87d45b8743b11cb4a0afbde11, type: 2}
     Stages:
-    - {fileID: 11400000, guid: a29837bdb11495447be2489d7453e870, type: 2}
-    - {fileID: 11400000, guid: 4daaa2cc6d2a3c5468a0e535c627aaaf, type: 2}
+    - {fileID: 0}
+    - {fileID: 0}
+    - {fileID: 0}
+    - {fileID: 0}
   - ChapterId: Chapter_02
     VisualProfile: {fileID: 11400000, guid: cf958409b171f644687b8f211da2ee8e, type: 2}
     Stages:

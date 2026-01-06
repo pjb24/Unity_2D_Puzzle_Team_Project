@@ -26,7 +26,7 @@ public class ToggleSwitchController : MonoBehaviour, IInteractable, IRewindable,
     [SerializeField] private Vector2Int _cell;
 
     [Header("Mode")]
-    [SerializeField] private E_SwitchMode _mode = E_SwitchMode.ToggleOnEnter;
+    [SerializeField] private E_SwitchMode _mode = E_SwitchMode.HoldWhilePressed;
 
     [Header("Behavior")]
     [SerializeField] private bool _startOn = false;
@@ -41,6 +41,8 @@ public class ToggleSwitchController : MonoBehaviour, IInteractable, IRewindable,
     private GridPresenter _presenter;
     private InteractRegistry _registry;
     private FatherController _father;
+
+    private StageRuntimeRefs _refs; // root 기반 링크 바인딩용
 
     private readonly List<DoorController> _doors = new(8);
 
@@ -81,6 +83,7 @@ public class ToggleSwitchController : MonoBehaviour, IInteractable, IRewindable,
 
     public void InitializeGimmick(StageRuntimeRefs refs, BoardGrid grid, GridPresenter presenter, InteractRegistry registry)
     {
+        _refs = refs;
         _grid = grid;
         _presenter = presenter;
         _registry = registry;
@@ -130,9 +133,8 @@ public class ToggleSwitchController : MonoBehaviour, IInteractable, IRewindable,
             return;
         }
 
-        // 1) 현재 스테이지 씬의 DoorController 전수 조사
-        var stageScene = refs._root.scene;
-        var allDoors = UnityEngine.Object.FindObjectsByType<DoorController>(FindObjectsSortMode.None);
+        // 1) 현재 스테이지 StageRoot 하위의 DoorController 스캔
+        var allDoors = refs._root.GetComponentsInChildren<DoorController>(includeInactive: true);
 
         var dict = new Dictionary<Guid, DoorController>(allDoors.Length);
 
@@ -140,7 +142,6 @@ public class ToggleSwitchController : MonoBehaviour, IInteractable, IRewindable,
         {
             var door = allDoors[i];
             if (door == null) continue;
-            if (door.gameObject.scene != stageScene) continue;
 
             var key = door.GetComponent<RewindKey>();
             if (key == null)
@@ -319,6 +320,7 @@ public class ToggleSwitchController : MonoBehaviour, IInteractable, IRewindable,
 
     private void OnDestroy()
     {
+        // UnloadStage 시 Destroy 지연 프레임에서도 registry가 “씬 전체 스캔”으로 재등록되는 문제를 막기 위해, 명시적 해제
         _registry?.Unregister(this);
     }
 

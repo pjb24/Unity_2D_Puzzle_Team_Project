@@ -50,6 +50,14 @@ public partial class FatherController : IRewindable
                 Mathf.Clamp(to.y, 0, _grid._h - 1));
         }
 
+        // InnerBase bounds 보정
+        if (_hasMoveBounds && !_moveBounds.Contains(to))
+        {
+            var clamped = ClampCellToRect(to, _moveBounds);
+            Debug.LogWarning($"[FatherController] RestoreState fallback: out of move bounds -> clamp. to={to} clamp={clamped} rect={_moveBounds}");
+            to = clamped;
+        }
+
         // 점유 리셋
         if (_grid.IsInBounds(Cell))
         {
