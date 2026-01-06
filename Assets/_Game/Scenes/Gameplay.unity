@@ -436,6 +436,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _maxSnapshots: 64
+  _stageRoot: {fileID: 0}
 --- !u!1 &260824316
 GameObject:
   m_ObjectHideFlags: 0
@@ -1786,6 +1787,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _recorder: {fileID: 211024661}
   _turnDriver: {fileID: 454478395}
+  _stageRoot: {fileID: 0}
+  _interactRegistry: {fileID: 0}
   _rewindMax: 3
 --- !u!1 &859788948
 GameObject:
@@ -3090,52 +3093,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1618684964}
   m_CullTransparentMesh: 1
---- !u!1 &1655691624
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1655691626}
-  - component: {fileID: 1655691625}
-  m_Layer: 0
-  m_Name: AudioHub
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1655691625
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1655691624}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 59723f4919e316c4981874eec85fae4c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _bgm: {fileID: 0}
-  _sfx: {fileID: 0}
---- !u!4 &1655691626
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1655691624}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 361.27, y: 231.36, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1830204619
 GameObject:
   m_ObjectHideFlags: 0
@@ -3739,4 +3696,3 @@ SceneRoots:
   - {fileID: 260824319}
   - {fileID: 2123659675}
   - {fileID: 1195767533}
-  - {fileID: 1655691626}

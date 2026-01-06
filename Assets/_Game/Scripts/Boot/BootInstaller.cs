@@ -9,6 +9,10 @@ public class BootInstaller : MonoBehaviour
 
     private void Awake()
     {
+        // BGM이 MainMenu 씬 로드 직후부터 바로 시작되도록 사전 준비
+        AudioHub.Ensure();
+        BgmSceneRouter.Ensure();
+
         // TODO: 이후 GameConfig / Save / Service 초기화 지점
         SceneLoader.Load(_nextScene);
     }

@@ -15,7 +15,11 @@ MonoBehaviour:
   _chapters:
   - ChapterId: Chapter_01
     VisualProfile: {fileID: 11400000, guid: d00934c87d45b8743b11cb4a0afbde11, type: 2}
-    Stages: []
+    Stages:
+    - {fileID: 0}
+    - {fileID: 0}
+    - {fileID: 0}
+    - {fileID: 0}
   _difficultyProfiles:
   - _difficulty: 0
     RewindMax: 3
