@@ -214,6 +214,20 @@ public class DummyStageLoader : IStageLoader
         EnsureHoleVisualLayer(ctx); // Hole 변화(메움/복원)도 화면에 반영
 
         var gapRegistry = EnsureGapFillerRegistry(ctx);
+        // GapFillerBlock도 InnerBase 규칙 적용
+        if (stageDef != null && ctx?._stageRuntime?._grid != null)
+        {
+            gapRegistry.ConfigureMoveBounds(stageDef.FatherMoveRect, ctx._stageRuntime._grid);
+        }
+        else
+        {
+            Debug.LogWarning("[StageLoader] GapFiller MoveBounds fallback: stageDef/grid is null. (use full board)");
+            gapRegistry.ConfigureMoveBounds(default, ctx?._stageRuntime?._grid);
+        }
+        // ToggleSwitchController가 블록을 감지할 수 있도록 refs에 보관
+        if (ctx?._stageRuntime != null)
+            ctx._stageRuntime._gapFillerRegistry = gapRegistry;
+
         SpawnGapFillerBlocks(ctx, stageDef, gapRegistry);
         BindGapFillerToFather(ctx, gapRegistry);
     }

@@ -34,4 +34,7 @@ public class StageRuntimeRefs
     public List<ITurnTickable> _turnSystems = new List<ITurnTickable>(8);
 
     public ChildPathBlockerRegistry _childPathBlockers;
+
+    // ===== GapFiller =====
+    public GapFillerBlockRegistry _gapFillerRegistry;
 }

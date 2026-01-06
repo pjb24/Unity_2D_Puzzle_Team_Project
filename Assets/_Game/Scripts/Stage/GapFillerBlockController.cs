@@ -2,6 +2,7 @@
 using System;
 using UnityEngine;
 
+[DisallowMultipleComponent]
 public class GapFillerBlockController : MonoBehaviour, IRewindable
 {
     [Serializable]
@@ -48,6 +49,14 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
                 Mathf.Clamp(_cell.y, 0, _grid._h - 1));
         }
 
+        // InnerBase(=FatherMoveRect) 밖이면 스폰 자체를 Clamp + Warning
+        if (_registry != null && !_registry.IsAllowedCell(_cell, _grid))
+        {
+            Vector2Int clamped = ClampCellToRect(_cell, GetMoveRectOrFullBoard());
+            Debug.LogWarning($"[GapFillerBlock] Initialize fallback: out of InnerBase. spawn={_cell} -> clamp={clamped}");
+            _cell = clamped;
+        }
+
         _isAlive = true;
 
         if (_registry != null)
@@ -81,7 +90,11 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
         if (!_grid.IsInBounds(to))
             return false;
 
-        // 정적 지형 막힘
+        // InnerBase(=FatherMoveRect)로 이동 제한
+        if (_registry != null && !_registry.IsAllowedCell(to, _grid))
+            return false;
+
+        // 정적 지형 막힘(벽/장애물)
         var cellType = _grid.GetCell(to);
         if (_grid.IsBlockedCell(cellType))
             return false;
@@ -152,7 +165,7 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
             return;
         }
 
-        // 현재 등록/점유 해제(살아있는 경우만)
+        // 기존 등록/점유 해제(살아있는 경우만)
         if (_isAlive)
         {
             _grid.SetOcc(_cell, E_Occupant.None);
@@ -162,10 +175,19 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
         var newCell = new Vector2Int(s._x, s._y);
         if (!_grid.IsInBounds(newCell))
         {
-            Debug.LogWarning($"[GapFillerBlock] RestoreState fallback: out of bounds. cell={newCell}");
-            newCell = new Vector2Int(
+            Vector2Int clamped = new Vector2Int(
                 Mathf.Clamp(newCell.x, 0, _grid._w - 1),
                 Mathf.Clamp(newCell.y, 0, _grid._h - 1));
+            Debug.LogWarning($"[GapFillerBlock] RestoreState fallback: out of bounds -> clamp. to={newCell} clamp={clamped}");
+            newCell = clamped;
+        }
+
+        // InnerBase 밖 복원은 Clamp + Warning (무음 금지)
+        if (_registry != null && !_registry.IsAllowedCell(newCell, _grid))
+        {
+            Vector2Int clamped = ClampCellToRect(newCell, GetMoveRectOrFullBoard());
+            Debug.LogWarning($"[GapFillerBlock] RestoreState fallback: out of InnerBase -> clamp. to={newCell} clamp={clamped}");
+            newCell = clamped;
         }
 
         _cell = newCell;
@@ -175,6 +197,15 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
 
         if (_isAlive)
         {
+            // “살아있는 상태인데 Hole 위”는 비정상 -> 죽이기 + Warning (무음 금지)
+            if (_grid.GetMeta(_cell).IsHole)
+            {
+                Debug.LogWarning($"[GapFillerBlock] RestoreState fallback: alive block on Hole cell. cell={_cell} -> deactivate");
+                _isAlive = false;
+                gameObject.SetActive(false);
+                return;
+            }
+
             _grid.SetOcc(_cell, E_Occupant.GapFillerBlock);
             _registry?.Register(this, _cell);
             gameObject.SetActive(true);
@@ -184,5 +215,21 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
         {
             gameObject.SetActive(false);
         }
+    }
+
+    // ===== helpers =====
+
+    private RectInt GetMoveRectOrFullBoard()
+    {
+        // registry가 full-board 폴백으로 들고 있을 수도 있으니 그대로 사용
+        // 단, 접근 API를 따로 열지 않았으므로 여기선 “보드 전체”를 반환하고 Clamp만 수행한다.
+        return new RectInt(0, 0, _grid._w, _grid._h);
+    }
+
+    private static Vector2Int ClampCellToRect(Vector2Int c, RectInt r)
+    {
+        int x = Mathf.Clamp(c.x, r.xMin, r.xMax - 1);
+        int y = Mathf.Clamp(c.y, r.yMin, r.yMax - 1);
+        return new Vector2Int(x, y);
     }
 }

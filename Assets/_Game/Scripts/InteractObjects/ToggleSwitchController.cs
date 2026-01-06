@@ -40,7 +40,9 @@ public class ToggleSwitchController : MonoBehaviour, IInteractable, IRewindable,
     private BoardGrid _grid;
     private GridPresenter _presenter;
     private InteractRegistry _registry;
+
     private FatherController _father;
+    private GapFillerBlockRegistry _gapFillerRegistry;
 
     private StageRuntimeRefs _refs; // root 기반 링크 바인딩용
 
@@ -87,7 +89,17 @@ public class ToggleSwitchController : MonoBehaviour, IInteractable, IRewindable,
         _grid = grid;
         _presenter = presenter;
         _registry = registry;
+
         _father = refs != null ? refs._fatherController : null;
+        _gapFillerRegistry = refs != null ? refs._gapFillerRegistry : null;
+
+        // scope에 registry를 못 넣은 경우 1회 폴백(무음 금지)
+        if (_gapFillerRegistry == null && refs != null && refs._root != null)
+        {
+            _gapFillerRegistry = refs._root.GetComponentInChildren<GapFillerBlockRegistry>(includeInactive: true);
+            if (_gapFillerRegistry == null)
+                Debug.LogWarning("[ToggleSwitchController] InitializeGimmick: GapFillerBlockRegistry not found. (Gap blocks won't press switches)");
+        }
 
         _isOn = _startOn;
         _isPressed = false;
@@ -190,11 +202,11 @@ public class ToggleSwitchController : MonoBehaviour, IInteractable, IRewindable,
     }
 
     // =========================
-    // Turn hook (OnEnter 1회 반전)
+    // Turn hook (OnEnter 1회 반전, 압력 스위치: Father + GapFillerBlock)
     // =========================
     public void OnTurnBegin(int turnIndex)
     {
-        if (_father == null || _grid == null)
+        if (_grid == null)
         {
             if (!_warnedNotInitialized)
             {
@@ -204,7 +216,7 @@ public class ToggleSwitchController : MonoBehaviour, IInteractable, IRewindable,
             return;
         }
 
-        bool onCell = (_father.Cell == _cell);
+        bool onCell = IsAnyPresserOnCell();
 
         bool entered = onCell && !_isPressed;
         bool exited = !onCell && _isPressed;
@@ -258,6 +270,24 @@ public class ToggleSwitchController : MonoBehaviour, IInteractable, IRewindable,
     public void OnTurnEnd(int turnIndex)
     {
         // no-op
+    }
+
+    private bool IsAnyPresserOnCell()
+    {
+        // 1) Father
+        if (_father != null && _father.Cell == _cell)
+            return true;
+
+        // 2) GapFillerBlock
+        if (_gapFillerRegistry != null
+            && _gapFillerRegistry.TryGet(_cell, out var block)
+            && block != null
+            && block.IsAlive)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     // =========================
