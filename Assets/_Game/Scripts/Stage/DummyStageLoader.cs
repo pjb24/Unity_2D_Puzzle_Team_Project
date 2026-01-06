@@ -281,6 +281,14 @@ public class DummyStageLoader : IStageLoader
         ctx._stageRuntime._grid = new BoardGrid(w, h, stageDef.Cells);
         ctx._stageRuntime._gridPresenter = new GridPresenter(ctx._stageRuntime._root.transform, w, h, _tileSize);
 
+        var profile = ctx._chapterVisualProfile;
+        if (profile == null)
+        {
+            Debug.LogWarning("[StageLoader] ChapterVisualProfile is null. TileVisualProfile will be null (proto fallback).");
+        }
+
+        ctx._stageRuntime._gridPresenter.SetTileVisualProfile(profile != null ? profile.TileVisualProfile : null);
+
         // ===== 타일 생성 =====
         ctx._stageRuntime._tilesRoot = ctx._stageRuntime._gridPresenter.BuildTiles(ctx._stageRuntime._grid, ctx._stageRuntime._tiles);
         if (ctx._stageRuntime._tilesRoot == null)

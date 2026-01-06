@@ -10,6 +10,9 @@ public class ChapterVisualProfile : ScriptableObject
     [SerializeField] private Sprite _fatherSprite;
     [SerializeField] private Sprite _childSprite;
 
+    [Header("Tiles")]
+    [SerializeField] private TileVisualProfile _tileVisualProfile;
+
     [Header("Audio")]
     [SerializeField] private AudioClip _bgm;
     [SerializeField] private AudioClip _sfxStageEnter;
@@ -22,6 +25,8 @@ public class ChapterVisualProfile : ScriptableObject
     public GameObject ChildPrefab => _childPrefab;
     public Sprite FatherSprite => _fatherSprite;
     public Sprite ChildSprite => _childSprite;
+    public TileVisualProfile TileVisualProfile => _tileVisualProfile;
+
     public AudioClip Bgm => _bgm;
     public AudioClip SfxStageEnter => _sfxStageEnter;
     public float FatherMoveSpeed => _fatherMoveSpeed;
@@ -35,6 +40,9 @@ public class ChapterVisualProfile : ScriptableObject
 
         if (_childPrefab == null && _childSprite == null)
             Debug.LogWarning($"[ChapterVisualProfile] Child visual missing: {name}", this);
+
+        if (_tileVisualProfile == null)
+            Debug.LogWarning($"[ChapterVisualProfile] TileVisualProfile missing: {name} (tiles will use proto fallback)", this);
 
         if (_fatherMoveSpeed <= 0f) _fatherMoveSpeed = 0.01f;
         if (_childStepSpeed <= 0f) _childStepSpeed = 0.01f;

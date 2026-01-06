@@ -16,23 +16,24 @@ public class GridPresenter
     private readonly int _w;
     private readonly int _h;
 
-    private readonly SpriteRenderer[] _tileRenderers;
+    private readonly List<SpriteRenderer> _tileRenderers = new List<SpriteRenderer>(256);
 
     private Transform _tilesRoot;
     private BoardGrid _boundGrid;
     private System.Action<Vector2Int, CellMeta> _metaListener;
 
+    private TileVisualProfile _tileVisualProfile;
+    private bool _warnedNoProfile;
+
     public GridPresenter(Transform root, int w, int h, float tileSize)
     {
         _root = root;
-        _w = w;
-        _h = h;
-        _tileSize = tileSize;
+        _w = Mathf.Max(1, w);
+        _h = Mathf.Max(1, h);
+        _tileSize = Mathf.Max(0.01f, tileSize);
 
         // DummyStageLoader와 동일한 중앙정렬 규칙
         _originLocal = new Vector3(-(w - 1) * 0.5f * tileSize, -(h - 1) * 0.5f * tileSize, 0f);
-
-        _tileRenderers = new SpriteRenderer[_w * _h];
     }
 
     public Vector3 CellToWorld(Vector2Int c)
@@ -44,6 +45,12 @@ public class GridPresenter
 
     public Transform BuildTiles(BoardGrid grid, List<Transform> outTiles = null)
     {
+        if (_root == null)
+        {
+            Debug.LogWarning("[GridPresenter] BuildTiles fallback: root is null.");
+            return null;
+        }
+
         if (grid == null)
         {
             Debug.LogWarning("[GridPresenter] BuildTiles fallback: grid is null.");
@@ -60,6 +67,8 @@ public class GridPresenter
             Object.Destroy(_tilesRoot.gameObject);
             _tilesRoot = null;
         }
+
+        _tileRenderers.Clear();
 
         var goRoot = new GameObject("[Tiles]");
         goRoot.transform.SetParent(_root, false);
@@ -84,9 +93,9 @@ public class GridPresenter
 
                 go.transform.position = CellToWorld(cell);
 
-                _tileRenderers[idx] = go.GetComponent<SpriteRenderer>();
-
-                outTiles?.Add(go.transform);
+                var sr = go.GetComponent<SpriteRenderer>();
+                _tileRenderers.Add(sr);
+                outTiles?.Add(sr.transform);
 
                 RefreshTile(grid, cell);
             }
@@ -94,6 +103,17 @@ public class GridPresenter
 
         BindMetaListener(grid);
         return _tilesRoot;
+    }
+
+    public void ApplyCellChange(Vector2Int cell)
+    {
+        if (_boundGrid == null)
+        {
+            Debug.LogWarning($"[GridPresenter] ApplyCellChange fallback: bound grid is null. cell={cell}");
+            return;
+        }
+
+        RefreshTile(_boundGrid, cell);
     }
 
     public void RefreshTile(BoardGrid grid, Vector2Int cell)
@@ -118,8 +138,42 @@ public class GridPresenter
             return;
         }
 
+        // Hole은 메타 우선(검정)
+        var meta = grid.GetMeta(cell);
         // 정적 셀 타입 색
         var cellType = grid.GetCell(cell);
+
+        // ---- resolve key ----
+        E_TileVisualKey key;
+        if (meta.IsHole) key = E_TileVisualKey.Hole;
+        else
+        {
+            key = cellType switch
+            {
+                E_CellType.Wall => E_TileVisualKey.Wall,
+                E_CellType.Obstacle => E_TileVisualKey.Obstacle,
+                E_CellType.Goal => E_TileVisualKey.Goal,
+                _ => E_TileVisualKey.Floor
+            };
+        }
+
+        // ---- apply ----
+        if (_tileVisualProfile != null)
+        {
+            Sprite sprite = _tileVisualProfile.GetSpriteOrFallback(key);
+            if (sprite != null)
+            {
+                sr.sprite = sprite;
+                sr.color = Color.white;
+                return;
+            }
+
+            Debug.LogWarning($"[GridPresenter] Tile sprite fallback: profile fallback sprite is null. key={key}");
+        }
+
+        // 프로필이 없거나(혹은 폴백 스프라이트도 없는) 경우: 기존 프로토 색상으로 폴백
+        sr.sprite = Proto2DVisual.Sprite;
+
         Color baseColor = cellType switch
         {
             E_CellType.Wall => Proto2DVisual.TileWall,
@@ -128,8 +182,6 @@ public class GridPresenter
             _ => Proto2DVisual.TileFloor
         };
 
-        // Hole은 메타 우선(검정)
-        var meta = grid.GetMeta(cell);
         if (meta.IsHole)
             sr.color = Proto2DVisual.TileHole;
         else
@@ -156,5 +208,28 @@ public class GridPresenter
 
         _boundGrid = null;
         _metaListener = null;
+    }
+
+    public void SetTileVisualProfile(TileVisualProfile profile)
+    {
+        _tileVisualProfile = profile;
+
+        if (_tileVisualProfile == null && !_warnedNoProfile)
+        {
+            _warnedNoProfile = true;
+            Debug.LogWarning("[GridPresenter] TileVisualProfile is null. Tiles will use proto color fallback.");
+        }
+
+        // 이미 타일이 만들어져 있으면 즉시 재적용
+        if (_boundGrid != null && _tileRenderers.Count == _w * _h)
+        {
+            for (int y = 0; y < _h; y++)
+            {
+                for (int x = 0; x < _w; x++)
+                {
+                    RefreshTile(_boundGrid, new Vector2Int(x, y));
+                }
+            }
+        }
     }
 }

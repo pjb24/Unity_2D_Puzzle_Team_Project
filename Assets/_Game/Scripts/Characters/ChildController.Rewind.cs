@@ -13,11 +13,17 @@ public partial class ChildController : IRewindable
     {
         public int _pathPos;
         public bool _lastBlocked;
+        public E_Facing _facing;
     }
 
     public object CaptureState()
     {
-        return new ChildState { _pathPos = _pathPos, _lastBlocked = _lastStepBlocked };
+        return new ChildState
+        {
+            _pathPos = _pathPos,
+            _lastBlocked = _lastStepBlocked,
+            _facing = Facing
+        };
     }
 
     public void RestoreState(object state)
@@ -36,6 +42,9 @@ public partial class ChildController : IRewindable
 
         _pathPos = Mathf.Clamp(s._pathPos, 0, _path.Count - 1);
         _lastStepBlocked = s._lastBlocked;
+
+        Facing = s._facing;
+        ApplyFacingVisual();
 
         transform.position = _path.Points[_pathPos];
     }

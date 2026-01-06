@@ -53,7 +53,20 @@ public partial class ChildController : MonoBehaviour
         _lastStepBlocked = false;
 
         if (_path != null && _path.Count > 0)
+        {
             transform.position = _path.Points[_pathPos];
+
+            if (_path.Count >= 2)
+            {
+                int next = _pathPos + 1;
+                if (next >= _path.Count) next = 0;
+                UpdateFacingByNextStepWorld(_path.Points[_pathPos], _path.Points[next]);
+            }
+            else
+            {
+                ApplyFacingVisual();
+            }
+        }
     }
 
     public void RequestStep()
@@ -68,10 +81,10 @@ public partial class ChildController : MonoBehaviour
         int next = _pathPos + 1;
         if (next >= _path.Count)
         {
-            next = 0; // ★ 루프: 끝이면 처음으로
+            next = 0; // 루프: 끝이면 처음으로
         }
 
-        // 최소 구현: 특정 인덱스가 Blocked면 막힘
+        // 특정 인덱스가 Blocked면 막힘
         if (_pathBlockers != null && _pathBlockers.IsBlocked(next))
         {
             Debug.Log("[ChildController] Blocked by ChildPathBlockerRegistry");
@@ -79,6 +92,12 @@ public partial class ChildController : MonoBehaviour
             _onStepCompleted?.Invoke(true);
             return;
         }
+
+
+        // 코너 포함: “다음 이동 벡터”로 Facing 선 갱신
+        Vector3 from = _path.Points[_pathPos];
+        Vector3 toNext = _path.Points[next];
+        UpdateFacingByNextStepWorld(from, toNext);
 
         // 성공: 인덱스 갱신 + 이동
         _pathPos = next;
