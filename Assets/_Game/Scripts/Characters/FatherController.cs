@@ -6,6 +6,7 @@
 ///
 
 using System;
+using System.Collections;
 using UnityEngine;
 
 public enum E_FatherActionResultCode
@@ -78,10 +79,25 @@ public partial class FatherController : MonoBehaviour
     private RectInt _moveBounds;
     private bool _hasMoveBounds;
 
+    // ===== Move FX (Lerp) =====
+    [Header("Move FX (Lerp)")]
+    [SerializeField] private bool _useLerp = true;
+    [SerializeField] private float _moveDuration = 0.12f;
+
+    private Coroutine _moveCo;
+
+    // ===== Move Animation =====
+    private FatherAnimDriver _animDriver;
+    public void BindAnimDriver(FatherAnimDriver driver) => _animDriver = driver;
+    public void UnbindAnimDriver() => _animDriver = null;
+
     public void Initialize(BoardGrid grid, GridPresenter presenter, Vector2Int spawnCell, RectInt moveBounds)
     {
         _grid = grid;
         _presenter = presenter;
+
+        if (_animDriver == null)
+            _animDriver = GetComponent<FatherAnimDriver>();
 
         Cell = spawnCell;
 
@@ -126,6 +142,8 @@ public partial class FatherController : MonoBehaviour
         // 점유 등록
         _grid.SetOcc(Cell, E_Occupant.Father);
 
+        StopMoveFxIfAny();
+
         // 위치 스냅
         transform.position = _presenter.CellToWorld(Cell);
         ApplyFacingVisual();
@@ -140,6 +158,7 @@ public partial class FatherController : MonoBehaviour
 
             _interactPort?.RequestInteract(Cell, Facing);
 
+            // Interact는 이동이 아니므로 애니 트리거 없음
             _lastResult = new FatherActionResult(E_FatherActionResultCode.None, Cell, Cell, false);
             _onActionCompleted?.Invoke();
             return;
@@ -156,6 +175,7 @@ public partial class FatherController : MonoBehaviour
 
         if (dir == Vector2Int.zero)
         {
+            Debug.LogWarning($"[FatherController] RequestAction fallback: invalid move cmd. cmd={cmd.Type}");
             _lastResult = new FatherActionResult(E_FatherActionResultCode.None, Cell, Cell, false);
             _onActionCompleted?.Invoke();
             return;
@@ -195,13 +215,14 @@ public partial class FatherController : MonoBehaviour
             return;
         }
 
-        // 2) InnerBase bounds (요구사항)
+        // 2) InnerBase bounds
         if (_hasMoveBounds && !_moveBounds.Contains(to))
         {
             _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_InnerBase, from, from, false);
             return;
         }
 
+        // wall/blocked cell
         var cellType = _grid.GetCell(to);
         if (_grid.IsBlockedCell(cellType))
         {
@@ -257,13 +278,14 @@ public partial class FatherController : MonoBehaviour
             }
         }
 
+        // ===== 논리 이동(즉시) =====
         // 점유 갱신
         _grid.SetOcc(from, E_Occupant.None);
         _grid.SetOcc(to, E_Occupant.Father);
         Cell = to;
 
-        // 월드 이동 스냅
-        transform.position = _presenter.CellToWorld(Cell);
+        // 이동 성공 시에만 Move 애니메이션 재생
+        _animDriver?.PlayMove(Facing);
 
         bool triggerGoal = (cellType == E_CellType.Goal);
 
@@ -275,10 +297,25 @@ public partial class FatherController : MonoBehaviour
             consumedTurns = 2;
 
         _lastResult = new FatherActionResult(E_FatherActionResultCode.Moved, from, to, triggerGoal, consumedTurns);
+
+        // ===== 연출 이동(애니 + Lerp) =====
+        _animDriver?.PlayMove(Facing);
+
+        StartMoveFx(
+            fromWorld: _presenter.CellToWorld(from),
+            toWorld: _presenter.CellToWorld(to),
+            onDone: () => _onActionCompleted?.Invoke());
     }
 
     private void ApplyFacingVisual()
     {
+        // Animator 사용 가능하면 회전으로 방향 표시하지 않는다(프리팹 애니/리깅 훼손 방지)
+        if (_animDriver != null && _animDriver.IsUsable)
+        {
+            _animDriver.SetFacing(Facing);
+            return;
+        }
+
         // 프로토타입: 회전으로 방향 표시
         float z = Facing switch
         {
@@ -305,5 +342,58 @@ public partial class FatherController : MonoBehaviour
         int x = Mathf.Clamp(c.x, r.xMin, r.xMax - 1);
         int y = Mathf.Clamp(c.y, r.yMin, r.yMax - 1);
         return new Vector2Int(x, y);
+    }
+
+    private void StartMoveFx(Vector3 fromWorld, Vector3 toWorld, Action onDone)
+    {
+        // 중복 이동 정리
+        StopMoveFxIfAny();
+
+        if (!_useLerp)
+        {
+            transform.position = toWorld;
+            onDone?.Invoke();
+            return;
+        }
+
+        if (_moveDuration <= 0f)
+        {
+            Debug.LogWarning($"[FatherController] MoveFX fallback: invalid duration({_moveDuration}). (snap)");
+            transform.position = toWorld;
+            onDone?.Invoke();
+            return;
+        }
+
+        _moveCo = StartCoroutine(CoMove(fromWorld, toWorld, _moveDuration, () =>
+        {
+            _moveCo = null;
+            onDone?.Invoke();
+        }));
+    }
+
+    private void StopMoveFxIfAny()
+    {
+        if (_moveCo != null)
+        {
+            StopCoroutine(_moveCo);
+            _moveCo = null;
+        }
+    }
+
+    private IEnumerator CoMove(Vector3 from, Vector3 to, float dur, Action onDone)
+    {
+        // 현재 위치가 from과 다를 수 있으니(리와인드/중단 등) 실제 시작점은 transform 기준으로 잡는다.
+        Vector3 start = transform.position;
+
+        float t = 0f;
+        while (t < 1f)
+        {
+            t += Time.deltaTime / dur;
+            transform.position = Vector3.Lerp(start, to, Mathf.Clamp01(t));
+            yield return null;
+        }
+
+        transform.position = to;
+        onDone?.Invoke();
     }
 }

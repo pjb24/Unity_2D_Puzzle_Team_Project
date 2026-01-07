@@ -40,6 +40,11 @@ public partial class FatherController : IRewindable
             return;
         }
 
+        // 이동 연출 중이면 중단 (무음 금지 아님: 정상 동작이므로 Warning 불필요)
+        // (StopMoveFxIfAny는 FatherController.cs에 있음)
+        var mi = GetType().GetMethod("StopMoveFxIfAny", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        mi?.Invoke(this, null);
+
         Vector2Int to = new Vector2Int(s._x, s._y);
 
         if (!_grid.IsInBounds(to))

@@ -40,12 +40,17 @@ public partial class ChildController : IRewindable
             return;
         }
 
+        // 이동 연출 중이면 중단 (정상 동작)
+        StopMoveFxIfAny();
+
         _pathPos = Mathf.Clamp(s._pathPos, 0, _path.Count - 1);
         _lastStepBlocked = s._lastBlocked;
 
         Facing = s._facing;
-        ApplyFacingVisual();
 
+        // 즉시 스냅 복원
         transform.position = _path.Points[_pathPos];
+
+        ApplyFacingVisual();
     }
 }

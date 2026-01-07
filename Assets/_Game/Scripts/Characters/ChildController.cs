@@ -9,7 +9,6 @@
 
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -30,14 +29,22 @@ public partial class ChildController : MonoBehaviour
 
     private Coroutine _moveCo;
 
-    [Header("Move (Optional)")]
+    [Header("Move FX (Lerp)")]
     [SerializeField] private bool _useLerp = true;
     [SerializeField] private float _lerpDuration = 0.12f;
+
+    // ===== Move Animation (Optional) =====
+    private ChildAnimDriver _animDriver;
+    public void BindAnimDriver(ChildAnimDriver driver) => _animDriver = driver;
+    public void UnbindAnimDriver() => _animDriver = null;
 
     public void Initialize(ChildPathRuntime path, ChildPathBlockerRegistry blockers, int startPos = 0)
     {
         _path = path;
         _pathBlockers = blockers;
+
+        if (_animDriver == null)
+            _animDriver = GetComponent<ChildAnimDriver>();
 
         int count = _path?.Count ?? 0;
         if (_pathBlockers == null)
@@ -54,6 +61,8 @@ public partial class ChildController : MonoBehaviour
 
         if (_path != null && _path.Count > 0)
         {
+            StopMoveFxIfAny();
+
             transform.position = _path.Points[_pathPos];
 
             if (_path.Count >= 2)
@@ -93,31 +102,59 @@ public partial class ChildController : MonoBehaviour
             return;
         }
 
-
         // 코너 포함: “다음 이동 벡터”로 Facing 선 갱신
         Vector3 from = _path.Points[_pathPos];
         Vector3 toNext = _path.Points[next];
         UpdateFacingByNextStepWorld(from, toNext);
 
+        // ===== 논리 이동(즉시) =====
         // 성공: 인덱스 갱신 + 이동
         _pathPos = next;
         _lastStepBlocked = false;
 
+        // ===== 연출 이동(애니 + Lerp) =====
+        // 이동 성공 시에만 이동 애니메이션 1회 재생
+        _animDriver?.PlayMove();
+
         Vector3 to = _path.Points[_pathPos];
 
-        if (_useLerp)
+        StartMoveFx(
+            toWorld: to,
+            onDone: () => _onStepCompleted?.Invoke(false));
+    }
+
+    private void StartMoveFx(Vector3 toWorld, Action onDone)
+    {
+        StopMoveFxIfAny();
+
+        if (!_useLerp)
         {
-            if (_moveCo != null) StopCoroutine(_moveCo);
-            _moveCo = StartCoroutine(CoMove(to, _lerpDuration, () =>
-            {
-                _moveCo = null;
-                _onStepCompleted?.Invoke(false);
-            }));
+            transform.position = toWorld;
+            onDone?.Invoke();
+            return;
         }
-        else
+
+        if (_lerpDuration <= 0f)
         {
-            transform.position = to;
-            _onStepCompleted?.Invoke(false);
+            Debug.LogWarning($"[ChildController] MoveFX fallback: invalid duration({_lerpDuration}). (snap)");
+            transform.position = toWorld;
+            onDone?.Invoke();
+            return;
+        }
+
+        _moveCo = StartCoroutine(CoMove(toWorld, _lerpDuration, () =>
+        {
+            _moveCo = null;
+            onDone?.Invoke();
+        }));
+    }
+
+    private void StopMoveFxIfAny()
+    {
+        if (_moveCo != null)
+        {
+            StopCoroutine(_moveCo);
+            _moveCo = null;
         }
     }
 

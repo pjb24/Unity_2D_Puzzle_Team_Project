@@ -29,11 +29,13 @@ public class DummyStageLoader : IStageLoader
     private const int Sorting_Path = 2;
     private const int Sorting_Block = 3;
     private const int Sorting_Character = 4;
+    private const int Sorting_Overlay = 10;
 
     // Colors (구분 가능)
     private static readonly Color Color_Floor = new(0.85f, 0.85f, 0.85f, 1f);
     private static readonly Color Color_Wall = new(0.15f, 0.15f, 0.15f, 1f);
-    private static readonly Color Color_Obstacle = new(0.35f, 0.35f, 0.35f, 1f);
+    private static readonly Color Color_Switch = new(1.00f, 0.20f, 0.20f, 1f);
+    private static readonly Color Color_Door = new(0.70f, 0.10f, 0.10f, 1f);
     private static readonly Color Color_Goal = new(0.25f, 1.00f, 0.25f, 1f);
     private static readonly Color Color_Path = new(1.00f, 0.80f, 0.10f, 1f);
     private static readonly Color Color_Father = new(0.10f, 0.80f, 1.00f, 1f);
@@ -326,6 +328,10 @@ public class DummyStageLoader : IStageLoader
         ctx._stageRuntime._fatherController = EnsureController<FatherController>(ctx._stageRuntime._father);
         EnsureRewindKey(ctx._stageRuntime._father);
 
+        // Father 이동 애니메이션 드라이버(없으면 생성)
+        var fatherAnim = EnsureController<FatherAnimDriver>(ctx._stageRuntime._father);
+        ctx._stageRuntime._fatherController.BindAnimDriver(fatherAnim);
+
         // Father bounds 주입 (InnerBase)
         RectInt moveRect = stageDef != null ? stageDef.FatherMoveRect : default;
         if (stageDef == null)
@@ -340,6 +346,10 @@ public class DummyStageLoader : IStageLoader
         // ChildController 부착 + 초기화
         ctx._stageRuntime._childController = EnsureController<ChildController>(ctx._stageRuntime._child);
         EnsureRewindKey(ctx._stageRuntime._child);
+
+        // Child 이동 애니메이션 드라이버(없으면 생성)
+        var childAnim = EnsureController<ChildAnimDriver>(ctx._stageRuntime._child);
+        ctx._stageRuntime._childController.BindAnimDriver(childAnim);
 
         // ChildPathRuntime 생성
         var pathRuntime = new ChildPathRuntime(ctx._stageRuntime._grid, ctx._stageRuntime._gridPresenter);
