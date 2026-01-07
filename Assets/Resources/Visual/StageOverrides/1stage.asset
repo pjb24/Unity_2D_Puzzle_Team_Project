@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f2131a39848a1ec4c8314c3036837628, type: 3}
   m_Name: 1stage
   m_EditorClassIdentifier: 
-  _fatherSpriteOverride: {fileID: 21300000, guid: dd425af4cb9a4ca489bf33a28a04b23b, type: 3}
-  _childSpriteOverride: {fileID: 21300000, guid: 55bb3c221f92a5840a1200fd35a6f21e, type: 3}
+  _fatherSpriteOverride: {fileID: 1632283341634827271, guid: 427245a049fc1744e80b0ceb79579dda, type: 3}
+  _childSpriteOverride: {fileID: 5051400570598478193, guid: c4011633417c32148b5d7e6a8bee487d, type: 3}
   _floor: {fileID: 0}
   _hole: {fileID: 0}
   _goal: {fileID: 0}
@@ -21,3 +21,8 @@ MonoBehaviour:
   _doorOpen: {fileID: 0}
   _doorClosed: {fileID: 0}
   _switch: {fileID: 0}
+  _useMoveAnimOverride: 1
+  _fatherMoveAnimatorOverride: {fileID: 22100000, guid: f583e2909e0ed7045a30dada3e71a9cf, type: 2}
+  _childMoveAnimatorOverride: {fileID: 22100000, guid: 9c272eb2d5c936c4aa5233aa13cf3234, type: 2}
+  _useRewindRestoreLerp: 1
+  _rewindRestoreMoveDuration: 0.12

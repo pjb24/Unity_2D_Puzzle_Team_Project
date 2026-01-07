@@ -38,10 +38,28 @@ public partial class ChildController : MonoBehaviour
     public void BindAnimDriver(ChildAnimDriver driver) => _animDriver = driver;
     public void UnbindAnimDriver() => _animDriver = null;
 
-    public void Initialize(ChildPathRuntime path, ChildPathBlockerRegistry blockers, int startPos = 0)
+    private VisualMoveAgent _visualMove;
+    private bool _useRewindRestoreLerp;
+    private float _rewindRestoreMoveDuration;
+
+    private bool _warnedRestoreMissingMoveAgent;
+    private bool _warnedRestoreInvalidDuration;
+
+    public void BindVisualMoveAgent(VisualMoveAgent agent) => _visualMove = agent;
+    public void UnbindVisualMoveAgent() => _visualMove = null;
+
+    public void Initialize(
+        ChildPathRuntime path,
+        ChildPathBlockerRegistry blockers,
+        int startPos = 0,
+        bool useRewindRestoreLerp = false,
+        float rewindRestoreMoveDuration = 0f)
     {
         _path = path;
         _pathBlockers = blockers;
+
+        _useRewindRestoreLerp = useRewindRestoreLerp;
+        _rewindRestoreMoveDuration = rewindRestoreMoveDuration;
 
         if (_animDriver == null)
             _animDriver = GetComponent<ChildAnimDriver>();

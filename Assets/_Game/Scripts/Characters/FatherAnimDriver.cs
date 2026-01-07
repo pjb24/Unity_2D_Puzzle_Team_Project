@@ -31,6 +31,24 @@ public class FatherAnimDriver : MonoBehaviour
         CacheParams();
     }
 
+    public void ApplyAnimatorOverrideOrWarn(AnimatorOverrideController aoc, string stageId)
+    {
+        if (aoc == null)
+        {
+            Debug.LogWarning($"[FatherAnim] Apply override fallback: aoc is null. stageId={stageId}");
+            return;
+        }
+
+        if (_anim == null)
+        {
+            Debug.LogWarning($"[FatherAnim] Apply override fallback: Animator missing. stageId={stageId}");
+            return;
+        }
+
+        _anim.runtimeAnimatorController = aoc;
+        CacheParams();
+    }
+
     private void CacheParams()
     {
         _hasFacingInt = false;

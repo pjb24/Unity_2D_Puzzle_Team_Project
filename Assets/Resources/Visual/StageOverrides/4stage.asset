@@ -21,3 +21,8 @@ MonoBehaviour:
   _doorOpen: {fileID: 0}
   _doorClosed: {fileID: 0}
   _switch: {fileID: 0}
+  _useMoveAnimOverride: 1
+  _fatherMoveAnimatorOverride: {fileID: 22100000, guid: 51f7996c81b249c4e8770c40fb88d743, type: 2}
+  _childMoveAnimatorOverride: {fileID: 22100000, guid: efa70f585bb798e438c0fab605f64324, type: 2}
+  _useRewindRestoreLerp: 1
+  _rewindRestoreMoveDuration: 0.12

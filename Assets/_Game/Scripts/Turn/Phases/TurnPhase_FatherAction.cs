@@ -9,7 +9,6 @@
 /// 
 /// Father 완료 이벤트가 오면 FatherController.LastResult를 읽어서 ctx에 저장 후 ChildStep으로 전이
 /// </summary>
-
 using UnityEngine;
 
 public class TurnPhase_FatherAction : ITurnPhase

@@ -42,15 +42,51 @@ public partial class ChildController : IRewindable
 
         // 이동 연출 중이면 중단 (정상 동작)
         StopMoveFxIfAny();
+        _visualMove?.StopMove();
+
+        int fromPos = _pathPos;
 
         _pathPos = Mathf.Clamp(s._pathPos, 0, _path.Count - 1);
         _lastStepBlocked = s._lastBlocked;
 
         Facing = s._facing;
 
-        // 즉시 스냅 복원
-        transform.position = _path.Points[_pathPos];
-
         ApplyFacingVisual();
+
+        bool moved = fromPos != _pathPos;
+        Vector3 toWorld = _path.Points[_pathPos];
+
+        if (moved)
+            _animDriver?.PlayMove();
+
+        if (_useRewindRestoreLerp && moved)
+        {
+            if (_visualMove == null)
+            {
+                if (!_warnedRestoreMissingMoveAgent)
+                {
+                    _warnedRestoreMissingMoveAgent = true;
+                    Debug.LogWarning("[ChildController] RestoreState fallback: VisualMoveAgent missing. (snap restore)");
+                }
+                transform.position = toWorld;
+                return;
+            }
+
+            if (_rewindRestoreMoveDuration <= 0f)
+            {
+                if (!_warnedRestoreInvalidDuration)
+                {
+                    _warnedRestoreInvalidDuration = true;
+                    Debug.LogWarning($"[ChildController] RestoreState fallback: invalid rewind restore duration={_rewindRestoreMoveDuration}. (snap restore)");
+                }
+                transform.position = toWorld;
+                return;
+            }
+
+            _visualMove.MoveTo(toWorld, _rewindRestoreMoveDuration);
+            return;
+        }
+
+        transform.position = toWorld;
     }
 }

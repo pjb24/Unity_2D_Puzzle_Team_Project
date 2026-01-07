@@ -7,7 +7,6 @@
 /// 
 /// 핵심: Input 상태에서만 Dequeue. 그 외 상태에서는 입력 버퍼를 건드리지 않음.
 /// </summary>
-
 public class TurnPhase_Input : ITurnPhase
 {
     public E_TurnPhase Phase => E_TurnPhase.Input;

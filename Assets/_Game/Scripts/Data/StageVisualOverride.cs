@@ -22,8 +22,26 @@ public class StageVisualOverride : ScriptableObject
     [SerializeField] private Sprite _doorClosed;
     [SerializeField] private Sprite _switch;
 
+    [Header("Move Animation Override (AnimatorOverrideController)")]
+    [SerializeField] private bool _useMoveAnimOverride = false;
+    [SerializeField] private AnimatorOverrideController _fatherMoveAnimatorOverride;
+    [SerializeField] private AnimatorOverrideController _childMoveAnimatorOverride;
+
+    [Header("Rewind Restore Move FX")]
+    [SerializeField] private bool _useRewindRestoreLerp = true;
+
+    [Tooltip("UseRewindRestoreLerp가 true일 때만 사용. 0 이하이면 복원 시 Snap 폴백.")]
+    [SerializeField] private float _rewindRestoreMoveDuration = 0.12f;
+
     public Sprite FatherSpriteOverride => _fatherSpriteOverride;
     public Sprite ChildSpriteOverride => _childSpriteOverride;
+
+    public bool UseMoveAnimOverride => _useMoveAnimOverride;
+    public AnimatorOverrideController FatherMoveAnimatorOverride => _fatherMoveAnimatorOverride;
+    public AnimatorOverrideController ChildMoveAnimatorOverride => _childMoveAnimatorOverride;
+
+    public bool UseRewindRestoreLerp => _useRewindRestoreLerp;
+    public float RewindRestoreMoveDuration => _rewindRestoreMoveDuration;
 
     public bool TryGetTileSpriteOverride(E_TileVisualKey key, out Sprite sprite)
     {

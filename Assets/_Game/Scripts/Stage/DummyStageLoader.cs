@@ -324,9 +324,19 @@ public class DummyStageLoader : IStageLoader
 
     private void InitializeControllers(GameFlowContext ctx, StageDefinition stageDef)
     {
+        var stageId = ctx?._stageRuntime?._stageId ?? "UNKNOWN_STAGE";
+        var stageOverride = ctx?._stageRuntime?._stageVisualOverride;
+
+        bool useRestoreLerp = stageOverride != null && stageOverride.UseRewindRestoreLerp;
+        float restoreDur = stageOverride != null ? stageOverride.RewindRestoreMoveDuration : 0f;
+
         // FatherController 부착 + 초기화
         ctx._stageRuntime._fatherController = EnsureController<FatherController>(ctx._stageRuntime._father);
         EnsureRewindKey(ctx._stageRuntime._father);
+
+        // VisualMoveAgent(없으면 생성)
+        var fatherMoveAgent = EnsureController<VisualMoveAgent>(ctx._stageRuntime._father);
+        ctx._stageRuntime._fatherController.BindVisualMoveAgent(fatherMoveAgent);
 
         // Father 이동 애니메이션 드라이버(없으면 생성)
         var fatherAnim = EnsureController<FatherAnimDriver>(ctx._stageRuntime._father);
@@ -341,11 +351,17 @@ public class DummyStageLoader : IStageLoader
             ctx._stageRuntime._grid,
             ctx._stageRuntime._gridPresenter,
             stageDef.FatherSpawn._cell,
-            moveRect);
+            moveRect,
+            useRestoreLerp,
+            restoreDur);
 
         // ChildController 부착 + 초기화
         ctx._stageRuntime._childController = EnsureController<ChildController>(ctx._stageRuntime._child);
         EnsureRewindKey(ctx._stageRuntime._child);
+
+        // VisualMoveAgent(없으면 생성)
+        var childMoveAgent = EnsureController<VisualMoveAgent>(ctx._stageRuntime._child);
+        ctx._stageRuntime._childController.BindVisualMoveAgent(childMoveAgent);
 
         // Child 이동 애니메이션 드라이버(없으면 생성)
         var childAnim = EnsureController<ChildAnimDriver>(ctx._stageRuntime._child);
@@ -366,7 +382,38 @@ public class DummyStageLoader : IStageLoader
         }
 
         // ChildController는 Registry 버전 Initialize 사용
-        ctx._stageRuntime._childController.Initialize(pathRuntime, ctx._stageRuntime._childPathBlockers, startPos: 0);
+        ctx._stageRuntime._childController.Initialize(pathRuntime, ctx._stageRuntime._childPathBlockers, startPos, useRestoreLerp, restoreDur);
+
+        // Stage별 Move 애니 교체(AOC)
+        ApplyStageMoveAnimOverrideOrWarn(stageId, stageOverride, fatherAnim, childAnim);
+    }
+
+    private static void ApplyStageMoveAnimOverrideOrWarn(
+    string stageId,
+    StageVisualOverride stageOverride,
+    FatherAnimDriver fatherAnim,
+    ChildAnimDriver childAnim)
+    {
+        if (stageOverride == null)
+            return;
+
+        if (!stageOverride.UseMoveAnimOverride)
+            return;
+
+        if (fatherAnim == null || childAnim == null)
+        {
+            Debug.LogWarning($"[StageLoader] MoveAnimOverride fallback: anim driver missing. stageId={stageId}");
+            return;
+        }
+
+        if (stageOverride.FatherMoveAnimatorOverride == null || stageOverride.ChildMoveAnimatorOverride == null)
+        {
+            Debug.LogWarning($"[StageLoader] MoveAnimOverride fallback: AOC missing. stageId={stageId}");
+            return;
+        }
+
+        fatherAnim.ApplyAnimatorOverrideOrWarn(stageOverride.FatherMoveAnimatorOverride, stageId);
+        childAnim.ApplyAnimatorOverrideOrWarn(stageOverride.ChildMoveAnimatorOverride, stageId);
     }
 
     private T EnsureController<T>(GameObject go) where T : MonoBehaviour

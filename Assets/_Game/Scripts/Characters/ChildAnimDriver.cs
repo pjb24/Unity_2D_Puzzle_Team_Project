@@ -24,6 +24,24 @@ public class ChildAnimDriver : MonoBehaviour
         CacheParams();
     }
 
+    public void ApplyAnimatorOverrideOrWarn(AnimatorOverrideController aoc, string stageId)
+    {
+        if (aoc == null)
+        {
+            Debug.LogWarning($"[ChildAnim] Apply override fallback: aoc is null. stageId={stageId}");
+            return;
+        }
+
+        if (_anim == null)
+        {
+            Debug.LogWarning($"[ChildAnim] Apply override fallback: Animator missing. stageId={stageId}");
+            return;
+        }
+
+        _anim.runtimeAnimatorController = aoc;
+        CacheParams();
+    }
+
     private void CacheParams()
     {
         _hasMoveTrigger = false;
@@ -38,7 +56,6 @@ public class ChildAnimDriver : MonoBehaviour
             if (p.nameHash == HashMove && p.type == AnimatorControllerParameterType.Trigger)
             {
                 _hasMoveTrigger = true;
-                return;
             }
         }
     }

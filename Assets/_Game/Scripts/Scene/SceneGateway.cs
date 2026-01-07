@@ -1,5 +1,4 @@
 // SceneGateway.cs
-
 using System;
 using UnityEngine.SceneManagement;
 

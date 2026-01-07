@@ -7,7 +7,6 @@
 /// (이 방식이면 “잠금 중 입력이 쌓이는” 문제가 생김)
 /// 프로토타입은 잠금 중 enqueue 자체를 차단이 깔끔함.
 ///
-
 using System.Collections.Generic;
 
 public class TurnInputBuffer

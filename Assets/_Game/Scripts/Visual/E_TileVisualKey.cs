@@ -1,5 +1,4 @@
 // E_TileVisualKey.cs
-
 public enum E_TileVisualKey
 {
     Floor = 0,

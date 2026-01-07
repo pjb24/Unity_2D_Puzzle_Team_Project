@@ -1,5 +1,4 @@
 // ISceneGateway.cs
-
 using System;
 
 public interface ISceneGateway

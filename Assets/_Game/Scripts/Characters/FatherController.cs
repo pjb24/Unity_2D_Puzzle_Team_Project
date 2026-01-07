@@ -91,10 +91,30 @@ public partial class FatherController : MonoBehaviour
     public void BindAnimDriver(FatherAnimDriver driver) => _animDriver = driver;
     public void UnbindAnimDriver() => _animDriver = null;
 
-    public void Initialize(BoardGrid grid, GridPresenter presenter, Vector2Int spawnCell, RectInt moveBounds)
+    private VisualMoveAgent _visualMove;
+    private bool _useRewindRestoreLerp;
+    private float _rewindRestoreMoveDuration;
+
+    private bool _warnedRestoreMissingMoveAgent;
+    private bool _warnedRestoreInvalidDuration;
+
+    public void BindVisualMoveAgent(VisualMoveAgent agent) => _visualMove = agent;
+    public void UnbindVisualMoveAgent() => _visualMove = null;
+
+
+    public void Initialize(
+        BoardGrid grid,
+        GridPresenter presenter,
+        Vector2Int spawnCell,
+        RectInt moveBounds,
+        bool useRewindRestoreLerp,
+        float rewindRestoreMoveDuration)
     {
         _grid = grid;
         _presenter = presenter;
+
+        _useRewindRestoreLerp = useRewindRestoreLerp;
+        _rewindRestoreMoveDuration = rewindRestoreMoveDuration;
 
         if (_animDriver == null)
             _animDriver = GetComponent<FatherAnimDriver>();
