@@ -7,4 +7,8 @@ public enum E_TileVisualKey
     Obstacle = 2,
     Goal = 3,
     Hole = 4,
+    Path = 5,
+    DoorOpen = 6,
+    DoorClosed = 7,
+    Switch = 8,
 }

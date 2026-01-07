@@ -5,14 +5,15 @@ using UnityEngine;
 
 public enum E_SwitchMode
 {
-    OneShotLatch = 0,
-    ToggleOnEnter = 1,
-    HoldWhilePressed = 2,
+    OneShotLatch = 0,       // 한 번만 눌리면 고정
+    ToggleOnEnter = 1,      // 토글 ON/OFF
+    HoldWhilePressed = 2,   // 누르고 있는 동안만 ON
 }
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(RewindKey))]
-public class ToggleSwitchController : MonoBehaviour, IInteractable, IRewindable, ITurnTickable, IStageGimmickInitializable, ILinkBinder
+public class ToggleSwitchController : MonoBehaviour,
+    IInteractable, IRewindable, ITurnTickable, IStageGimmickInitializable, ILinkBinder
 {
     [Serializable]
     public struct ToggleSwitchState
@@ -56,6 +57,9 @@ public class ToggleSwitchController : MonoBehaviour, IInteractable, IRewindable,
     private bool _warnedNotInitialized;
     private bool _warnedNoTargets;
 
+    private ITileSpriteProvider _tileSprites;
+    private SpriteRenderer _sr;
+
     private event Action<bool> _onStateChanged;
     public void AddListenerOnStateChanged(Action<bool> cb) => _onStateChanged += cb;
     public void RemoveListenerOnStateChanged(Action<bool> cb) => _onStateChanged -= cb;
@@ -93,6 +97,9 @@ public class ToggleSwitchController : MonoBehaviour, IInteractable, IRewindable,
         _father = refs != null ? refs._fatherController : null;
         _gapFillerRegistry = refs != null ? refs._gapFillerRegistry : null;
 
+        _tileSprites = refs != null ? refs._tileSpriteProvider : null;
+        _sr = GetComponentInChildren<SpriteRenderer>(includeInactive: true);
+
         // scope에 registry를 못 넣은 경우 1회 폴백(무음 금지)
         if (_gapFillerRegistry == null && refs != null && refs._root != null)
         {
@@ -122,7 +129,27 @@ public class ToggleSwitchController : MonoBehaviour, IInteractable, IRewindable,
 
         _registry.Register(this);
 
+        ApplySpriteOnce();
         ApplyVisual();
+    }
+
+    private void ApplySpriteOnce()
+    {
+        if (_sr == null)
+            _sr = GetComponentInChildren<SpriteRenderer>(includeInactive: true);
+
+        if (_sr == null)
+        {
+            Debug.LogWarning("[ToggleSwitchController] ApplySprite fallback: SpriteRenderer missing.");
+            return;
+        }
+
+        if (_tileSprites != null && _tileSprites.TryGetSprite(E_TileVisualKey.Switch, out var s) && s != null)
+        {
+            _sr.sprite = s;
+            _sr.color = Color.white;
+        }
+        // 없으면 이전 유지
     }
 
     public void BindAllLinks(StageRuntimeRefs refs)
@@ -147,7 +174,6 @@ public class ToggleSwitchController : MonoBehaviour, IInteractable, IRewindable,
 
         // 1) 현재 스테이지 StageRoot 하위의 DoorController 스캔
         var allDoors = refs._root.GetComponentsInChildren<DoorController>(includeInactive: true);
-
         var dict = new Dictionary<Guid, DoorController>(allDoors.Length);
 
         for (int i = 0; i < allDoors.Length; i++)

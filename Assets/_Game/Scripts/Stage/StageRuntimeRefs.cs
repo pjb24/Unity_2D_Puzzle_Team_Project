@@ -7,6 +7,13 @@ public class StageRuntimeRefs
     // ===== Root =====
     public GameObject _root;
 
+    // ===== Visual =====
+    public string _stageId;
+    public StageVisualOverride _stageVisualOverride;
+    public ITileSpriteProvider _tileSpriteProvider;
+    public Sprite _resolvedFatherSprite;
+    public Sprite _resolvedChildSprite;
+
     // ===== Board =====
     public Transform _tilesRoot; // Slide 대상
     public List<Transform> _tiles = new();

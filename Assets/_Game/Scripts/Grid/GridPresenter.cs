@@ -22,8 +22,8 @@ public class GridPresenter
     private BoardGrid _boundGrid;
     private System.Action<Vector2Int, CellMeta> _metaListener;
 
-    private TileVisualProfile _tileVisualProfile;
-    private bool _warnedNoProfile;
+    private ITileSpriteProvider _tileSpriteProvider;
+    private bool _warnedNoProvider;
 
     public GridPresenter(Transform root, int w, int h, float tileSize)
     {
@@ -81,7 +81,6 @@ public class GridPresenter
             for (int x = 0; x < _w; x++)
             {
                 var cell = new Vector2Int(x, y);
-                int idx = y * _w + x;
 
                 var go = Proto2DVisual.CreateSpriteObject(
                     name: $"Tile({x},{y})",
@@ -157,35 +156,30 @@ public class GridPresenter
             };
         }
 
-        // ---- apply ----
-        if (_tileVisualProfile != null)
+        // 1) provider sprite가 있으면 적용 (스프라이트 교체)
+        if (_tileSpriteProvider != null && _tileSpriteProvider.TryGetSprite(key, out var sprite) && sprite != null)
         {
-            Sprite sprite = _tileVisualProfile.GetSpriteOrFallback(key);
-            if (sprite != null)
-            {
-                sr.sprite = sprite;
-                sr.color = Color.white;
-                return;
-            }
-
-            Debug.LogWarning($"[GridPresenter] Tile sprite fallback: profile fallback sprite is null. key={key}");
+            sr.sprite = sprite;
+            sr.color = Color.white;
+            return;
         }
 
-        // 프로필이 없거나(혹은 폴백 스프라이트도 없는) 경우: 기존 프로토 색상으로 폴백
-        sr.sprite = Proto2DVisual.Sprite;
-
-        Color baseColor = cellType switch
+        // 2) 없으면 "이전 스프라이트 유지"가 원칙
+        // 단, 현재가 프로토 스프라이트 상태일 때만 색상 폴백으로 상태 표현
+        if (sr.sprite == null || sr.sprite == Proto2DVisual.Sprite)
         {
-            E_CellType.Wall => Proto2DVisual.TileWall,
-            E_CellType.Obstacle => Proto2DVisual.TileObstacle,
-            E_CellType.Goal => Proto2DVisual.TileGoal,
-            _ => Proto2DVisual.TileFloor
-        };
+            sr.sprite = Proto2DVisual.Sprite;
 
-        if (meta.IsHole)
-            sr.color = Proto2DVisual.TileHole;
-        else
-            sr.color = baseColor;
+            Color baseColor = cellType switch
+            {
+                E_CellType.Wall => Proto2DVisual.TileWall,
+                E_CellType.Obstacle => Proto2DVisual.TileObstacle,
+                E_CellType.Goal => Proto2DVisual.TileGoal,
+                _ => Proto2DVisual.TileFloor
+            };
+
+            sr.color = meta.IsHole ? Proto2DVisual.TileHole : baseColor;
+        }
     }
 
     private void BindMetaListener(BoardGrid grid)
@@ -210,26 +204,22 @@ public class GridPresenter
         _metaListener = null;
     }
 
-    public void SetTileVisualProfile(TileVisualProfile profile)
+    public void SetTileSpriteProvider(ITileSpriteProvider provider)
     {
-        _tileVisualProfile = profile;
+        _tileSpriteProvider = provider;
 
-        if (_tileVisualProfile == null && !_warnedNoProfile)
+        if (_tileSpriteProvider == null && !_warnedNoProvider)
         {
-            _warnedNoProfile = true;
-            Debug.LogWarning("[GridPresenter] TileVisualProfile is null. Tiles will use proto color fallback.");
+            _warnedNoProvider = true;
+            Debug.LogWarning("[GridPresenter] TileSpriteProvider is null. Tiles will keep proto visuals.");
         }
 
         // 이미 타일이 만들어져 있으면 즉시 재적용
         if (_boundGrid != null && _tileRenderers.Count == _w * _h)
         {
             for (int y = 0; y < _h; y++)
-            {
                 for (int x = 0; x < _w; x++)
-                {
                     RefreshTile(_boundGrid, new Vector2Int(x, y));
-                }
-            }
         }
     }
 }

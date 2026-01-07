@@ -1,6 +1,4 @@
 // StageGimmickSpawner.cs
-using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 public static class StageGimmickSpawner
@@ -50,10 +48,22 @@ public static class StageGimmickSpawner
 
             var go = CreateSpriteGO($"Door_{i}", doorRoot, refs._gridPresenter.CellToWorld(d._cell), new Vector3(0.9f, 0.9f, 1f), new Color(0.15f, 0.60f, 0.95f, 1f), sortingOrder: 3);
 
-            var key = go.AddComponent<RewindKey>();
+            // 초기 스프라이트(있으면 적용, 없으면 이전 유지)
+            var sr = go.GetComponent<SpriteRenderer>();
+            if (sr != null && refs._tileSpriteProvider != null)
+            {
+                var key = d._startOpen ? E_TileVisualKey.DoorOpen : E_TileVisualKey.DoorClosed;
+                if (refs._tileSpriteProvider.TryGetSprite(key, out var s) && s != null)
+                {
+                    sr.sprite = s;
+                    sr.color = Color.white;
+                }
+            }
+
+            var keyComp = go.AddComponent<RewindKey>();
             if (!string.IsNullOrWhiteSpace(d._guid))
             {
-                if (!key.TrySetGuidString(d._guid, overwrite: true))
+                if (!keyComp.TrySetGuidString(d._guid, overwrite: true))
                     Debug.LogWarning($"[StageGimmickSpawner] Door guid set failed. index={i} raw={d._guid}");
             }
             else
@@ -71,7 +81,8 @@ public static class StageGimmickSpawner
                 d._cell,
                 d._startOpen,
                 refs._childPathBlockers,
-                step);
+                step,
+                refs._tileSpriteProvider);
         }
     }
 
@@ -95,6 +106,17 @@ public static class StageGimmickSpawner
             }
 
             var go = CreateSpriteGO($"ToggleSwitch_{i}", swRoot, refs._gridPresenter.CellToWorld(s._cell), new Vector3(0.75f, 0.75f, 1f), new Color(0.95f, 0.85f, 0.15f, 1f), sortingOrder: 3);
+
+            // 초기 스프라이트(있으면 적용)
+            var sr = go.GetComponent<SpriteRenderer>();
+            if (sr != null && refs._tileSpriteProvider != null)
+            {
+                if (refs._tileSpriteProvider.TryGetSprite(E_TileVisualKey.Switch, out var sp) && sp != null)
+                {
+                    sr.sprite = sp;
+                    sr.color = Color.white;
+                }
+            }
 
             go.AddComponent<RewindKey>();
 

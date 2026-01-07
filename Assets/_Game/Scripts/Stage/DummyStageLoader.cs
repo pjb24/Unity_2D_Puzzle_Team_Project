@@ -191,6 +191,27 @@ public class DummyStageLoader : IStageLoader
         ctx._stageRuntime = new StageRuntimeRefs();
         ctx._stageRuntime._root = new GameObject($"[StageRuntime] C{ctx._chapterIndex}_S{ctx._stageIndex}");
         ctx._stageDefinition = stageDef;
+
+        string stageId = stageDef != null ? stageDef.StageId : $"C{ctx._chapterIndex}_S{ctx._stageIndex}";
+        ctx._stageRuntime._stageId = stageId;
+
+        var chapterProfile = ctx._chapterVisualProfile;
+        var baseTileProfile = chapterProfile != null ? chapterProfile.TileVisualProfile : null;
+
+        var stageOverride = StageVisualOverrideLoader.LoadOrNull(stageId);
+        ctx._stageRuntime._stageVisualOverride = stageOverride;
+
+        ctx._stageRuntime._tileSpriteProvider = new CompositeTileSpriteProvider(stageId, baseTileProfile, stageOverride);
+
+        ctx._stageRuntime._resolvedFatherSprite =
+            stageOverride != null && stageOverride.FatherSpriteOverride != null
+                ? stageOverride.FatherSpriteOverride
+                : (chapterProfile != null ? chapterProfile.FatherSprite : null);
+
+        ctx._stageRuntime._resolvedChildSprite =
+            stageOverride != null && stageOverride.ChildSpriteOverride != null
+                ? stageOverride.ChildSpriteOverride
+                : (chapterProfile != null ? chapterProfile.ChildSprite : null);
     }
 
     // ===== (6) 캐릭터 생성 + Initialize + GapFiller =====
@@ -257,7 +278,7 @@ public class DummyStageLoader : IStageLoader
         // Father
         ctx._stageRuntime._father = SpawnVisual(
             prefab: profile != null ? profile.FatherPrefab : null,
-            sprite: profile != null ? profile.FatherSprite : null,
+            sprite: null,
             name: "Father(Dummy)",
             parent: ctx._stageRuntime._root.transform,
             fallbackColor: Color_Father);
@@ -265,10 +286,20 @@ public class DummyStageLoader : IStageLoader
         // Child
         ctx._stageRuntime._child = SpawnVisual(
             prefab: profile != null ? profile.ChildPrefab : null,
-            sprite: profile != null ? profile.ChildSprite : null,
+            sprite: null,
             name: "Child(Dummy)",
             parent: ctx._stageRuntime._root.transform,
             fallbackColor: Color_Child);
+
+        SpriteApplyUtil.TryApplySpriteKeepPrevious(
+            SpriteApplyUtil.FindSpriteRendererOrNull(ctx._stageRuntime._father),
+            ctx._stageRuntime._resolvedFatherSprite,
+            "Father");
+
+        SpriteApplyUtil.TryApplySpriteKeepPrevious(
+            SpriteApplyUtil.FindSpriteRendererOrNull(ctx._stageRuntime._child),
+            ctx._stageRuntime._resolvedChildSprite,
+            "Child");
     }
 
     // ===== (4) 보드 생성 (2D Sprite) =====
@@ -281,13 +312,7 @@ public class DummyStageLoader : IStageLoader
         ctx._stageRuntime._grid = new BoardGrid(w, h, stageDef.Cells);
         ctx._stageRuntime._gridPresenter = new GridPresenter(ctx._stageRuntime._root.transform, w, h, _tileSize);
 
-        var profile = ctx._chapterVisualProfile;
-        if (profile == null)
-        {
-            Debug.LogWarning("[StageLoader] ChapterVisualProfile is null. TileVisualProfile will be null (proto fallback).");
-        }
-
-        ctx._stageRuntime._gridPresenter.SetTileVisualProfile(profile != null ? profile.TileVisualProfile : null);
+        ctx._stageRuntime._gridPresenter.SetTileSpriteProvider(ctx._stageRuntime._tileSpriteProvider);
 
         // ===== 타일 생성 =====
         ctx._stageRuntime._tilesRoot = ctx._stageRuntime._gridPresenter.BuildTiles(ctx._stageRuntime._grid, ctx._stageRuntime._tiles);
