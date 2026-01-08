@@ -121,3 +121,21 @@ MonoBehaviour:
     MixerGroupOverride: {fileID: 0}
     CooldownSeconds: 0
     MaxVoices: 1
+  - Id: 13
+    Clip: {fileID: 8300000, guid: 76a435ee87a6f5d4c8b416172ba5dce4, type: 3}
+    Volume: 1
+    PitchMin: 1
+    PitchMax: 1
+    SpatialBlend: 0
+    MixerGroupOverride: {fileID: 0}
+    CooldownSeconds: 0
+    MaxVoices: 1
+  - Id: 14
+    Clip: {fileID: 8300000, guid: 76a435ee87a6f5d4c8b416172ba5dce4, type: 3}
+    Volume: 1
+    PitchMin: 1
+    PitchMax: 1
+    SpatialBlend: 0
+    MixerGroupOverride: {fileID: 0}
+    CooldownSeconds: 0
+    MaxVoices: 1

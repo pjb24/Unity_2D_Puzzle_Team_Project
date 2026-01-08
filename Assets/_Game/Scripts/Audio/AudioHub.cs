@@ -14,8 +14,31 @@ public class AudioHub : MonoBehaviour
     private struct ActiveSfx
     {
         public E_SfxId Id;
+        public uint Serial;
         public AudioSource Source;
         public float EndTime;
+        public bool IsLoop;
+    }
+
+    // StopSfx(token) 용도 (외부에서만 사용)
+    public readonly struct SfxToken
+    {
+        public readonly E_SfxId Id;
+        public readonly uint Serial;
+
+        // OneShot: 실제 사용된 길이(피치 반영) / Loop: 0
+        public readonly float DurationSeconds;
+
+        public bool IsValid => Serial != 0;
+
+        public SfxToken(E_SfxId id, uint serial, float durationSeconds)
+        {
+            Id = id;
+            Serial = serial;
+            DurationSeconds = durationSeconds;
+        }
+
+        public static SfxToken Invalid => new SfxToken(E_SfxId.None, 0, 0f);
     }
 
     private static AudioHub _instance;
@@ -48,6 +71,10 @@ public class AudioHub : MonoBehaviour
 
     // 싱글 인스턴스: 현재 재생 중인 id -> source
     private readonly Dictionary<E_SfxId, AudioSource> _playingById = new();
+
+    // 토큰 기반 stop
+    private uint _sfxSerialCounter = 1; // 0은 invalid 예약
+    private readonly Dictionary<uint, AudioSource> _playingByToken = new();
 
     public static AudioHub Ensure()
     {
@@ -100,6 +127,7 @@ public class AudioHub : MonoBehaviour
             {
                 DecreaseVoiceCount(a.Id);
                 CleanupPlayingByIdIfMatches(a.Id, null);
+                CleanupPlayingByTokenIfMatches(a.Serial, null);
                 _activeSfx.RemoveAt(i);
                 continue;
             }
@@ -111,6 +139,7 @@ public class AudioHub : MonoBehaviour
 
                 DecreaseVoiceCount(a.Id);
                 CleanupPlayingByIdIfMatches(a.Id, a.Source);
+                CleanupPlayingByTokenIfMatches(a.Serial, a.Source);
 
                 _activeSfx.RemoveAt(i);
             }
@@ -177,10 +206,56 @@ public class AudioHub : MonoBehaviour
 
     // ===== SFX (ID 기반) =====
     public void PlaySfx(E_SfxId id, float volumeScale = 1f)
-        => PlaySfxInternal(id, null, volumeScale);
+        => PlaySfxInternal(id, null, volumeScale, false);
 
     public void PlaySfxAt(E_SfxId id, Vector3 worldPos, float volumeScale = 1f)
-        => PlaySfxInternal(id, worldPos, volumeScale);
+        => PlaySfxInternal(id, worldPos, volumeScale, false);
+
+    // ===== SFX TOKEN API =====
+    public SfxToken PlaySfxOneShot(E_SfxId id, float volumeScale = 1f)
+        => PlaySfxInternal(id, null, volumeScale, false);
+
+    public SfxToken PlaySfxOneShotAt(E_SfxId id, Vector3 worldPos, float volumeScale = 1f)
+        => PlaySfxInternal(id, worldPos, volumeScale, false);
+
+    public SfxToken PlaySfxLoop(E_SfxId id, float volumeScale = 1f)
+        => PlaySfxInternal(id, null, volumeScale, true);
+
+    public SfxToken PlaySfxLoopAt(E_SfxId id, Vector3 worldPos, float volumeScale = 1f)
+        => PlaySfxInternal(id, worldPos, volumeScale, true);
+
+    public void StopSfx(SfxToken token)
+    {
+        if (!token.IsValid) return;
+
+        if (!_playingByToken.TryGetValue(token.Serial, out var src) || src == null)
+        {
+            _playingByToken.Remove(token.Serial);
+            return;
+        }
+
+        for (int i = _activeSfx.Count - 1; i >= 0; i--)
+        {
+            var a = _activeSfx[i];
+            if (a.Serial != token.Serial) continue;
+
+            src.Stop();
+            src.clip = null;
+
+            DecreaseVoiceCount(a.Id);
+            CleanupPlayingByIdIfMatches(a.Id, src);
+            CleanupPlayingByTokenIfMatches(a.Serial, src);
+
+            _activeSfx.RemoveAt(i);
+            return;
+        }
+
+        // active 리스트에 없더라도 토큰 맵은 정리
+        src.Stop();
+        src.clip = null;
+        CleanupPlayingByIdIfMatches(token.Id, src);
+        CleanupPlayingByTokenIfMatches(token.Serial, src);
+    }
 
     // ===== PRIVATE: CLIP API (외부 노출 금지) =====
     private void PlayBgmClipIfChanged(AudioClip clip, float volume, AudioMixerGroup mixerOverride)
@@ -208,24 +283,24 @@ public class AudioHub : MonoBehaviour
         _bgm.Play();
     }
 
-    private void PlaySfxInternal(E_SfxId id, Vector3? worldPos, float volumeScale)
+    private SfxToken PlaySfxInternal(E_SfxId id, Vector3? worldPos, float volumeScale, bool loop)
     {
         if (_sfxLibrary == null)
         {
             Debug.LogWarning($"[AudioHub] SfxLibrary is null. id={id} (fallback: skip)");
-            return;
+            return SfxToken.Invalid;
         }
 
         if (!_sfxLibrary.TryGet(id, out var def))
         {
             Debug.LogWarning($"[AudioHub] SFX id not registered. id={id} (fallback: skip)");
-            return;
+            return SfxToken.Invalid;
         }
 
         if (def.Clip == null)
         {
             Debug.LogWarning($"[AudioHub] SFX clip is null. id={id} (fallback: skip)");
-            return;
+            return SfxToken.Invalid;
         }
 
         // 싱글 인스턴스: 같은 id면 이전 것 즉시 Stop
@@ -238,7 +313,7 @@ public class AudioHub : MonoBehaviour
             _lastPlayedAt.TryGetValue(id, out float lastAt) &&
             now - lastAt < def.CooldownSeconds)
         {
-            return;
+            return SfxToken.Invalid;
         }
 
         // max voices (싱글 인스턴스면 사실상 1이지만 방어)
@@ -246,14 +321,14 @@ public class AudioHub : MonoBehaviour
             _activeVoicesById.TryGetValue(id, out int voices) &&
             voices >= def.MaxVoices)
         {
-            return;
+            return SfxToken.Invalid;
         }
 
         var src = GetFreeSfxSource();
         if (src == null)
         {
             Debug.LogWarning($"[AudioHub] SFX pool exhausted. id={id} pool={_sfxPool.Count} (fallback: skip)");
-            return;
+            return SfxToken.Invalid;
         }
 
         float pitch = Random.Range(def.PitchMin, def.PitchMax);
@@ -263,11 +338,14 @@ public class AudioHub : MonoBehaviour
         src.spatialBlend = def.SpatialBlend;
         src.pitch = pitch;
         src.volume = Mathf.Clamp01(def.Volume * Mathf.Clamp01(volumeScale));
-        src.loop = false;
+        src.loop = loop;
         src.transform.position = worldPos ?? Vector3.zero;
 
         src.clip = def.Clip;
         src.Play();
+
+        uint serial = NextSfxSerial();
+        _playingByToken[serial] = src;
 
         _lastPlayedAt[id] = now;
         IncreaseVoiceCount(id);
@@ -275,13 +353,18 @@ public class AudioHub : MonoBehaviour
         _playingById[id] = src;
 
         float length = def.Clip.length / Mathf.Max(0.01f, Mathf.Abs(pitch));
+        float duration = loop ? 0f : length;
 
         _activeSfx.Add(new ActiveSfx
         {
             Id = id,
+            Serial = serial,
             Source = src,
-            EndTime = now + length
+            EndTime = loop ? float.PositiveInfinity : now + length,
+            IsLoop = loop
         });
+
+        return new SfxToken(id, serial, duration);
     }
 
     private void StopPreviousSameIdIfPlaying(E_SfxId id)
@@ -304,6 +387,7 @@ public class AudioHub : MonoBehaviour
             prev.clip = null;
 
             DecreaseVoiceCount(a.Id);
+            CleanupPlayingByTokenIfMatches(a.Serial, a.Source);
             _activeSfx.RemoveAt(i);
             break;
         }
@@ -317,6 +401,30 @@ public class AudioHub : MonoBehaviour
         {
             if (cur == null || cur == src)
                 _playingById.Remove(id);
+        }
+    }
+
+    private uint NextSfxSerial()
+    {
+        uint s = _sfxSerialCounter++;
+        if (_sfxSerialCounter == 0) _sfxSerialCounter = 1; // overflow 대비
+        if (s == 0) s = _sfxSerialCounter++;
+        return s;
+    }
+
+    private void CleanupPlayingByTokenIfMatches(uint serial, AudioSource src)
+    {
+        if (serial == 0) return;
+
+        if (_playingByToken.TryGetValue(serial, out var cur))
+        {
+            if (cur == null || cur == src)
+                _playingByToken.Remove(serial);
+        }
+        else
+        {
+            if (src == null)
+                _playingByToken.Remove(serial);
         }
     }
 

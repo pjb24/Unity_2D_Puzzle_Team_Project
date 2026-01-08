@@ -42,6 +42,11 @@ public class RewindController : MonoBehaviour
 
     private Coroutine _deferredEnterCo;
 
+    // ===== Rewind SFX =====
+    private AudioHub.SfxToken _rewindEnterToken = AudioHub.SfxToken.Invalid;
+    private AudioHub.SfxToken _rewindLoopToken = AudioHub.SfxToken.Invalid;
+    private Coroutine _rewindLoopStartCo;
+
     private void Reset()
     {
         _recorder = FindAnyObjectByType<TurnSnapshotRecorder>();
@@ -84,6 +89,8 @@ public class RewindController : MonoBehaviour
         _isRewindActive = false;
         _cursorIndex = -1;
         _enterIndex = -1;
+
+        StopRewindSfx(false);
     }
 
     public void EnterRewind(E_RewindEnterSource source)
@@ -122,13 +129,14 @@ public class RewindController : MonoBehaviour
             return;
         }
 
+        StopRewindSfx(false);
+
         _isRewindActive = true;
 
         _cursorIndex = _recorder.LatestIndex; // 0개면 -1 이지만 위에서 방지됨
         _enterIndex = _cursorIndex; // 진입 시점 고정
 
-        // === Rewind 진입 SFX ===
-        AudioHub.Ensure().PlaySfx(E_SfxId.Rewind_Enter);
+        StartRewindSfx();
 
         // 안전하게 최신 상태를 복원(되감기 UI 기준점)
         RestoreAndSync(_cursorIndex);
@@ -202,6 +210,8 @@ public class RewindController : MonoBehaviour
 
         _rewindRemaining = Mathf.Max(0, _rewindRemaining - 1);
 
+        StopRewindSfx(true);
+
         ClearTurnInputBuffer();
         Debug.Log($"[RewindController] Commit cursor={_cursorIndex} remaining={_rewindRemaining}");
     }
@@ -223,8 +233,60 @@ public class RewindController : MonoBehaviour
 
         _isRewindActive = false;
 
+        StopRewindSfx(true);
+
         ClearTurnInputBuffer();
         Debug.Log("[RewindController] Cancel -> restored enter snapshot and exit rewind.");
+    }
+
+    private void StartRewindSfx()
+    {
+        var hub = AudioHub.Ensure();
+
+        _rewindEnterToken = hub.PlaySfxOneShot(E_SfxId.Rewind_Enter);
+
+        float delay = Mathf.Max(0f, _rewindEnterToken.DurationSeconds);
+
+        if (_rewindLoopStartCo != null)
+        {
+            StopCoroutine(_rewindLoopStartCo);
+            _rewindLoopStartCo = null;
+        }
+
+        _rewindLoopStartCo = StartCoroutine(CoStartRewindLoop(delay));
+    }
+
+    private IEnumerator CoStartRewindLoop(float delaySeconds)
+    {
+        if (delaySeconds > 0f)
+            yield return new WaitForSecondsRealtime(delaySeconds);
+
+        _rewindLoopStartCo = null;
+
+        if (!_isRewindActive) yield break;
+
+        var hub = AudioHub.Ensure();
+        _rewindLoopToken = hub.PlaySfxLoop(E_SfxId.Rewind_Loop);
+    }
+
+    private void StopRewindSfx(bool playExit)
+    {
+        if (_rewindLoopStartCo != null)
+        {
+            StopCoroutine(_rewindLoopStartCo);
+            _rewindLoopStartCo = null;
+        }
+
+        var hub = AudioHub.Ensure();
+
+        if (_rewindEnterToken.IsValid) hub.StopSfx(_rewindEnterToken);
+        if (_rewindLoopToken.IsValid) hub.StopSfx(_rewindLoopToken);
+
+        _rewindEnterToken = AudioHub.SfxToken.Invalid;
+        _rewindLoopToken = AudioHub.SfxToken.Invalid;
+
+        if (playExit)
+            hub.PlaySfx(E_SfxId.Rewind_Exit);
     }
 
     private void RestoreAndSync(int index)

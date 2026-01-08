@@ -21,4 +21,7 @@ public enum E_SfxId
 
     UI_Hover,
     UI_Click,
+
+    Rewind_Loop,
+    Rewind_Exit,
 }

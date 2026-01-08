@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _fatherSpriteOverride: {fileID: 21300000, guid: a3faa21844585624a80569bbe71ad6ce, type: 3}
   _childSpriteOverride: {fileID: 21300000, guid: 75d10c77a97412442b6ae086d6c5c5c9, type: 3}
-  _floor: {fileID: 0}
-  _hole: {fileID: 0}
+  _floor: {fileID: 21300000, guid: 7841911ae7ad9904dbbc79f59a0b667d, type: 3}
+  _hole: {fileID: 21300000, guid: 7ff8d84f17a223d419bd612138889d59, type: 3}
   _goal: {fileID: 0}
   _path: {fileID: 0}
   _doorOpen: {fileID: 0}
