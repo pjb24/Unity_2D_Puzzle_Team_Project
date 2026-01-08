@@ -6,6 +6,31 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum E_TurnResolveOutcome
+{
+    // 턴의 최종 결론
+    None,
+    Continue,          // Easy에서 막혀도 계속
+    StageCleared,      // 목표 도달
+    StageFailed_Rewind,// Normal 실패 → 리와인드로
+    StageFailed_Reset, // Hard 실패 → 즉시 리셋
+}
+
+public enum E_StageFailReason
+{
+    // 실패 원인
+    None,
+    ChildBlocked,
+}
+
+public enum E_ChildBlockedCause
+{
+    None = 0,
+    WallOrBlockedCell = 1,
+    DoorOrGimmick = 2,
+    Unknown = 99,
+}
+
 [DisallowMultipleComponent]
 public class TurnDriver : MonoBehaviour
 {
@@ -16,16 +41,21 @@ public class TurnDriver : MonoBehaviour
     private TurnInputBuffer _input;
 
     private TurnInputRouter _router;
-    private TurnSignalBus _signals = new TurnSignalBus();
 
     public bool IsInputLocked => _ctx != null && _ctx.IsInputLocked;
     public int TurnIndex => _ctx != null ? _ctx.TurnIndex : 0;
 
-    public void AddListenerOnResolved(Action<E_TurnResolveOutcome, E_StageFailReason, int> cb)
-    => _signals.AddListenerOnResolved(cb);
+    private Action<E_TurnResolveOutcome, E_StageFailReason, int> _onResolved;
+    private Action<E_TurnResolveOutcome, E_StageFailReason, E_ChildBlockedCause, int> _onResolvedDetailed;
 
-    public void RemoveListenerOnResolved(Action<E_TurnResolveOutcome, E_StageFailReason, int> cb)
-        => _signals.RemoveListenerOnResolved(cb);
+    private ChildController _child;
+    private FatherController _father;
+
+    public void AddListenerOnResolved(Action<E_TurnResolveOutcome, E_StageFailReason, int> cb) => _onResolved += cb;
+    public void RemoveListenerOnResolved(Action<E_TurnResolveOutcome, E_StageFailReason, int> cb) => _onResolved -= cb;
+
+    public void AddListenerOnResolvedDetailed(Action<E_TurnResolveOutcome, E_StageFailReason, E_ChildBlockedCause, int> cb) => _onResolvedDetailed += cb;
+    public void RemoveListenerOnResolvedDetailed(Action<E_TurnResolveOutcome, E_StageFailReason, E_ChildBlockedCause, int> cb) => _onResolvedDetailed -= cb;
 
     public void Bind(
         FatherController father,
@@ -45,7 +75,7 @@ public class TurnDriver : MonoBehaviour
 
         // Inject
         _ctx.InjectDifficulty(profile);
-        _ctx.InjectSignals(_signals);
+        _ctx.InjectSignals(this);
         _ctx.InjectTurnSystems(turnSystems);
         _ctx.InjectChildGoalPathStep(childGoalPathStep);
 
@@ -111,5 +141,28 @@ public class TurnDriver : MonoBehaviour
         // 안전하게 Input 상태로 돌리고 버퍼 비움
         _input?.Clear();
         _sm?.Change(E_TurnPhase.Input);
+    }
+
+    public void RaiseResolved(E_TurnResolveOutcome outcome, E_StageFailReason reason, int turnIndex)
+    {
+        E_ChildBlockedCause cause = E_ChildBlockedCause.None;
+
+        if (reason == E_StageFailReason.ChildBlocked)
+        {
+            if (_child == null)
+            {
+                Debug.LogWarning("[TurnDriver] ChildBlocked cause fallback: child is null.");
+                cause = E_ChildBlockedCause.Unknown;
+            }
+            else
+            {
+                cause = _child.LastBlockedCause;
+                if (cause == E_ChildBlockedCause.None)
+                    cause = E_ChildBlockedCause.Unknown;
+            }
+        }
+
+        _onResolved?.Invoke(outcome, reason, turnIndex);
+        _onResolvedDetailed?.Invoke(outcome, reason, cause, turnIndex);
     }
 }

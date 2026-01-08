@@ -127,6 +127,9 @@ public class StageDefinition : ScriptableObject
 
     [SerializeField] private int _childGoalPathStep = -1;
 
+    [Header("Audio")]
+    [SerializeField] private StageAudioProfile _audioProfile;
+
     // ===== Public getters =====
     public string StageId => _stageId;
     public Vector2Int BoardSize => _boardSize;
@@ -146,6 +149,8 @@ public class StageDefinition : ScriptableObject
 
     public int ChildStartPathStep => _childStartPathStep;
     public int ChildGoalPathStep => _childGoalPathStep;
+
+    public StageAudioProfile AudioProfile => _audioProfile;
 
     private void OnValidate()
     {

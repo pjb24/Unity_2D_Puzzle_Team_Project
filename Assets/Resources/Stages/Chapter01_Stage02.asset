@@ -14,7 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _stageId: 1-2
   _boardSize: {x: 7, y: 7}
-  _boardText: 
   _cells: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
   _fatherSpawn:
     _cell: {x: 0, y: 0}
@@ -22,5 +21,17 @@ MonoBehaviour:
   _childSpawn:
     _cell: {x: 0, y: 0}
     _world: {x: 0, y: 0, z: 0}
-  _childPath: {fileID: 11400000, guid: 267adb9e5d7fb7c43bc7048e052e4d66, type: 2}
+  _fatherMoveRect:
+    x: 0
+    y: 0
+    width: 7
+    height: 7
+  _blockedPathSteps: 
   _transitionType: 1
+  _holeCells: []
+  _gapFillerBlockCells: []
+  _doorSpawns: []
+  _toggleSwitchSpawns: []
+  _childStartPathStep: 0
+  _childGoalPathStep: -1
+  _audioProfile: {fileID: 11400000, guid: 853c188e0597fbb4288a48d8bafd7a4d, type: 2}

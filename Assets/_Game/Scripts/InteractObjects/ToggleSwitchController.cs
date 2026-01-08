@@ -290,6 +290,9 @@ public class ToggleSwitchController : MonoBehaviour,
                 }
         }
 
+        if (_isOn) AudioHub.Ensure().PlaySfx(E_SfxId.Switch_On);
+        else AudioHub.Ensure().PlaySfx(E_SfxId.Switch_Off);
+
         _isPressed = onCell;
     }
 

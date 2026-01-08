@@ -349,29 +349,14 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1191375607}
-  - component: {fileID: 1191375606}
+  - component: {fileID: 1191375608}
   m_Layer: 0
-  m_Name: AudioHub
+  m_Name: BootAudioInstaller
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1191375606
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1191375605}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 59723f4919e316c4981874eec85fae4c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _bgm: {fileID: 0}
-  _sfx: {fileID: 0}
-  _autoCreateSources: 1
 --- !u!4 &1191375607
 Transform:
   m_ObjectHideFlags: 0
@@ -387,6 +372,20 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1191375608
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1191375605}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9985811df1b93bd4f929ce024e80c7e5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _config: {fileID: 0}
+  _configResourcesPath: Configs/AudioConfig
 --- !u!1 &1364901979
 GameObject:
   m_ObjectHideFlags: 0

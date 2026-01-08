@@ -5,7 +5,6 @@
 /// 퍼즐 목표 달성 이벤트로 교체
 /// 또는 C 키(또는 UI 버튼)로 StageClear 강제 트리거
 ///
-
 using UnityEngine;
 
 public class GamePlayState : IGameFlowState
@@ -37,6 +36,18 @@ public class GamePlayState : IGameFlowState
     public void SetStageLoad(IGameFlowState stageLoad)
     {
         _stageLoad = stageLoad;
+    }
+
+    private void EnterBindResolvedCallbacks()
+    {
+        // 기존 Enter()에서 Bind 후 호출되는 위치에 넣어라.
+        _turnDriver.AddListenerOnResolvedDetailed(OnTurnResolvedDetailed);
+    }
+
+    private void ExitUnbindResolvedCallbacks()
+    {
+        if (_turnDriver != null)
+            _turnDriver.RemoveListenerOnResolvedDetailed(OnTurnResolvedDetailed);
     }
 
     public void Enter(GameFlowContext ctx)
@@ -190,6 +201,17 @@ public class GamePlayState : IGameFlowState
     {
         if (_ctx == null) return;
 
+        bool isChildBlockedFail = (reason == E_StageFailReason.ChildBlocked);
+        bool noRewind = (_rewind != null && _rewind.RewindRemaining <= 0);
+
+        // === RewindRemaining==0 + ChildBlocked 확정 시 SFX ===
+        // 우선순위: NoRewind_ChildFail만 재생(다른 blocked SFX와 중복 울림 방지)
+        if (isChildBlockedFail && noRewind &&
+            (outcome == E_TurnResolveOutcome.StageFailed_Rewind || outcome == E_TurnResolveOutcome.StageFailed_Reset))
+        {
+            AudioHub.Ensure().PlaySfx(E_SfxId.NoRewind_ChildFail);
+        }
+
         switch (outcome)
         {
             case E_TurnResolveOutcome.StageCleared:
@@ -270,5 +292,30 @@ public class GamePlayState : IGameFlowState
         }
 
         _sm.ChangeState(_ctx, _stageLoad);
+    }
+
+    // === Child 벽 막힘 SFX (원인=Wall/BlockedCell일 때만) ===
+    private void OnTurnResolvedDetailed(E_TurnResolveOutcome outcome, E_StageFailReason reason, E_ChildBlockedCause blockedCause, int turnIndex)
+    {
+        if (_ctx == null) return;
+
+        bool isChildBlockedFail = (reason == E_StageFailReason.ChildBlocked);
+        if (!isChildBlockedFail) return;
+
+        bool noRewind = (_rewind != null && _rewind.RewindRemaining <= 0);
+
+        // 우선순위: NoRewind_ChildFail이 울리는 케이스면 wall SFX는 울리지 않음(중복 방지)
+        if (noRewind &&
+            (outcome == E_TurnResolveOutcome.StageFailed_Rewind || outcome == E_TurnResolveOutcome.StageFailed_Reset))
+        {
+            // 이건 OnTurnResolved()에서 이미 처리한다고 가정.
+            return;
+        }
+
+        if (blockedCause == E_ChildBlockedCause.WallOrBlockedCell)
+        {
+            AudioHub.Ensure().PlaySfx(E_SfxId.ChildBlocked_Wall);
+        }
+        // Door/스위치/기믹에 의해 막힌 경우는 고정: SFX 없음
     }
 }

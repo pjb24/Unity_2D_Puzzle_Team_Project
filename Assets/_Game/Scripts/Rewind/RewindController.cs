@@ -75,7 +75,6 @@ public class RewindController : MonoBehaviour
     /// <summary>
     /// 스테이지 시작/재시작 시 호출 권장.
     /// - rewindMax: 난이도 프로필 값
-    /// - resetFailStreak: 챕터 복귀 후 true 권장
     /// </summary>
     public void ResetForStageStart(int rewindMax)
     {
@@ -128,6 +127,9 @@ public class RewindController : MonoBehaviour
         _cursorIndex = _recorder.LatestIndex; // 0개면 -1 이지만 위에서 방지됨
         _enterIndex = _cursorIndex; // 진입 시점 고정
 
+        // === Rewind 진입 SFX ===
+        AudioHub.Ensure().PlaySfx(E_SfxId.Rewind_Enter);
+
         // 안전하게 최신 상태를 복원(되감기 UI 기준점)
         RestoreAndSync(_cursorIndex);
 
@@ -143,9 +145,12 @@ public class RewindController : MonoBehaviour
 
         int prev = _cursorIndex - 1;
         if (prev < 0) prev = 0;
-        if (prev == _cursorIndex) return;
+        if (prev == _cursorIndex) return; // 실패(범위 밖) -> SFX 없음
 
         _cursorIndex = prev;
+
+        // === Rewind Prev SFX (성공 시에만) ===
+        AudioHub.Ensure().PlaySfx(E_SfxId.Rewind_Prev);
 
         RestoreAndSync(_cursorIndex);
 
@@ -162,9 +167,12 @@ public class RewindController : MonoBehaviour
         int max = _recorder.LatestIndex;
         int next = _cursorIndex + 1;
         if (next > max) next = max;
-        if (next == _cursorIndex) return;
+        if (next == _cursorIndex) return; // 실패(범위 밖) -> SFX 없음
 
         _cursorIndex = next;
+
+        // === Rewind Next SFX (성공 시에만) ===
+        AudioHub.Ensure().PlaySfx(E_SfxId.Rewind_Next);
 
         RestoreAndSync(_cursorIndex);
 
@@ -210,7 +218,6 @@ public class RewindController : MonoBehaviour
         }
 
         // 진입 시점 상태로 복귀
-
         _cursorIndex = _enterIndex;
         RestoreAndSync(_cursorIndex);
 

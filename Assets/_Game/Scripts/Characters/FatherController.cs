@@ -4,7 +4,6 @@
 /// _lastResult 프로퍼티로 TurnContext/Resolve가 조회하게 한다
 /// (콜백에 ctx를 못 넣는 구조와 잘 맞음).
 ///
-
 using System;
 using System.Collections;
 using UnityEngine;
@@ -79,7 +78,6 @@ public partial class FatherController : MonoBehaviour
     private RectInt _moveBounds;
     private bool _hasMoveBounds;
 
-    // ===== Move FX (Lerp) =====
     [Header("Move FX (Lerp)")]
     [SerializeField] private bool _useLerp = true;
     [SerializeField] private float _moveDuration = 0.12f;
@@ -100,7 +98,6 @@ public partial class FatherController : MonoBehaviour
 
     public void BindVisualMoveAgent(VisualMoveAgent agent) => _visualMove = agent;
     public void UnbindVisualMoveAgent() => _visualMove = null;
-
 
     public void Initialize(
         BoardGrid grid,
@@ -298,14 +295,10 @@ public partial class FatherController : MonoBehaviour
             }
         }
 
-        // ===== 논리 이동(즉시) =====
-        // 점유 갱신
+        // ===== 논리 이동, 점유 갱신 =====
         _grid.SetOcc(from, E_Occupant.None);
         _grid.SetOcc(to, E_Occupant.Father);
         Cell = to;
-
-        // 이동 성공 시에만 Move 애니메이션 재생
-        _animDriver?.PlayMove(Facing);
 
         bool triggerGoal = (cellType == E_CellType.Goal);
 
@@ -319,7 +312,11 @@ public partial class FatherController : MonoBehaviour
         _lastResult = new FatherActionResult(E_FatherActionResultCode.Moved, from, to, triggerGoal, consumedTurns);
 
         // ===== 연출 이동(애니 + Lerp) =====
+        // 이동 성공 시에만 Move 애니메이션 재생
         _animDriver?.PlayMove(Facing);
+
+        // === Father 이동 SFX: 이동 성공 확정 + VisualMove 시작 직전 1회 ===
+        AudioHub.Ensure().PlaySfx(E_SfxId.Move_Father);
 
         StartMoveFx(
             fromWorld: _presenter.CellToWorld(from),
@@ -384,7 +381,7 @@ public partial class FatherController : MonoBehaviour
             return;
         }
 
-        _moveCo = StartCoroutine(CoMove(fromWorld, toWorld, _moveDuration, () =>
+        _moveCo = StartCoroutine(CoMove(toWorld, _moveDuration, () =>
         {
             _moveCo = null;
             onDone?.Invoke();
@@ -400,16 +397,16 @@ public partial class FatherController : MonoBehaviour
         }
     }
 
-    private IEnumerator CoMove(Vector3 from, Vector3 to, float dur, Action onDone)
+    private IEnumerator CoMove(Vector3 to, float dur, Action onDone)
     {
         // 현재 위치가 from과 다를 수 있으니(리와인드/중단 등) 실제 시작점은 transform 기준으로 잡는다.
-        Vector3 start = transform.position;
+        Vector3 from = transform.position;
 
         float t = 0f;
         while (t < 1f)
         {
             t += Time.deltaTime / dur;
-            transform.position = Vector3.Lerp(start, to, Mathf.Clamp01(t));
+            transform.position = Vector3.Lerp(from, to, Mathf.Clamp01(t));
             yield return null;
         }
 

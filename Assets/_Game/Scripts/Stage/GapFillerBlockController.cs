@@ -1,5 +1,6 @@
 // GapFillerBlockController.cs
 using System;
+using System.Collections;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -20,10 +21,16 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
     [SerializeField] private Vector2Int _cell;
     [SerializeField] private bool _isAlive = true;
 
+    [Header("Move FX")]
+    [SerializeField] private bool _useLerp = true;
+    [SerializeField] private float _moveDuration = 0.12f;
+
     private SpriteRenderer _sr;
 
     public Vector2Int Cell => _cell;
     public bool IsAlive => _isAlive;
+
+    private Coroutine _moveCo;
 
     public void Initialize(BoardGrid grid, GridPresenter presenter, GapFillerBlockRegistry registry, Vector2Int spawnCell)
     {
@@ -129,8 +136,51 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
         _registry?.Move(from, to, this);
 
         _cell = to;
-        SnapToCell();
+
+        // === Push 성공 직후 SFX. 실패에는 재생 없음. ===
+        AudioHub.Ensure().PlaySfx(E_SfxId.GapFiller_Push);
+
+        // 비주얼 이동
+        StartMoveFx(_presenter.CellToWorld(from), _presenter.CellToWorld(to));
         return true;
+    }
+
+    private void StartMoveFx(Vector3 fromWorld, Vector3 toWorld)
+    {
+        if (_moveCo != null)
+        {
+            StopCoroutine(_moveCo);
+            _moveCo = null;
+        }
+
+        if (!_useLerp)
+        {
+            transform.position = toWorld;
+            return;
+        }
+
+        if (_moveDuration <= 0f)
+        {
+            Debug.LogWarning($"[GapFillerBlock] MoveFX fallback: invalid duration({_moveDuration}). (snap)");
+            transform.position = toWorld;
+            return;
+        }
+
+        _moveCo = StartCoroutine(CoMove(fromWorld, toWorld, _moveDuration));
+    }
+
+    private IEnumerator CoMove(Vector3 from, Vector3 to, float dur)
+    {
+        float t = 0f;
+        while (t < 1f)
+        {
+            t += Time.deltaTime / dur;
+            transform.position = Vector3.Lerp(from, to, Mathf.Clamp01(t));
+            yield return null;
+        }
+
+        transform.position = to;
+        _moveCo = null;
     }
 
     private void SnapToCell()

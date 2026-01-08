@@ -28,7 +28,7 @@ public class TurnContext
     public FatherActionResult FatherResult { get; set; }
 
     public DifficultyProfile _profile { get; private set; }
-    public TurnSignalBus _signals { get; private set; }
+    public TurnDriver _signals { get; private set; }
 
     private List<ITurnTickable> _turnSystems = new List<ITurnTickable>(8);
 
@@ -42,7 +42,7 @@ public class TurnContext
     public int ChildGoalPathStep { get; private set; } = -1;
 
     public void InjectDifficulty(DifficultyProfile profile) => _profile = profile;
-    public void InjectSignals(TurnSignalBus signals) => _signals = signals;
+    public void InjectSignals(TurnDriver signals) => _signals = signals;
 
     public void InjectTurnSystems(IReadOnlyList<ITurnTickable> systems)
     {

@@ -13,9 +13,10 @@ public class ChapterVisualProfile : ScriptableObject
     [Header("Tiles")]
     [SerializeField] private TileVisualProfile _tileVisualProfile;
 
-    [Header("Audio")]
-    [SerializeField] private AudioClip _bgm;
-    [SerializeField] private AudioClip _sfxStageEnter;
+    [Header("Audio (ID Only)")]
+    [SerializeField] private E_BgmId _bgmId = E_BgmId.Chapter_01;
+    [Header("Optional SFX (ID Only)")]
+    [SerializeField] private E_SfxId _stageEnterSfxId;
 
     [Header("Anim Params (Prototype)")]
     [SerializeField] private float _fatherMoveSpeed = 1.0f;
@@ -27,8 +28,9 @@ public class ChapterVisualProfile : ScriptableObject
     public Sprite ChildSprite => _childSprite;
     public TileVisualProfile TileVisualProfile => _tileVisualProfile;
 
-    public AudioClip Bgm => _bgm;
-    public AudioClip SfxStageEnter => _sfxStageEnter;
+    public E_BgmId BgmId => _bgmId;
+    public E_SfxId StageEnterSfxId => _stageEnterSfxId;
+
     public float FatherMoveSpeed => _fatherMoveSpeed;
     public float ChildStepSpeed => _childStepSpeed;
 
@@ -43,6 +45,9 @@ public class ChapterVisualProfile : ScriptableObject
 
         if (_tileVisualProfile == null)
             Debug.LogWarning($"[ChapterVisualProfile] TileVisualProfile missing: {name} (tiles will use proto fallback)", this);
+
+        if (_bgmId == E_BgmId.None)
+            Debug.LogWarning($"[ChapterVisualProfile] BgmId is None. BGM may not play. name={name}", this);
 
         if (_fatherMoveSpeed <= 0f) _fatherMoveSpeed = 0.01f;
         if (_childStepSpeed <= 0f) _childStepSpeed = 0.01f;

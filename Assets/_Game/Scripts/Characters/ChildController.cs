@@ -6,7 +6,6 @@
 /// next가 Blocked면 막힘(인덱스 유지)
 /// 성공이면 _pathPos = next 후 위치 갱신(스냅 또는 코루틴 Lerp)
 ///
-
 using System;
 using System.Collections;
 using UnityEngine;
@@ -47,6 +46,8 @@ public partial class ChildController : MonoBehaviour
 
     public void BindVisualMoveAgent(VisualMoveAgent agent) => _visualMove = agent;
     public void UnbindVisualMoveAgent() => _visualMove = null;
+
+    public E_ChildBlockedCause LastBlockedCause { get; private set; } = E_ChildBlockedCause.None;
 
     public void Initialize(
         ChildPathRuntime path,
@@ -125,7 +126,6 @@ public partial class ChildController : MonoBehaviour
         Vector3 toNext = _path.Points[next];
         UpdateFacingByNextStepWorld(from, toNext);
 
-        // ===== 논리 이동(즉시) =====
         // 성공: 인덱스 갱신 + 이동
         _pathPos = next;
         _lastStepBlocked = false;
@@ -133,6 +133,9 @@ public partial class ChildController : MonoBehaviour
         // ===== 연출 이동(애니 + Lerp) =====
         // 이동 성공 시에만 이동 애니메이션 1회 재생
         _animDriver?.PlayMove();
+
+        // === Child 이동 SFX: 이동 성공 확정 + VisualMove 시작 직전 1회 ===
+        AudioHub.Ensure().PlaySfx(E_SfxId.Move_Child);
 
         Vector3 to = _path.Points[_pathPos];
 

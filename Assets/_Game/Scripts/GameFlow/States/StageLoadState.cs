@@ -57,20 +57,16 @@ public class StageLoadState : IGameFlowState
                 Debug.LogWarning("[StageLoadState] StageTransitionFx not found. Transition skipped (fallback).");
         }
 
-        // AudioHub 확보(SFX)
+        // AudioHub 확보
         if (ctx._audioHub == null)
-        {
-            ctx._audioHub = Object.FindFirstObjectByType<AudioHub>();
-            if (ctx._audioHub == null)
-                Debug.LogWarning("[StageLoadState] AudioHub not found. SFX skipped (fallback).");
-        }
+            ctx._audioHub = AudioHub.Ensure();
 
         if (ctx._transitionFx == null || t == E_StageTransitionType.None)
         {
             // 폴백: 즉시 로드
             ctx._stageLoader.LoadStage(ctx, () =>
             {
-                PlayStageEnterSfx(ctx);
+                ApplyStageAudio(ctx);
                 _sm.ChangeState(ctx, _next);
             });
             return;
@@ -82,7 +78,7 @@ public class StageLoadState : IGameFlowState
             {
                 ctx._stageLoader.LoadStage(ctx, () =>
                 {
-                    PlayStageEnterSfx(ctx);
+                    ApplyStageAudio(ctx);
                     continueAfterLoad?.Invoke();
                 });
                 return true;
@@ -96,15 +92,25 @@ public class StageLoadState : IGameFlowState
     public void Tick(GameFlowContext ctx) { }
     public void Exit(GameFlowContext ctx) { }
 
-    private void PlayStageEnterSfx(GameFlowContext ctx)
+    private void ApplyStageAudio(GameFlowContext ctx)
     {
-        if (ctx._audioHub == null)
+        if (ctx == null || ctx._audioHub == null)
             return;
 
-        var profile = ctx._chapterVisualProfile;
-        if (profile == null)
-            return;
+        float volumeScale;
+        E_BgmId bgmId = StageAudioSelector.SelectBgmId(ctx._stageDefinition, ctx._chapterVisualProfile, out volumeScale);
 
-        ctx._audioHub.PlaySfx(profile.SfxStageEnter);
+        if (bgmId == E_BgmId.None)
+        {
+            Debug.LogWarning("[StageLoadState] Selected BgmId is None. BGM skipped.");
+        }
+        else
+        {
+            ctx._audioHub.PlayBgmIfChanged(bgmId, volumeScale);
+        }
+
+        E_SfxId enterSfxId = StageAudioSelector.SelectStageEnterSfx(ctx._stageDefinition, ctx._chapterVisualProfile);
+        if (enterSfxId != E_SfxId.None)
+            ctx._audioHub.PlaySfx(enterSfxId);
     }
 }

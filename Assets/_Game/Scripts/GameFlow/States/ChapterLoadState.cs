@@ -56,7 +56,7 @@ public class ChapterLoadState : IGameFlowState
         EnsureAudioHub(ctx);
 
         if (ctx._audioHub != null && profile != null)
-            ctx._audioHub.PlayBgm(profile.Bgm);
+            ctx._audioHub.PlayBgmIfChanged(profile.BgmId);
 
         _sm.ChangeState(ctx, _next);
     }

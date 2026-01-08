@@ -1,0 +1,95 @@
+// SfxLibrary.cs
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Audio;
+
+[Serializable]
+public struct SfxClipEntry
+{
+    public E_SfxId Id;
+
+    [Header("Clip")]
+    public AudioClip Clip;
+
+    [Header("Mix")]
+    [Range(0f, 1f)] public float Volume;
+    [Range(-3f, 3f)] public float PitchMin;
+    [Range(-3f, 3f)] public float PitchMax;
+
+    [Tooltip("0 = 2D, 1 = 3D")]
+    [Range(0f, 1f)] public float SpatialBlend;
+
+    public AudioMixerGroup MixerGroupOverride;
+
+    [Header("De-dup Rules")]
+    [Tooltip("Same id cannot play again until cooldown passes.")]
+    [Min(0f)] public float CooldownSeconds;
+
+    [Tooltip("Max simultaneous plays allowed for this id.")]
+    [Min(0)] public int MaxVoices;
+
+    public void Sanitize()
+    {
+        if (Volume <= 0f) Volume = 1f;
+        if (Mathf.Approximately(PitchMin, 0f)) PitchMin = 1f;
+        if (Mathf.Approximately(PitchMax, 0f)) PitchMax = 1f;
+
+        if (PitchMin > PitchMax)
+        {
+            float t = PitchMin;
+            PitchMin = PitchMax;
+            PitchMax = t;
+        }
+
+        if (MaxVoices <= 0) MaxVoices = 1;
+        SpatialBlend = Mathf.Clamp01(SpatialBlend);
+        CooldownSeconds = Mathf.Max(0f, CooldownSeconds);
+    }
+}
+
+[CreateAssetMenu(menuName = "Game/Audio/SfxLibrary", fileName = "SfxLibrary")]
+public class SfxLibrary : ScriptableObject
+{
+    [SerializeField] private List<SfxClipEntry> _entries = new();
+
+    private readonly Dictionary<E_SfxId, SfxClipEntry> _cache = new();
+
+    private void OnEnable()
+    {
+        BuildCache(logWarnings: false);
+    }
+
+    private void OnValidate()
+    {
+        BuildCache(logWarnings: true);
+    }
+
+    private void BuildCache(bool logWarnings)
+    {
+        _cache.Clear();
+
+        if (_entries == null) return;
+
+        for (int i = 0; i < _entries.Count; i++)
+        {
+            var e = _entries[i];
+            e.Sanitize();
+            _entries[i] = e;
+
+            if (_cache.ContainsKey(e.Id))
+            {
+                if (logWarnings)
+                    Debug.LogWarning($"[SfxLibrary] Duplicate id detected. id={e.Id} (fallback: last wins)", this);
+            }
+
+            if (e.Clip == null && logWarnings)
+                Debug.LogWarning($"[SfxLibrary] Clip is null. id={e.Id} (SFX will not play)", this);
+
+            _cache[e.Id] = e;
+        }
+    }
+
+    public bool TryGet(E_SfxId id, out SfxClipEntry entry)
+        => _cache.TryGetValue(id, out entry);
+}
