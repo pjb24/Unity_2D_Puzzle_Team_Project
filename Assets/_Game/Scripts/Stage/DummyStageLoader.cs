@@ -23,6 +23,7 @@ public class DummyStageLoader : IStageLoader
     private const string InteractRegistryName = "InteractRegistry";
     private const string GapFillerRegistryName = "GapFillerBlockRegistry";
     private const string HolesRootName = "[Holes]";
+    private const string TileOverlayRootName = "[TileOverlays]";
 
     // Sorting order (2D)
     private const int Sorting_Tile = 0;
@@ -250,10 +251,13 @@ public class DummyStageLoader : IStageLoader
         if (profile == null)
             Debug.LogWarning("[StageLoader] ChapterVisualProfile is null. Use sprite fallback visuals.");
 
-        // 6) Father/Child 생성 + 초기화
-        SpawnActorVisuals(ctx, profile);
         // ===== (4) 보드 생성 (2D Sprite) =====
         BuildGridAndTiles(ctx, stageDef);
+        EnsureTileOverlayLayer(ctx);
+        ctx._stageRuntime._gridPresenter.EnableTileOverlayLayer();
+
+        // 6) Father/Child 생성 + 초기화
+        SpawnActorVisuals(ctx, profile);
         InitializeControllers(ctx, stageDef);
 
         // 6.1) Father에 InteractPort 주입
@@ -261,7 +265,6 @@ public class DummyStageLoader : IStageLoader
 
         // Hole 적용 + 메움 블록 스폰/바인딩
         ApplyHolesFromStageDef(ctx, stageDef);
-        EnsureHoleVisualLayer(ctx); // Hole 변화(메움/복원)도 화면에 반영
 
         var gapRegistry = EnsureGapFillerRegistry(ctx);
         // GapFillerBlock도 InnerBase 규칙 적용
@@ -280,6 +283,27 @@ public class DummyStageLoader : IStageLoader
 
         SpawnGapFillerBlocks(ctx, stageDef, gapRegistry);
         BindGapFillerToFather(ctx, gapRegistry);
+    }
+
+    private bool EnsureTileOverlayLayer(GameFlowContext ctx)
+    {
+        if (ctx?._stageRuntime?._root == null || ctx._stageRuntime._grid == null || ctx._stageRuntime._gridPresenter == null)
+        {
+            Debug.LogWarning("[StageLoader] EnsureTileOverlayLayer fallback: root/grid/presenter is null.");
+            return false;
+        }
+
+        var root = ctx._stageRuntime._root.transform;
+        var existing = root.Find(TileOverlayRootName);
+        if (existing != null)
+            return true;
+
+        var go = new GameObject(TileOverlayRootName);
+        go.transform.SetParent(root, false);
+
+        var layer = go.AddComponent<TileOverlayLayer>();
+        layer.Initialize(ctx._stageRuntime._grid, ctx._stageRuntime._gridPresenter, ctx._stageRuntime._tileSpriteProvider);
+        return true;
     }
 
     private void RunPostSpawnPipeline(GameFlowContext ctx, InteractRegistry registry)

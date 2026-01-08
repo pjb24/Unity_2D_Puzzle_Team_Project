@@ -60,7 +60,10 @@ public struct CellMeta
     public E_CellTrapMask _trapMask;
 
     public E_CellVisualTag _visualTag;
-    public bool _isFilledHole; // “Hole을 메운 상태” (surface=Normal + 이 플래그로 표현)
+
+    // “Hole을 메운 상태”
+    // 규칙(권장): FilledHole이면 _surface=Normal + _isFilledHole=true
+    public bool _isFilledHole;
 
     public static CellMeta Default => new CellMeta
     {
@@ -78,6 +81,10 @@ public struct CellMeta
 
     public bool IsGap => _visualTag == E_CellVisualTag.Gap;
     public bool IsFilledHole => _isFilledHole;
+
+    // “이동을 막는 열린 Hole”
+    // (데이터가 surface=Hole + filled=true로 들어와도 통과 가능하게 보정)
+    public bool IsOpenHole => IsHole && !_isFilledHole;
 }
 
 public enum E_CellChangeKind
@@ -270,24 +277,6 @@ public class BoardGrid
 
         bool requiresRebuild = (change.Kind == E_CellChangeKind.TopologyChanged);
         return (changed, requiresRebuild);
-    }
-
-    public (bool changed, bool requiresRegistryRebuild) ApplyCellChanges(CellChange[] changes, bool notify = true)
-    {
-        if (changes == null || changes.Length == 0)
-            return (false, false);
-
-        bool anyChanged = false;
-        bool requiresRebuild = false;
-
-        for (int i = 0; i < changes.Length; i++)
-        {
-            var (c, r) = ApplyCellChange(changes[i], notify);
-            anyChanged |= c;
-            requiresRebuild |= r;
-        }
-
-        return (anyChanged, requiresRebuild);
     }
 
     public bool CanEnter(Vector2Int c)

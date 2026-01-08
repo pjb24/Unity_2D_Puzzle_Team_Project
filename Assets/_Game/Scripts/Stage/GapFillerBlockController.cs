@@ -137,12 +137,13 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
 
         // Hole이면: 블록 소멸 + HoleFilled 상태로 전환(진입 가능 + FilledHole 스프라이트)
         var meta = _grid.GetMeta(to);
-        if (meta.IsHole) // "열린 Hole"만
+        if (meta.IsOpenHole)
         {
             _grid.SetOcc(from, E_Occupant.None);
 
+            meta._surface = E_CellSurface.Normal;   // 중요: “열린 Hole” 해제
             meta._isFilledHole = true;
-            _grid.SetMeta(to, meta, notify: true); // GridPresenter/HoleVisual 즉시 갱신
+            _grid.SetMeta(to, meta, notify: true);
 
             _registry?.Unregister(from, this);
 
@@ -270,10 +271,10 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
 
         if (_isAlive)
         {
-            // “살아있는 상태인데 Hole 위”는 비정상 -> 죽이기 + Warning (무음 금지)
-            if (_grid.GetMeta(_cell).IsHole)
+            // “살아있는 블록이 Hole 위” OpenHole 기준으로 수정
+            if (_grid.GetMeta(_cell).IsOpenHole)
             {
-                Debug.LogWarning($"[GapFillerBlock] RestoreState fallback: alive block on Hole cell. cell={_cell} -> deactivate");
+                Debug.LogWarning($"[GapFillerBlock] RestoreState fallback: alive block on OpenHole cell. cell={_cell} -> deactivate");
                 _isAlive = false;
                 gameObject.SetActive(false);
                 return;

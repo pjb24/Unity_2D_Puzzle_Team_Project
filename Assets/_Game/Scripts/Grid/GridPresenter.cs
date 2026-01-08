@@ -6,8 +6,6 @@
 ///
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
-using static TMPro.SpriteAssetUtilities.TexturePacker_JsonArray;
 
 public class GridPresenter
 {
@@ -45,6 +43,16 @@ public class GridPresenter
             -(w - 1) * 0.5f * _cellPitch,
             -(h - 1) * 0.5f * _cellPitch,
             0f);
+    }
+
+    public void EnableTileOverlayLayer()
+    {
+        if (_boundGrid != null && _tileRenderers.Count == _w * _h)
+        {
+            for (int y = 0; y < _h; y++)
+                for (int x = 0; x < _w; x++)
+                    RefreshTile(_boundGrid, new Vector2Int(x, y));
+        }
     }
 
     public void SetInnerBaseRect(RectInt rect)
@@ -173,33 +181,34 @@ public class GridPresenter
         var meta = grid.GetMeta(cell);
         var cellType = grid.GetCell(cell);
 
-        // ---- resolve key ----
-        E_TileVisualKey key;
-
-        // 1) Hole / FilledHole
-        if (meta.IsHole)
+        // ===== Overlay 모드: Hole은 Base 숨김, Goal은 Base=Floor =====
+        if (meta.IsOpenHole)
         {
-            key = meta.IsFilledHole ? E_TileVisualKey.HoleFilled : E_TileVisualKey.Hole;
+            sr.enabled = false; // Hole 스프라이트가 있으면 Proto2D가 절대 보이면 안 됨
+            return;
         }
+
+        sr.enabled = true;
+
+        E_TileVisualKey baseKey;
+        if (cellType == E_CellType.Wall) baseKey = E_TileVisualKey.Wall;
+        else if (cellType == E_CellType.Obstacle) baseKey = E_TileVisualKey.Obstacle;
         else
         {
-            // 2) 정적 지형
-            if (cellType == E_CellType.Wall) key = E_TileVisualKey.Wall;
-            else if (cellType == E_CellType.Obstacle) key = E_TileVisualKey.Obstacle;
-            else if (cellType == E_CellType.Goal) key = E_TileVisualKey.Goal;
+            if (IsPerimeter(cell))
+                baseKey = E_TileVisualKey.Path;
+            else if (_hasInnerBaseRect && !_innerBaseRect.Contains(cell))
+                baseKey = E_TileVisualKey.InnerOuterGap;
             else
-            {
-                // 3) Path / Gap / Floor
-                if (IsPerimeter(cell))
-                    key = E_TileVisualKey.Path;
-                else if (_hasInnerBaseRect && !_innerBaseRect.Contains(cell))
-                    key = E_TileVisualKey.InnerOuterGap;
-                else
-                    key = E_TileVisualKey.Floor;
-            }
+                baseKey = E_TileVisualKey.Floor; // Goal 포함: 항상 Floor
         }
 
-        // 1) provider sprite가 있으면 적용 (스프라이트 교체)
+        ApplyBaseSpriteOrProtoFallback(sr, baseKey, meta, cellType);
+        return;
+    }
+
+    private void ApplyBaseSpriteOrProtoFallback(SpriteRenderer sr, E_TileVisualKey key, CellMeta meta, E_CellType cellType)
+    {
         if (_tileSpriteProvider != null && _tileSpriteProvider.TryGetSprite(key, out var sprite) && sprite != null)
         {
             sr.sprite = sprite;
@@ -207,8 +216,6 @@ public class GridPresenter
             return;
         }
 
-        // 2) 없으면 "이전 스프라이트 유지"가 원칙
-        // 단, 현재가 프로토 스프라이트 상태일 때만 색상 폴백으로 상태 표현
         if (sr.sprite == null || sr.sprite == Proto2DVisual.Sprite)
         {
             sr.sprite = Proto2DVisual.Sprite;
@@ -221,15 +228,8 @@ public class GridPresenter
                 _ => Proto2DVisual.TileFloor
             };
 
-            // Gap은 proto에서 별도 톤(회색/어두움)으로 구분
             if (meta.IsGap)
                 baseColor = new Color(0.55f, 0.55f, 0.55f, 1f);
-
-            // Hole/FilledHole은 더 강하게
-            if (meta.IsHole)
-                baseColor = Proto2DVisual.TileHole;
-            else if (meta.IsFilledHole)
-                baseColor = new Color(0.15f, 0.15f, 0.15f, 1f);
 
             sr.color = baseColor;
         }

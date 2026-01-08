@@ -247,8 +247,8 @@ public partial class FatherController : MonoBehaviour
             return;
         }
 
-        // 기믹 메타(Hole) 진입 불가
-        if (_grid.GetMeta(to).IsHole)
+        var toMeta = _grid.GetMeta(to);
+        if (toMeta.IsOpenHole)
         {
             _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Cell, from, from, false, consumedTurns: 1);
             return;
@@ -305,7 +305,6 @@ public partial class FatherController : MonoBehaviour
         // “턴 비용(2턴)” (늪 이탈 시 2)
         int consumedTurns = 1;
         var fromMeta = _grid.GetMeta(from);
-        var toMeta = _grid.GetMeta(to);
         if (fromMeta.IsSwamp && !toMeta.IsSwamp)
             consumedTurns = 2;
 
