@@ -1,5 +1,6 @@
 // StageGimmickSpawner.cs
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public static class StageGimmickSpawner
 {
@@ -59,7 +60,8 @@ public static class StageGimmickSpawner
             if (sr != null && refs._tileSpriteProvider != null)
             {
                 var key = d._startOpen ? E_TileVisualKey.DoorOpen : E_TileVisualKey.DoorClosed;
-                if (refs._tileSpriteProvider.TryGetSprite(key, out var s) && s != null)
+                var selector = TileSelector.Make(E_TileLayer.Ring, key);
+                if (refs._tileSpriteProvider.TryGetSprite(selector, out var s) && s != null)
                 {
                     sr.sprite = s;
                     sr.color = Color.white;
@@ -124,13 +126,13 @@ public static class StageGimmickSpawner
             if (sr != null && refs._tileSpriteProvider != null)
             {
                 var want = s._startOn ? E_TileVisualKey.SwitchOn : E_TileVisualKey.SwitchOff;
-
-                if (refs._tileSpriteProvider.TryGetSprite(want, out var sp) && sp != null)
+                var selector = TileSelector.Make(E_TileLayer.InnerBase, want);
+                if (refs._tileSpriteProvider.TryGetSprite(selector, out var sp) && sp != null)
                 {
                     sr.sprite = sp;
                     sr.color = Color.white;
                 }
-                else if (refs._tileSpriteProvider.TryGetSprite(E_TileVisualKey.SwitchOn, out var legacy) && legacy != null)
+                else if (refs._tileSpriteProvider.TryGetSprite(selector, out var legacy) && legacy != null)
                 {
                     Debug.LogWarning($"[StageGimmickSpawner] Switch sprite fallback: legacy Switch. want={want}");
                     sr.sprite = legacy;

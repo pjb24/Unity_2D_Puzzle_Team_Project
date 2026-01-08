@@ -3,6 +3,9 @@
 /// 표현 레이어: “월드 좌표 ↔ 셀” 변환 규칙 고정
 /// DummyStageLoader가 타일을 “중앙 정렬 + tileSize”로 깔고 있다.
 /// 타일 생성 파이프라인을 GridPresenter.BuildTiles() 하나로 통일
+/// 
+/// - 타일 생성 루프에서 "스프라이트가 없으면" GameObject/SpriteRenderer를 만들지 않는다.
+/// - 이미 만들어진 타일이더라도, 이후 TryGet 실패/열린 Hole 등으로 "표시 불가"가 되면 즉시 Destroy.
 ///
 using System.Collections.Generic;
 using UnityEngine;
@@ -13,10 +16,9 @@ public class GridPresenter
     public readonly float _cellPitch;
     public readonly Vector3 _originLocal; // root 기준 원점(셀 0,0의 중심)
     public readonly Transform _root;      // StageRuntime root
+
     private readonly int _w;
     private readonly int _h;
-
-    private readonly List<SpriteRenderer> _tileRenderers = new List<SpriteRenderer>(256);
 
     private Transform _tilesRoot;
     private BoardGrid _boundGrid;
@@ -27,6 +29,10 @@ public class GridPresenter
 
     private RectInt _innerBaseRect;
     private bool _hasInnerBaseRect;
+
+    // idx = y * w + x
+    private SpriteRenderer[] _tileRenderers;
+    private GameObject[] _tileObjects;
 
     public GridPresenter(Transform root, int w, int h, float tileScale, float tileGap)
     {
@@ -45,9 +51,18 @@ public class GridPresenter
             0f);
     }
 
-    public void EnableTileOverlayLayer()
+    public void SetTileSpriteProvider(ITileSpriteProvider provider)
     {
-        if (_boundGrid != null && _tileRenderers.Count == _w * _h)
+        _tileSpriteProvider = provider;
+
+        if (_tileSpriteProvider == null && !_warnedNoProvider)
+        {
+            _warnedNoProvider = true;
+            Debug.LogWarning("[GridPresenter] TileSpriteProvider is null. Tiles will not be created.");
+        }
+
+        // 이미 타일이 만들어져 있으면 즉시 재적용
+        if (_boundGrid != null && _tilesRoot != null)
         {
             for (int y = 0; y < _h; y++)
                 for (int x = 0; x < _w; x++)
@@ -69,7 +84,7 @@ public class GridPresenter
         }
 
         // 즉시 재적용
-        if (_boundGrid != null && _tileRenderers.Count == _w * _h)
+        if (_boundGrid != null && _tilesRoot != null)
         {
             for (int y = 0; y < _h; y++)
                 for (int x = 0; x < _w; x++)
@@ -109,7 +124,9 @@ public class GridPresenter
             _tilesRoot = null;
         }
 
-        _tileRenderers.Clear();
+        int total = _w * _h;
+        _tileRenderers = new SpriteRenderer[total];
+        _tileObjects = new GameObject[total];
 
         var goRoot = new GameObject("[Tiles]");
         goRoot.transform.SetParent(_root, false);
@@ -117,27 +134,17 @@ public class GridPresenter
 
         if (outTiles != null) outTiles.Clear();
 
+        // 루프에서 TryGet 실패면 "생성 스킵"
         for (int y = 0; y < _h; y++)
         {
             for (int x = 0; x < _w; x++)
             {
                 var cell = new Vector2Int(x, y);
-
-                var go = Proto2DVisual.CreateSpriteObject(
-                    name: $"Tile({x},{y})",
-                    parent: _tilesRoot,
-                    sortingOrder: (int)E_ProtoSort.Tile,
-                    color: Proto2DVisual.TileFloor,
-                    localScale: new Vector3(_tileScale, _tileScale, 1f)
-                );
-
-                go.transform.position = CellToWorld(cell);
-
-                var sr = go.GetComponent<SpriteRenderer>();
-                _tileRenderers.Add(sr);
-                outTiles?.Add(sr.transform);
-
                 RefreshTile(grid, cell);
+
+                int idx = ToIndex(cell);
+                if (outTiles != null && _tileRenderers[idx] != null)
+                    outTiles.Add(_tileRenderers[idx].transform);
             }
         }
 
@@ -170,13 +177,13 @@ public class GridPresenter
             return;
         }
 
-        int idx = cell.y * _w + cell.x;
-        var sr = _tileRenderers[idx];
-        if (sr == null)
+        if (_tileRenderers == null || _tileObjects == null)
         {
-            Debug.LogWarning($"[GridPresenter] RefreshTile fallback: tile renderer missing. cell={cell}");
+            Debug.LogWarning("[GridPresenter] RefreshTile fallback: tiles not built yet.");
             return;
         }
+
+        int idx = ToIndex(cell);
 
         var meta = grid.GetMeta(cell);
         var cellType = grid.GetCell(cell);
@@ -184,60 +191,137 @@ public class GridPresenter
         // ===== Overlay 모드: Hole은 Base 숨김, Goal은 Base=Floor =====
         if (meta.IsOpenHole)
         {
-            sr.enabled = false; // Hole 스프라이트가 있으면 Proto2D가 절대 보이면 안 됨
+            DestroyTileAt(idx); // Hole 스프라이트가 있으면 Proto2D가 절대 보이면 안 됨
             return;
         }
 
-        sr.enabled = true;
+        // Provider 없으면 생성 금지(= 스킵). 기존 타일이 있으면 제거.
+        if (_tileSpriteProvider == null)
+        {
+            DestroyTileAt(idx);
+            return;
+        }
 
+        // Base selector 계산
+        if (!TryBuildBaseSelector(grid, cell, cellType, meta, out var selector))
+        {
+            DestroyTileAt(idx);
+            return;
+        }
+
+        // 스프라이트 없으면 생성/유지 안 함
+        if (!_tileSpriteProvider.TryGetSprite(in selector, out var sprite) || sprite == null)
+        {
+            DestroyTileAt(idx);
+            return;
+        }
+
+        // 여기부터는 반드시 생성/유지
+        var sr = EnsureTileAt(idx, cell);
+        if (sr == null)
+        {
+            Debug.LogWarning($"[GridPresenter] EnsureTileAt fallback: SpriteRenderer missing. cell={cell}");
+            return;
+        }
+
+        sr.sprite = sprite;
+        sr.color = Color.white;
+        sr.enabled = true;
+    }
+
+    // ----- Internals -----
+
+    private int ToIndex(Vector2Int c) => c.y * _w + c.x;
+
+    private bool TryBuildBaseSelector(BoardGrid grid, Vector2Int cell, E_CellType cellType, CellMeta meta, out TileSelector selector)
+    {
+        // 정적 막힘은 항상 그 키를 사용
         E_TileVisualKey baseKey;
+
         if (cellType == E_CellType.Wall) baseKey = E_TileVisualKey.Wall;
         else if (cellType == E_CellType.Obstacle) baseKey = E_TileVisualKey.Obstacle;
         else
         {
+            // Gap 표시는 meta.IsGap 또는 InnerBaseRect 외부로 결정
+            bool isGap = meta.IsGap || (_hasInnerBaseRect && !_innerBaseRect.Contains(cell));
+
             if (IsPerimeter(cell))
                 baseKey = E_TileVisualKey.Path;
-            else if (_hasInnerBaseRect && !_innerBaseRect.Contains(cell))
+            else if (isGap)
                 baseKey = E_TileVisualKey.InnerOuterGap;
             else
-                baseKey = E_TileVisualKey.Floor; // Goal 포함: 항상 Floor
+                baseKey = E_TileVisualKey.Floor; // Goal 포함: Base는 항상 Floor
         }
 
-        ApplyBaseSpriteOrProtoFallback(sr, baseKey, meta, cellType);
-        return;
+        var layer = ResolveLayerForBaseKey(baseKey);
+        selector = TileSelector.Make(layer, baseKey);
+        return true;
     }
 
-    private void ApplyBaseSpriteOrProtoFallback(SpriteRenderer sr, E_TileVisualKey key, CellMeta meta, E_CellType cellType)
+    private static E_TileLayer ResolveLayerForBaseKey(E_TileVisualKey key)
     {
-        if (_tileSpriteProvider != null && _tileSpriteProvider.TryGetSprite(key, out var sprite) && sprite != null)
+        switch (key)
         {
-            sr.sprite = sprite;
-            sr.color = Color.white;
-            return;
-        }
+            case E_TileVisualKey.Path:
+            case E_TileVisualKey.InnerOuterGap:
+            case E_TileVisualKey.DoorOpen:
+            case E_TileVisualKey.DoorClosed:
+            case E_TileVisualKey.Goal:
+                return E_TileLayer.Ring;
 
-        if (sr.sprite == null || sr.sprite == Proto2DVisual.Sprite)
-        {
-            sr.sprite = Proto2DVisual.Sprite;
+            case E_TileVisualKey.GapFillerBlock:
+                return E_TileLayer.Block;
 
-            Color baseColor = cellType switch
-            {
-                E_CellType.Wall => Proto2DVisual.TileWall,
-                E_CellType.Obstacle => Proto2DVisual.TileObstacle,
-                E_CellType.Goal => Proto2DVisual.TileGoal,
-                _ => Proto2DVisual.TileFloor
-            };
-
-            if (meta.IsGap)
-                baseColor = new Color(0.55f, 0.55f, 0.55f, 1f);
-
-            sr.color = baseColor;
+            default:
+                return E_TileLayer.InnerBase;
         }
     }
 
     private bool IsPerimeter(Vector2Int c)
     {
         return c.x == 0 || c.y == 0 || c.x == _w - 1 || c.y == _h - 1;
+    }
+
+    private SpriteRenderer EnsureTileAt(int idx, Vector2Int cell)
+    {
+        var existing = _tileRenderers[idx];
+        if (existing != null)
+        {
+            // 위치 보정(타일 피치/오리진 변경 등 대응)
+            existing.transform.position = CellToWorld(cell);
+            return existing;
+        }
+
+        if (_tilesRoot == null)
+        {
+            Debug.LogWarning("[GridPresenter] EnsureTileAt fallback: tilesRoot is null.");
+            return null;
+        }
+
+        var go = new GameObject($"Tile({cell.x},{cell.y})");
+        go.transform.SetParent(_tilesRoot, false);
+        go.transform.localScale = new Vector3(_tileScale, _tileScale, 1f);
+        go.transform.position = CellToWorld(cell);
+
+        var sr = go.AddComponent<SpriteRenderer>();
+        sr.sortingOrder = (int)E_ProtoSort.Tile; // 기존 규칙 유지
+        sr.color = Color.white;
+
+        _tileObjects[idx] = go;
+        _tileRenderers[idx] = sr;
+        return sr;
+    }
+
+    private void DestroyTileAt(int idx)
+    {
+        var go = _tileObjects[idx];
+        if (go != null)
+        {
+            Object.Destroy(go);
+        }
+
+        _tileObjects[idx] = null;
+        _tileRenderers[idx] = null;
     }
 
     private void BindMetaListener(BoardGrid grid)
@@ -262,24 +346,5 @@ public class GridPresenter
 
         _boundGrid = null;
         _metaListener = null;
-    }
-
-    public void SetTileSpriteProvider(ITileSpriteProvider provider)
-    {
-        _tileSpriteProvider = provider;
-
-        if (_tileSpriteProvider == null && !_warnedNoProvider)
-        {
-            _warnedNoProvider = true;
-            Debug.LogWarning("[GridPresenter] TileSpriteProvider is null. Tiles will keep proto visuals.");
-        }
-
-        // 이미 타일이 만들어져 있으면 즉시 재적용
-        if (_boundGrid != null && _tileRenderers.Count == _w * _h)
-        {
-            for (int y = 0; y < _h; y++)
-                for (int x = 0; x < _w; x++)
-                    RefreshTile(_boundGrid, new Vector2Int(x, y));
-        }
     }
 }

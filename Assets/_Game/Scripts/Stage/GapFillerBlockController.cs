@@ -88,7 +88,8 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
             return;
         }
 
-        if (_tileSprites.TryGetSprite(E_TileVisualKey.GapFillerBlock, out var sp) && sp != null)
+        var selector = TileSelector.Make(E_TileLayer.InnerBase, E_TileVisualKey.GapFillerBlock);
+        if (_tileSprites.TryGetSprite(selector, out var sp) && sp != null)
         {
             _sr.sprite = sp;
             _sr.color = Color.white;

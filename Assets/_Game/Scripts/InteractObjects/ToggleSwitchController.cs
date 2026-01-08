@@ -424,8 +424,8 @@ public class ToggleSwitchController : MonoBehaviour,
         }
 
         E_TileVisualKey want = _isOn ? E_TileVisualKey.SwitchOn : E_TileVisualKey.SwitchOff;
-
-        if (_tileSprites.TryGetSprite(want, out var sp) && sp != null)
+        var selector = TileSelector.Make(E_TileLayer.InnerBase, want);
+        if (_tileSprites.TryGetSprite(selector, out var sp) && sp != null)
         {
             _sr.sprite = sp;
             _sr.color = Color.white;

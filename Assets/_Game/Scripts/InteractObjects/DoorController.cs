@@ -1,6 +1,8 @@
 // DoorController.cs
 using System;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using static UnityEditor.Experimental.GraphView.GraphView;
 
 [DisallowMultipleComponent]
 public class DoorController : MonoBehaviour, IRewindable
@@ -117,12 +119,16 @@ public class DoorController : MonoBehaviour, IRewindable
 
         if (_isOpen)
         {
-            if (_tileSprites != null && _tileSprites.TryGetSprite(E_TileVisualKey.DoorOpen, out var s) && s != null)
+            if (_tileSprites != null)
             {
-                _sr.enabled = true;
-                _sr.sprite = s;
-                _sr.color = Color.white;
-                transform.localScale = Vector3.one;
+                var selector = TileSelector.Make(E_TileLayer.Ring, E_TileVisualKey.DoorOpen);
+                if (_tileSprites.TryGetSprite(selector, out var s) && s != null)
+                {
+                    _sr.enabled = true;
+                    _sr.sprite = s;
+                    _sr.color = Color.white;
+                    transform.localScale = Vector3.one;
+                }
             }
             else
             {
@@ -137,11 +143,15 @@ public class DoorController : MonoBehaviour, IRewindable
         // closed
         if (_sr != null) _sr.enabled = true;
 
-        if (_tileSprites != null && _tileSprites.TryGetSprite(E_TileVisualKey.DoorClosed, out var c) && c != null)
+        if (_tileSprites != null)
         {
-            _sr.sprite = c;
-            _sr.color = Color.white;
-            transform.localScale = Vector3.one;
+            var selector = TileSelector.Make(E_TileLayer.Ring, E_TileVisualKey.DoorClosed);
+            if (_tileSprites.TryGetSprite(selector, out var c) && c != null)
+            {
+                _sr.sprite = c;
+                _sr.color = Color.white;
+                transform.localScale = Vector3.one;
+            }
         }
         else
         {

@@ -9,18 +9,16 @@ public class TileVisualProfile : ScriptableObject
     [Serializable]
     public struct Entry
     {
-        public E_TileVisualKey _key;
+        public TileSelector _selector;
         public Sprite _sprite;
     }
 
-    [Header("Fallback")]
-    [SerializeField] private Sprite _fallbackSprite;
-
-    [Header("Sprites")]
+    [Header("Mapping")]
     [SerializeField] private Entry[] _entries;
 
-    private readonly Dictionary<E_TileVisualKey, Sprite> _map = new Dictionary<E_TileVisualKey, Sprite>(32);
-    private readonly HashSet<E_TileVisualKey> _warnedMissing = new HashSet<E_TileVisualKey>();
+    private readonly Dictionary<TileSelector, Sprite> _map = new();
+    private readonly HashSet<TileSelector> _warnedNullSprite = new();
+    private readonly HashSet<TileSelector> _warnedDuplicate = new();
 
     private void OnEnable()
     {
@@ -35,6 +33,8 @@ public class TileVisualProfile : ScriptableObject
     private void RebuildCache()
     {
         _map.Clear();
+        _warnedNullSprite.Clear();
+        _warnedDuplicate.Clear();
 
         if (_entries == null)
             return;
@@ -42,36 +42,48 @@ public class TileVisualProfile : ScriptableObject
         for (int i = 0; i < _entries.Length; i++)
         {
             var e = _entries[i];
-            if (_map.ContainsKey(e._key))
-            {
-                Debug.LogWarning($"[TileVisualProfile] Duplicate key ignored. profile={name} key={e._key}", this);
+
+            // null 스프라이트는 캐시에 넣지 않는다 (TryGetSprite는 false)
+            if (e._sprite == null)
                 continue;
+
+            if (_map.ContainsKey(e._selector))
+            {
+                if (!_warnedDuplicate.Contains(e._selector))
+                {
+                    _warnedDuplicate.Add(e._selector);
+                    Debug.LogWarning($"[TileVisualProfile] Duplicate selector detected. last wins. profile={name} selector=({e._selector})", this);
+                }
             }
 
-            _map.Add(e._key, e._sprite);
+            _map[e._selector] = e._sprite;
         }
     }
 
-    public bool TryGetSprite(E_TileVisualKey key, out Sprite sprite)
+    public bool TryGetSprite(in TileSelector selector, out Sprite sprite)
     {
-        if (_map.TryGetValue(key, out sprite) && sprite != null)
+        if (_map.TryGetValue(selector, out sprite) && sprite != null)
             return true;
+
+        // 인스펙터 데이터 실수 디버깅(키는 있는데 스프라이트가 null) 1회 경고
+        if (_entries != null)
+        {
+            for (int i = 0; i < _entries.Length; i++)
+            {
+                if (!_entries[i]._selector.Equals(selector))
+                    continue;
+
+                if (_entries[i]._sprite == null && !_warnedNullSprite.Contains(selector))
+                {
+                    _warnedNullSprite.Add(selector);
+                    Debug.LogWarning($"[TileVisualProfile] Sprite is null. profile={name} selector=({selector}) (treated as missing)", this);
+                }
+
+                break;
+            }
+        }
 
         sprite = null;
         return false;
-    }
-
-    public Sprite GetSpriteOrFallback(E_TileVisualKey key)
-    {
-        if (TryGetSprite(key, out var sprite))
-            return sprite;
-
-        if (!_warnedMissing.Contains(key))
-        {
-            _warnedMissing.Add(key);
-            Debug.LogWarning($"[TileVisualProfile] Sprite missing -> fallback used. profile={name} key={key}", this);
-        }
-
-        return _fallbackSprite;
     }
 }

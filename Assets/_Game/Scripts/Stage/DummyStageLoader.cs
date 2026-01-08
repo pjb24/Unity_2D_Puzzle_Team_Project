@@ -254,7 +254,6 @@ public class DummyStageLoader : IStageLoader
         // ===== (4) 보드 생성 (2D Sprite) =====
         BuildGridAndTiles(ctx, stageDef);
         EnsureTileOverlayLayer(ctx);
-        ctx._stageRuntime._gridPresenter.EnableTileOverlayLayer();
 
         // 6) Father/Child 생성 + 초기화
         SpawnActorVisuals(ctx, profile);
@@ -710,58 +709,66 @@ public class DummyStageLoader : IStageLoader
             0f
         );
     }
-    private void CreateChildPathBorderSpritesPerSide(
-    GameFlowContext ctx,
-    int w,
-    int h,
-    float tileSize,
-    float tilePitch,
-    Transform parent)
+
+    // DummyStageLoader.cs (기존 CreateChildPathBorderSpritesPerSide 교체)
+    private static void CreateChildPathBorderSpritesPerSide(
+        GameFlowContext ctx,
+        int w,
+        int h,
+        float tileSize,
+        float tilePitch,
+        Transform parent)
     {
-        var ov = ctx?._stageRuntime?._stageVisualOverride;
+        var runtime = ctx?._stageRuntime;
+        var ov = runtime?._stageVisualOverride;
+
         if (ov == null || !ov.UseChildPathOuterBorder)
             return;
 
-        Sprite sprite = ov.ChildPathOuterBorderSprite;
-        if (sprite == null)
+        var provider = runtime?._tileSpriteProvider;
+        if (provider == null)
         {
-            Debug.LogWarning($"[PathBorder] Enabled but sprite missing. stageId={ctx?._stageRuntime?._stageId}");
+            Debug.LogWarning($"[PathBorder] Enabled but TileSpriteProvider is null. stageId={runtime?._stageId}");
             return;
         }
 
-        float z = 0;
+        var selector = TileSelector.Make(E_TileLayer.Ring, E_TileVisualKey.ChildPathOuterBorder);
 
-        // 0이면 Path 셀 중심과 겹침. “외곽을 둘러야” 요구라면 최소 0.5칸은 밀어야 함.
+        // 스프라이트 없으면 생성 안 함 (Composite provider가 selector 단위 1회 Warning)
+        if (!provider.TryGetSprite(in selector, out var sprite) || sprite == null)
+            return;
+
+        float z = 0f;
+
         float extraCells = Mathf.Max(0f, ov.ChildPathOuterBorderOffsetCells);
         float outwardWorld = (0.5f + extraCells) * tilePitch;
 
         Vector3 origin = GetTileOriginLocal(w, h, tilePitch);
 
-        Vector3 CellCenter(int x, int y)
-            => origin + new Vector3(x * tilePitch, y * tilePitch, z);
+        Vector3 CellCenter(int x, int y) => origin + new Vector3(x * tilePitch, y * tilePitch, z);
 
-        // ===== 아래( bottom ) : y=0, x=0..w-1 (w개), Child 방향=Right, outward=Down =====
+        // 아래: y=0, x=0..w-1 (w개), Child 방향=Right
         for (int x = 0; x < w; x++)
         {
             Vector3 pos = CellCenter(x, 0) + Vector3.down * outwardWorld;
             CreateBorderOne(parent, $"Border_B_{x}_0", sprite, pos, RotationForFacing(E_Facing.Right), tileSize, Sorting_Path);
         }
 
-        // ===== 오른쪽( right ) : x=w-1, y=0..h-1 (h개), Child 방향=Up, outward=Right =====
+        // 오른쪽: x=w-1, y=0..h-1 (h개), Child 방향=Up
         for (int y = 0; y < h; y++)
         {
             Vector3 pos = CellCenter(w - 1, y) + Vector3.right * outwardWorld;
             CreateBorderOne(parent, $"Border_R_{w - 1}_{y}", sprite, pos, RotationForFacing(E_Facing.Up), tileSize, Sorting_Path);
         }
 
-        // ===== 위( top ) : y=h-1, x=w-1..0 (w개), Child 방향=Left, outward=Up =====
+        // 위: y=h-1, x=w-1..0 (w개), Child 방향=Left
         for (int x = w - 1; x >= 0; x--)
         {
             Vector3 pos = CellCenter(x, h - 1) + Vector3.up * outwardWorld;
             CreateBorderOne(parent, $"Border_T_{x}_{h - 1}", sprite, pos, RotationForFacing(E_Facing.Left), tileSize, Sorting_Path);
         }
 
-        // ===== 왼쪽( left ) : x=0, y=h-1..0 (h개), Child 방향=Down, outward=Left =====
+        // 왼쪽: x=0, y=h-1..0 (h개), Child 방향=Down
         for (int y = h - 1; y >= 0; y--)
         {
             Vector3 pos = CellCenter(0, y) + Vector3.left * outwardWorld;

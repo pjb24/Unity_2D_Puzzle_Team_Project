@@ -4,6 +4,8 @@
 /// Resources/Visual/StageOverrides/< stageId >.asset
 /// < stageId > 는 StageDefinition.StageId 사용
 ///
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public enum E_Dir4
@@ -24,6 +26,16 @@ public enum E_InnerBaseBackgroundDrawMode
 [CreateAssetMenu(menuName = "Puzzle/Visual/Stage Visual Override")]
 public class StageVisualOverride : ScriptableObject
 {
+    [Serializable]
+    public struct Entry
+    {
+        public TileSelector _selector;
+        public Sprite _sprite;
+    }
+
+    [Header("Optional direct selector mapping (highest priority)")]
+    [SerializeField] private Entry[] _entries;
+
     [Header("Actors (Optional)")]
     [SerializeField] private Sprite _fatherSpriteOverride;
     [SerializeField] private Sprite _childSpriteOverride;
@@ -50,6 +62,9 @@ public class StageVisualOverride : ScriptableObject
     [Header("Blocks")]
     [SerializeField] private Sprite _gapFillerBlock;
 
+    private readonly Dictionary<TileSelector, Sprite> _map = new Dictionary<TileSelector, Sprite>();
+    private readonly HashSet<TileSelector> _warnedNull = new HashSet<TileSelector>();
+
     [Header("Layout (Optional)")]
     [SerializeField] private bool _useLayoutOverride = false;
     [Tooltip("월드 스케일. 1.0이면 1유닛 크기(프로토 기준). 0 이하이면 무시됨.")]
@@ -70,10 +85,8 @@ public class StageVisualOverride : ScriptableObject
     [SerializeField] private bool _useInnerBaseBackground = false;
     [SerializeField] private Sprite _innerBaseBackgroundSprite;
     [SerializeField] private E_InnerBaseBackgroundDrawMode _innerBaseBackgroundDrawMode = E_InnerBaseBackgroundDrawMode.Tiled;
-
     [Tooltip("InnerBase rect(w,h)에 더해지는 셀 단위 여백. (x=좌/우, y=상/하)")]
     [SerializeField] private Vector2 _innerBaseBackgroundPaddingCells = Vector2.zero;
-
     [Tooltip("타일보다 낮게(뒤) 깔아야 배경처럼 보임. 기본 -10 권장.")]
     [SerializeField] private int _innerBaseBackgroundSortingOrder = -10;
 
@@ -84,7 +97,6 @@ public class StageVisualOverride : ScriptableObject
 
     [Header("Rewind Restore Move FX")]
     [SerializeField] private bool _useRewindRestoreLerp = true;
-
     [Tooltip("UseRewindRestoreLerp가 true일 때만 사용. 0 이하이면 복원 시 Snap 폴백.")]
     [SerializeField] private float _rewindRestoreMoveDuration = 0.12f;
 
@@ -113,6 +125,11 @@ public class StageVisualOverride : ScriptableObject
     public bool UseRewindRestoreLerp => _useRewindRestoreLerp;
     public float RewindRestoreMoveDuration => _rewindRestoreMoveDuration;
 
+    private void OnEnable()
+    {
+        RebuildCache();
+    }
+
     private void OnValidate()
     {
         if (_useLayoutOverride)
@@ -129,32 +146,77 @@ public class StageVisualOverride : ScriptableObject
                 _tileGap = 0f;
             }
         }
+
+        RebuildCache();
     }
 
-    public bool TryGetTileSpriteOverride(E_TileVisualKey key, out Sprite sprite)
+    public bool TryGetTileSpriteOverride(in TileSelector selector, out Sprite sprite)
     {
-        sprite = key switch
+        if (_map.TryGetValue(selector, out sprite) && sprite != null)
+            return true;
+
+        // 데이터 실수(엔트리는 있는데 스프라이트 null) 1회 경고
+        if (_entries != null)
         {
-            E_TileVisualKey.Floor => _floor,
-            E_TileVisualKey.Wall => _wall,
-            E_TileVisualKey.Hole => _hole,
-            E_TileVisualKey.HoleFilled => _filledHole,
-            E_TileVisualKey.Goal => _goal,
+            for (int i = 0; i < _entries.Length; i++)
+            {
+                if (!_entries[i]._selector.Equals(selector))
+                    continue;
 
-            E_TileVisualKey.Path => _path,
-            E_TileVisualKey.InnerOuterGap => _innerOuterGap,
+                if (_entries[i]._sprite == null && !_warnedNull.Contains(selector))
+                {
+                    _warnedNull.Add(selector);
+                    Debug.LogWarning($"[StageVisualOverride] Sprite is null. override={name} selector=({selector}) (treated as missing)", this);
+                }
+                break;
+            }
+        }
 
-            E_TileVisualKey.DoorOpen => _doorOpen,
-            E_TileVisualKey.DoorClosed => _doorClosed,
+        sprite = null;
+        return false;
+    }
 
-            E_TileVisualKey.SwitchOn => _switchOn,
-            E_TileVisualKey.SwitchOff => _switchOff,
+    private void RebuildCache()
+    {
+        _map.Clear();
+        _warnedNull.Clear();
 
-            E_TileVisualKey.GapFillerBlock => _gapFillerBlock,
+        // 1) 명시적 selector 매핑(최우선)
+        if (_entries != null)
+        {
+            for (int i = 0; i < _entries.Length; i++)
+            {
+                var e = _entries[i];
+                if (e._sprite == null)
+                    continue;
 
-            _ => null
-        };
+                _map[e._selector] = e._sprite; // 중복이면 last wins
+            }
+        }
 
-        return sprite != null;
+        // 2) 슬롯 기반 매핑(편의)
+        PutIfNotNull(TileSelector.Make(E_TileLayer.InnerBase, E_TileVisualKey.Floor), _floor);
+        PutIfNotNull(TileSelector.Make(E_TileLayer.InnerBase, E_TileVisualKey.Wall), _wall);
+        PutIfNotNull(TileSelector.Make(E_TileLayer.InnerBase, E_TileVisualKey.Hole), _hole);
+        PutIfNotNull(TileSelector.Make(E_TileLayer.InnerBase, E_TileVisualKey.HoleFilled), _filledHole);
+
+        PutIfNotNull(TileSelector.Make(E_TileLayer.Ring, E_TileVisualKey.Path), _path);
+        PutIfNotNull(TileSelector.Make(E_TileLayer.Ring, E_TileVisualKey.InnerOuterGap), _innerOuterGap);
+        PutIfNotNull(TileSelector.Make(E_TileLayer.Ring, E_TileVisualKey.DoorOpen), _doorOpen);
+        PutIfNotNull(TileSelector.Make(E_TileLayer.Ring, E_TileVisualKey.DoorClosed), _doorClosed);
+        PutIfNotNull(TileSelector.Make(E_TileLayer.Ring, E_TileVisualKey.Goal), _goal);
+
+        PutIfNotNull(TileSelector.Make(E_TileLayer.InnerBase, E_TileVisualKey.SwitchOn), _switchOn);
+        PutIfNotNull(TileSelector.Make(E_TileLayer.InnerBase, E_TileVisualKey.SwitchOff), _switchOff);
+
+        PutIfNotNull(TileSelector.Make(E_TileLayer.Block, E_TileVisualKey.GapFillerBlock), _gapFillerBlock);
+    }
+
+    private void PutIfNotNull(in TileSelector selector, Sprite sprite)
+    {
+        if (sprite == null)
+            return;
+
+        _map[selector] = sprite;
     }
 }
