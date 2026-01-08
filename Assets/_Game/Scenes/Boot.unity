@@ -350,6 +350,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1191375607}
   - component: {fileID: 1191375608}
+  - component: {fileID: 1191375609}
   m_Layer: 0
   m_Name: BootAudioInstaller
   m_TagString: Untagged
@@ -386,6 +387,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _config: {fileID: 0}
   _configResourcesPath: Configs/AudioConfig
+--- !u!114 &1191375609
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1191375605}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: abdb72218f5431d42aac5d86b6b15496, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _runOnStart: 1
 --- !u!1 &1364901979
 GameObject:
   m_ObjectHideFlags: 0
