@@ -60,6 +60,9 @@ public class ToggleSwitchController : MonoBehaviour,
     private ITileSpriteProvider _tileSprites;
     private SpriteRenderer _sr;
 
+    private bool _warnedMissingOnSprite;
+    private bool _warnedMissingOffSprite;
+
     private event Action<bool> _onStateChanged;
     public void AddListenerOnStateChanged(Action<bool> cb) => _onStateChanged += cb;
     public void RemoveListenerOnStateChanged(Action<bool> cb) => _onStateChanged -= cb;
@@ -129,27 +132,7 @@ public class ToggleSwitchController : MonoBehaviour,
 
         _registry.Register(this);
 
-        ApplySpriteOnce();
         ApplyVisual();
-    }
-
-    private void ApplySpriteOnce()
-    {
-        if (_sr == null)
-            _sr = GetComponentInChildren<SpriteRenderer>(includeInactive: true);
-
-        if (_sr == null)
-        {
-            Debug.LogWarning("[ToggleSwitchController] ApplySprite fallback: SpriteRenderer missing.");
-            return;
-        }
-
-        if (_tileSprites != null && _tileSprites.TryGetSprite(E_TileVisualKey.Switch, out var s) && s != null)
-        {
-            _sr.sprite = s;
-            _sr.color = Color.white;
-        }
-        // 없으면 이전 유지
     }
 
     public void BindAllLinks(StageRuntimeRefs refs)
@@ -416,9 +399,56 @@ public class ToggleSwitchController : MonoBehaviour,
 
     private void ApplyVisual()
     {
-        // 최소 표현: On이면 조금 작게, Off면 기본
-        // (프로젝트 연출 규칙에 맞게 교체)
+        // (A) 스프라이트 즉시 교체(ON/OFF)
+        ApplyStateSpriteOrWarn();
+
+        // (B) 최소 연출(기존 유지)
         transform.localScale = _isOn ? new Vector3(0.85f, 0.85f, 1f) : Vector3.one;
+    }
+
+    private void ApplyStateSpriteOrWarn()
+    {
+        if (_sr == null)
+            _sr = GetComponentInChildren<SpriteRenderer>(includeInactive: true);
+
+        if (_sr == null)
+        {
+            Debug.LogWarning("[ToggleSwitchController] ApplyStateSprite fallback: SpriteRenderer missing.");
+            return;
+        }
+
+        if (_tileSprites == null)
+        {
+            Debug.LogWarning("[ToggleSwitchController] ApplyStateSprite fallback: TileSpriteProvider is null. (keep previous)");
+            return;
+        }
+
+        E_TileVisualKey want = _isOn ? E_TileVisualKey.SwitchOn : E_TileVisualKey.SwitchOff;
+
+        if (_tileSprites.TryGetSprite(want, out var sp) && sp != null)
+        {
+            _sr.sprite = sp;
+            _sr.color = Color.white;
+            return;
+        }
+
+        // 무음 금지: 상태별 1회 경고
+        if (_isOn)
+        {
+            if (!_warnedMissingOnSprite)
+            {
+                _warnedMissingOnSprite = true;
+                Debug.LogWarning("[ToggleSwitchController] Sprite missing: SwitchOn (keep previous).");
+            }
+        }
+        else
+        {
+            if (!_warnedMissingOffSprite)
+            {
+                _warnedMissingOffSprite = true;
+                Debug.LogWarning("[ToggleSwitchController] Sprite missing: SwitchOff (keep previous).");
+            }
+        }
     }
 
     // =========================

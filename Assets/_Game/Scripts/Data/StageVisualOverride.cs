@@ -28,21 +28,32 @@ public class StageVisualOverride : ScriptableObject
     [SerializeField] private Sprite _fatherSpriteOverride;
     [SerializeField] private Sprite _childSpriteOverride;
 
-    [Header("Tiles / Gimmicks (Optional)")]
+    [Header("Tile Sprites Override (optional, null = keep ChapterVisualProfile)")]
     [SerializeField] private Sprite _floor;
+    [SerializeField] private Sprite _wall;
     [SerializeField] private Sprite _hole;
+    [SerializeField] private Sprite _filledHole;
     [SerializeField] private Sprite _goal;
-    [SerializeField] private Sprite _path;
+
+    [Header("Outer/Ring")]
+    [SerializeField] private Sprite _path;             // Child Path 타일
+    [SerializeField] private Sprite _innerOuterGap;    // InnerBase ~ ChildPath 사이 “빈 공간” 타일
+
+    [Header("Door")]
     [SerializeField] private Sprite _doorOpen;
     [SerializeField] private Sprite _doorClosed;
-    [SerializeField] private Sprite _switch;
+
+    [Header("Switch")]
+    [SerializeField] private Sprite _switchOn;
+    [SerializeField] private Sprite _switchOff;
+
+    [Header("Blocks")]
+    [SerializeField] private Sprite _gapFillerBlock;
 
     [Header("Layout (Optional)")]
     [SerializeField] private bool _useLayoutOverride = false;
-
     [Tooltip("월드 스케일. 1.0이면 1유닛 크기(프로토 기준). 0 이하이면 무시됨.")]
     [SerializeField] private float _tileSize = 1f;
-
     [Tooltip("타일 간격. 0이면 붙음. 음수는 0으로 클램프.")]
     [SerializeField] private float _tileGap = 0f;
 
@@ -125,12 +136,22 @@ public class StageVisualOverride : ScriptableObject
         sprite = key switch
         {
             E_TileVisualKey.Floor => _floor,
+            E_TileVisualKey.Wall => _wall,
             E_TileVisualKey.Hole => _hole,
+            E_TileVisualKey.HoleFilled => _filledHole,
             E_TileVisualKey.Goal => _goal,
+
             E_TileVisualKey.Path => _path,
+            E_TileVisualKey.InnerOuterGap => _innerOuterGap,
+
             E_TileVisualKey.DoorOpen => _doorOpen,
             E_TileVisualKey.DoorClosed => _doorClosed,
-            E_TileVisualKey.Switch => _switch,
+
+            E_TileVisualKey.SwitchOn => _switchOn,
+            E_TileVisualKey.SwitchOff => _switchOff,
+
+            E_TileVisualKey.GapFillerBlock => _gapFillerBlock,
+
             _ => null
         };
 

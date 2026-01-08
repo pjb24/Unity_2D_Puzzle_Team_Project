@@ -8,7 +8,6 @@
 /// _meta[idx]  : CellMeta  (기믹/동적 속성)
 /// _occ[idx]   : E_Occupant(None / Father / Child / Blocker 등)
 ///
-
 using System;
 using UnityEngine;
 
@@ -46,6 +45,12 @@ public enum E_CellTrapMask
     // 확장: Spike, Laser 등
 }
 
+public enum E_CellVisualTag
+{
+    None = 0,
+    Gap = 1, // InnerBase ↔ ChildPath 사이 빈 공간
+}
+
 [Serializable]
 public struct CellMeta
 {
@@ -54,16 +59,25 @@ public struct CellMeta
     public int _regionId;
     public E_CellTrapMask _trapMask;
 
+    public E_CellVisualTag _visualTag;
+    public bool _isFilledHole; // “Hole을 메운 상태” (surface=Normal + 이 플래그로 표현)
+
     public static CellMeta Default => new CellMeta
     {
         _surface = E_CellSurface.Normal,
         _dir = E_CellDir.None,
         _regionId = 0,
         _trapMask = E_CellTrapMask.None,
+
+        _visualTag = E_CellVisualTag.None,
+        _isFilledHole = false,
     };
 
     public bool IsHole => _surface == E_CellSurface.Hole;
     public bool IsSwamp => _surface == E_CellSurface.Swamp;
+
+    public bool IsGap => _visualTag == E_CellVisualTag.Gap;
+    public bool IsFilledHole => _isFilledHole;
 }
 
 public enum E_CellChangeKind
@@ -126,7 +140,6 @@ public class BoardGrid
     }
 
     public bool IsInBounds(Vector2Int c) => (uint)c.x < (uint)_w && (uint)c.y < (uint)_h;
-
     public int ToIndex(Vector2Int c) => c.y * _w + c.x;
 
     public E_CellType GetCell(Vector2Int c)

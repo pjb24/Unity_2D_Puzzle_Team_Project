@@ -15,12 +15,17 @@ MonoBehaviour:
   _fatherSpriteOverride: {fileID: 21300000, guid: a3faa21844585624a80569bbe71ad6ce, type: 3}
   _childSpriteOverride: {fileID: 21300000, guid: 75d10c77a97412442b6ae086d6c5c5c9, type: 3}
   _floor: {fileID: 21300000, guid: 7841911ae7ad9904dbbc79f59a0b667d, type: 3}
+  _wall: {fileID: 21300000, guid: c0e837c84fb10c94c8ecd079329581b8, type: 3}
   _hole: {fileID: 21300000, guid: 7ff8d84f17a223d419bd612138889d59, type: 3}
-  _goal: {fileID: 0}
-  _path: {fileID: 0}
+  _filledHole: {fileID: 21300000, guid: d1171de56dcafe94d836cfcd8b52402e, type: 3}
+  _goal: {fileID: 21300000, guid: 585d86a1f05481148b31fdd6e975b713, type: 3}
+  _path: {fileID: 21300000, guid: 7841911ae7ad9904dbbc79f59a0b667d, type: 3}
+  _innerOuterGap: {fileID: 0}
   _doorOpen: {fileID: 0}
-  _doorClosed: {fileID: 0}
-  _switch: {fileID: 0}
+  _doorClosed: {fileID: 21300000, guid: e63f2f3e802585e44a2aa935ea37ba92, type: 3}
+  _switchOn: {fileID: 21300000, guid: f0f2f990c3134bc4f99eec92eababdf1, type: 3}
+  _switchOff: {fileID: 21300000, guid: 9c8ccd72040c92846a2b66d45f59d281, type: 3}
+  _gapFillerBlock: {fileID: 21300000, guid: 245faedf1c953d54e8033f7a428a839a, type: 3}
   _useLayoutOverride: 1
   _tileSize: 0.89
   _tileGap: 0

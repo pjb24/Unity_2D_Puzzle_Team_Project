@@ -339,12 +339,15 @@ public class DummyStageLoader : IStageLoader
         int h = Mathf.Max(1, stageDef.BoardSize.y);
 
         ctx._stageRuntime._grid = new BoardGrid(w, h, stageDef.Cells);
+        
         ctx._stageRuntime._gridPresenter = new GridPresenter(
             ctx._stageRuntime._root.transform, w, h,
             ctx._stageRuntime._tileScale,
             ctx._stageRuntime._tileGap);
 
         ctx._stageRuntime._gridPresenter.SetTileSpriteProvider(ctx._stageRuntime._tileSpriteProvider);
+
+        ctx._stageRuntime._gridPresenter.SetInnerBaseRect(stageDef.FatherMoveRect);
 
         // ===== InnerBase Background =====
         ctx._stageRuntime._innerBaseBackground = InnerBaseBackgroundBuilder.BuildOrNull(ctx._stageRuntime, stageDef);
@@ -867,6 +870,7 @@ public class DummyStageLoader : IStageLoader
 
             var meta = grid.GetMeta(c);
             meta._surface = E_CellSurface.Hole;
+            meta._isFilledHole = false;
             grid.SetMeta(c, meta, notify: true);
         }
     }
@@ -1023,7 +1027,7 @@ public class DummyStageLoader : IStageLoader
             EnsureRewindKey(go);
 
             var ctrl = go.AddComponent<GapFillerBlockController>();
-            ctrl.Initialize(grid, presenter, gapRegistry, c);
+            ctrl.Initialize(grid, presenter, gapRegistry, c, ctx._stageRuntime._tileSpriteProvider);
         }
     }
 

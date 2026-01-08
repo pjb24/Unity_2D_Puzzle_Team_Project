@@ -46,7 +46,13 @@ public static class StageGimmickSpawner
                 continue;
             }
 
-            var go = CreateSpriteGO($"Door_{i}", doorRoot, refs._gridPresenter.CellToWorld(d._cell), new Vector3(0.9f, 0.9f, 1f), new Color(0.15f, 0.60f, 0.95f, 1f), sortingOrder: 3);
+            var go = CreateSpriteGO(
+                $"Door_{i}",
+                doorRoot,
+                refs._gridPresenter.CellToWorld(d._cell),
+                new Vector3(0.9f, 0.9f, 1f),
+                new Color(0.15f, 0.60f, 0.95f, 1f),
+                sortingOrder: 3);
 
             // 초기 스프라이트(있으면 적용, 없으면 이전 유지)
             var sr = go.GetComponent<SpriteRenderer>();
@@ -105,15 +111,29 @@ public static class StageGimmickSpawner
                 continue;
             }
 
-            var go = CreateSpriteGO($"ToggleSwitch_{i}", swRoot, refs._gridPresenter.CellToWorld(s._cell), new Vector3(0.75f, 0.75f, 1f), new Color(0.95f, 0.85f, 0.15f, 1f), sortingOrder: 3);
+            var go = CreateSpriteGO(
+                $"ToggleSwitch_{i}",
+                swRoot,
+                refs._gridPresenter.CellToWorld(s._cell),
+                new Vector3(0.75f, 0.75f, 1f),
+                new Color(0.95f, 0.85f, 0.15f, 1f),
+                sortingOrder: 2);
 
-            // 초기 스프라이트(있으면 적용)
+            // 초기 스프라이트(ON/OFF)
             var sr = go.GetComponent<SpriteRenderer>();
             if (sr != null && refs._tileSpriteProvider != null)
             {
-                if (refs._tileSpriteProvider.TryGetSprite(E_TileVisualKey.Switch, out var sp) && sp != null)
+                var want = s._startOn ? E_TileVisualKey.SwitchOn : E_TileVisualKey.SwitchOff;
+
+                if (refs._tileSpriteProvider.TryGetSprite(want, out var sp) && sp != null)
                 {
                     sr.sprite = sp;
+                    sr.color = Color.white;
+                }
+                else if (refs._tileSpriteProvider.TryGetSprite(E_TileVisualKey.SwitchOn, out var legacy) && legacy != null)
+                {
+                    Debug.LogWarning($"[StageGimmickSpawner] Switch sprite fallback: legacy Switch. want={want}");
+                    sr.sprite = legacy;
                     sr.color = Color.white;
                 }
             }

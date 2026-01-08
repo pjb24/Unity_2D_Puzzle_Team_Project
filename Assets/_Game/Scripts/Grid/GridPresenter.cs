@@ -6,6 +6,8 @@
 ///
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using static TMPro.SpriteAssetUtilities.TexturePacker_JsonArray;
 
 public class GridPresenter
 {
@@ -25,6 +27,9 @@ public class GridPresenter
     private ITileSpriteProvider _tileSpriteProvider;
     private bool _warnedNoProvider;
 
+    private RectInt _innerBaseRect;
+    private bool _hasInnerBaseRect;
+
     public GridPresenter(Transform root, int w, int h, float tileScale, float tileGap)
     {
         _root = root;
@@ -40,6 +45,28 @@ public class GridPresenter
             -(w - 1) * 0.5f * _cellPitch,
             -(h - 1) * 0.5f * _cellPitch,
             0f);
+    }
+
+    public void SetInnerBaseRect(RectInt rect)
+    {
+        if (rect.width <= 0 || rect.height <= 0)
+        {
+            Debug.LogWarning($"[GridPresenter] SetInnerBaseRect fallback: invalid rect. rect={rect} (gap tile disabled)");
+            _hasInnerBaseRect = false;
+        }
+        else
+        {
+            _innerBaseRect = rect;
+            _hasInnerBaseRect = true;
+        }
+
+        // 즉시 재적용
+        if (_boundGrid != null && _tileRenderers.Count == _w * _h)
+        {
+            for (int y = 0; y < _h; y++)
+                for (int x = 0; x < _w; x++)
+                    RefreshTile(_boundGrid, new Vector2Int(x, y));
+        }
     }
 
     public Vector3 CellToWorld(Vector2Int c)
@@ -143,23 +170,33 @@ public class GridPresenter
             return;
         }
 
-        // Hole은 메타 우선(검정)
         var meta = grid.GetMeta(cell);
-        // 정적 셀 타입 색
         var cellType = grid.GetCell(cell);
 
         // ---- resolve key ----
         E_TileVisualKey key;
-        if (meta.IsHole) key = E_TileVisualKey.Hole;
+
+        // 1) Hole / FilledHole
+        if (meta.IsHole)
+        {
+            key = meta.IsFilledHole ? E_TileVisualKey.HoleFilled : E_TileVisualKey.Hole;
+        }
         else
         {
-            key = cellType switch
+            // 2) 정적 지형
+            if (cellType == E_CellType.Wall) key = E_TileVisualKey.Wall;
+            else if (cellType == E_CellType.Obstacle) key = E_TileVisualKey.Obstacle;
+            else if (cellType == E_CellType.Goal) key = E_TileVisualKey.Goal;
+            else
             {
-                E_CellType.Wall => E_TileVisualKey.Wall,
-                E_CellType.Obstacle => E_TileVisualKey.Obstacle,
-                E_CellType.Goal => E_TileVisualKey.Goal,
-                _ => E_TileVisualKey.Floor
-            };
+                // 3) Path / Gap / Floor
+                if (IsPerimeter(cell))
+                    key = E_TileVisualKey.Path;
+                else if (_hasInnerBaseRect && !_innerBaseRect.Contains(cell))
+                    key = E_TileVisualKey.InnerOuterGap;
+                else
+                    key = E_TileVisualKey.Floor;
+            }
         }
 
         // 1) provider sprite가 있으면 적용 (스프라이트 교체)
@@ -184,8 +221,23 @@ public class GridPresenter
                 _ => Proto2DVisual.TileFloor
             };
 
-            sr.color = meta.IsHole ? Proto2DVisual.TileHole : baseColor;
+            // Gap은 proto에서 별도 톤(회색/어두움)으로 구분
+            if (meta.IsGap)
+                baseColor = new Color(0.55f, 0.55f, 0.55f, 1f);
+
+            // Hole/FilledHole은 더 강하게
+            if (meta.IsHole)
+                baseColor = Proto2DVisual.TileHole;
+            else if (meta.IsFilledHole)
+                baseColor = new Color(0.15f, 0.15f, 0.15f, 1f);
+
+            sr.color = baseColor;
         }
+    }
+
+    private bool IsPerimeter(Vector2Int c)
+    {
+        return c.x == 0 || c.y == 0 || c.x == _w - 1 || c.y == _h - 1;
     }
 
     private void BindMetaListener(BoardGrid grid)

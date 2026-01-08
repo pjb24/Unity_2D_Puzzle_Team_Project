@@ -72,6 +72,7 @@ public static class Proto2DVisual
 public enum E_ProtoSort
 {
     Tile = 0,
+    Hole = 3,
     Path = 5,
     Actor = 10,
 }
