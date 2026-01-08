@@ -6,6 +6,14 @@
 ///
 using UnityEngine;
 
+public enum E_Dir4
+{
+    Up,
+    Right,
+    Down,
+    Left,
+}
+
 public enum E_InnerBaseBackgroundDrawMode
 {
     Tiled,
@@ -28,6 +36,24 @@ public class StageVisualOverride : ScriptableObject
     [SerializeField] private Sprite _doorOpen;
     [SerializeField] private Sprite _doorClosed;
     [SerializeField] private Sprite _switch;
+
+    [Header("Layout (Optional)")]
+    [SerializeField] private bool _useLayoutOverride = false;
+
+    [Tooltip("월드 스케일. 1.0이면 1유닛 크기(프로토 기준). 0 이하이면 무시됨.")]
+    [SerializeField] private float _tileSize = 1f;
+
+    [Tooltip("타일 간격. 0이면 붙음. 음수는 0으로 클램프.")]
+    [SerializeField] private float _tileGap = 0f;
+
+    [Header("Child Path Outer Border (Optional)")]
+    [SerializeField] private bool _useChildPathOuterBorder = false;
+    [Tooltip("테두리 스프라이트 1종(기본 방향=Right 기준).")]
+    [SerializeField] private Sprite _childPathOuterBorderSprite;
+    [Tooltip("두께(셀 단위). 1이면 '1칸'. 0 이하는 1로 폴백. 테두리 두께 = tileSize * scale")]
+    [SerializeField] private float _childPathOuterBorderThicknessCells = 1f;
+    [Tooltip("경로 바깥쪽으로 얼마나 밀지(셀 단위). 0.5면 바깥 한 칸 중심으로 이동.")]
+    [SerializeField] private float _childPathOuterBorderOffsetCells = 0.5f;
 
     [Header("InnerBase Background (Optional)")]
     [SerializeField] private bool _useInnerBaseBackground = false;
@@ -54,6 +80,15 @@ public class StageVisualOverride : ScriptableObject
     public Sprite FatherSpriteOverride => _fatherSpriteOverride;
     public Sprite ChildSpriteOverride => _childSpriteOverride;
 
+    public bool UseLayoutOverride => _useLayoutOverride;
+    public float TileSize => _tileSize;
+    public float TileGap => _tileGap;
+
+    public bool UseChildPathOuterBorder => _useChildPathOuterBorder;
+    public Sprite ChildPathOuterBorderSprite => _childPathOuterBorderSprite;
+    public float ChildPathOuterBorderThicknessCells => _childPathOuterBorderThicknessCells;
+    public float ChildPathOuterBorderOffsetCells => _childPathOuterBorderOffsetCells;
+
     public bool UseInnerBaseBackground => _useInnerBaseBackground;
     public Sprite InnerBaseBackgroundSprite => _innerBaseBackgroundSprite;
     public E_InnerBaseBackgroundDrawMode InnerBaseBackgroundDrawMode => _innerBaseBackgroundDrawMode;
@@ -66,6 +101,24 @@ public class StageVisualOverride : ScriptableObject
 
     public bool UseRewindRestoreLerp => _useRewindRestoreLerp;
     public float RewindRestoreMoveDuration => _rewindRestoreMoveDuration;
+
+    private void OnValidate()
+    {
+        if (_useLayoutOverride)
+        {
+            if (_tileSize <= 0f)
+            {
+                Debug.LogWarning("[StageVisualOverride] LayoutOverride fallback: TileSize <= 0. Force 1.");
+                _tileSize = 1f;
+            }
+
+            if (_tileGap < 0f)
+            {
+                Debug.LogWarning("[StageVisualOverride] LayoutOverride fallback: TileGap < 0. Clamp 0.");
+                _tileGap = 0f;
+            }
+        }
+    }
 
     public bool TryGetTileSpriteOverride(E_TileVisualKey key, out Sprite sprite)
     {

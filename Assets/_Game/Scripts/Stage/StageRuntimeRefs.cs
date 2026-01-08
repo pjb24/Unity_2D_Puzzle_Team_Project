@@ -14,6 +14,14 @@ public class StageRuntimeRefs
     public Sprite _resolvedFatherSprite;
     public Sprite _resolvedChildSprite;
 
+    // ===== Layout =====
+    // tileScale: 스프라이트 스케일
+    // tileGap  : 셀 간격
+    // cellPitch: 타일 배치 간격(tileScale + tileGap)
+    public float _tileScale = 1f;
+    public float _tileGap = 0f;
+    public float _cellPitch = 1f;
+
     // InnerBase Background
     public GameObject _innerBaseBackground;
 

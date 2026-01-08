@@ -21,8 +21,15 @@ MonoBehaviour:
   _doorOpen: {fileID: 0}
   _doorClosed: {fileID: 0}
   _switch: {fileID: 0}
-  _useInnerBaseBackground: 1
-  _innerBaseBackgroundSprite: {fileID: 21300000, guid: 7841911ae7ad9904dbbc79f59a0b667d, type: 3}
+  _useLayoutOverride: 1
+  _tileSize: 1
+  _tileGap: 0
+  _useChildPathOuterBorder: 1
+  _childPathOuterBorderSprite: {fileID: 21300000, guid: 3867d7f40d5f2f54fba83302d0ac01cb, type: 3}
+  _childPathOuterBorderThicknessCells: 1
+  _childPathOuterBorderOffsetCells: 0.1
+  _useInnerBaseBackground: 0
+  _innerBaseBackgroundSprite: {fileID: 0}
   _innerBaseBackgroundDrawMode: 1
   _innerBaseBackgroundPaddingCells: {x: 0.2, y: 0.2}
   _innerBaseBackgroundSortingOrder: -10

@@ -4,13 +4,13 @@
 /// DummyStageLoader가 타일을 “중앙 정렬 + tileSize”로 깔고 있다.
 /// 타일 생성 파이프라인을 GridPresenter.BuildTiles() 하나로 통일
 ///
-
 using System.Collections.Generic;
 using UnityEngine;
 
 public class GridPresenter
 {
-    public readonly float _tileSize;
+    public readonly float _tileScale;
+    public readonly float _cellPitch;
     public readonly Vector3 _originLocal; // root 기준 원점(셀 0,0의 중심)
     public readonly Transform _root;      // StageRuntime root
     private readonly int _w;
@@ -25,21 +25,27 @@ public class GridPresenter
     private ITileSpriteProvider _tileSpriteProvider;
     private bool _warnedNoProvider;
 
-    public GridPresenter(Transform root, int w, int h, float tileSize)
+    public GridPresenter(Transform root, int w, int h, float tileScale, float tileGap)
     {
         _root = root;
         _w = Mathf.Max(1, w);
         _h = Mathf.Max(1, h);
-        _tileSize = Mathf.Max(0.01f, tileSize);
 
-        // DummyStageLoader와 동일한 중앙정렬 규칙
-        _originLocal = new Vector3(-(w - 1) * 0.5f * tileSize, -(h - 1) * 0.5f * tileSize, 0f);
+        _tileScale = Mathf.Max(0.01f, tileScale);
+        float gap = Mathf.Max(0f, tileGap);
+        _cellPitch = Mathf.Max(0.01f, _tileScale + gap);
+
+        // DummyStageLoader와 동일한 중앙정렬 규칙(단, pitch 기준)
+        _originLocal = new Vector3(
+            -(w - 1) * 0.5f * _cellPitch,
+            -(h - 1) * 0.5f * _cellPitch,
+            0f);
     }
 
     public Vector3 CellToWorld(Vector2Int c)
     {
         // 2D 탑뷰: (x,y) 그대로 매핑
-        Vector3 local = _originLocal + new Vector3(c.x * _tileSize, c.y * _tileSize, 0f);
+        Vector3 local = _originLocal + new Vector3(c.x * _cellPitch, c.y * _cellPitch, 0f);
         return _root.TransformPoint(local);
     }
 
@@ -87,7 +93,7 @@ public class GridPresenter
                     parent: _tilesRoot,
                     sortingOrder: (int)E_ProtoSort.Tile,
                     color: Proto2DVisual.TileFloor,
-                    localScale: new Vector3(_tileSize, _tileSize, 1f)
+                    localScale: new Vector3(_tileScale, _tileScale, 1f)
                 );
 
                 go.transform.position = CellToWorld(cell);
@@ -184,6 +190,8 @@ public class GridPresenter
 
     private void BindMetaListener(BoardGrid grid)
     {
+        if (_boundGrid == grid) return;
+
         _boundGrid = grid;
 
         _metaListener = (cell, meta) =>

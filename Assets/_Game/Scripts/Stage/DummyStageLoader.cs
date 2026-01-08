@@ -16,7 +16,8 @@ public interface ILinkBinder
 public class DummyStageLoader : IStageLoader
 {
     // ===== Tunables =====
-    private readonly float _tileSize = 1.0f;
+    private readonly float _defaultTileSize = 1.0f;
+    private readonly float _defaultTileGap = 0.0f;
 
     // Registry GameObject name (under StageRuntime root)
     private const string InteractRegistryName = "InteractRegistry";
@@ -66,11 +67,11 @@ public class DummyStageLoader : IStageLoader
         var registry = EnsureInteractRegistry(ctx);
         ctx._stageRuntime._interactRegistry = registry;
 
-        // 5) 테두리 경로 생성(2D Sprite 마커)
-        CreateDummyPath(ctx, stageDef);
-
         // 6) 스폰(그리드/프리젠터/컨트롤러 포함)
         SpawnStageActorsAndSystems(ctx, stageDef, registry);
+
+        // 5) 테두리 경로 생성(2D Sprite 마커)
+        CreateDummyPath(ctx, stageDef);
 
         // 런타임 기믹 스폰(Doors + ToggleSwitches)
         StageGimmickSpawner.SpawnDoorsAndToggleSwitches(ctx._stageRuntime, stageDef);
@@ -214,6 +215,32 @@ public class DummyStageLoader : IStageLoader
             stageOverride != null && stageOverride.ChildSpriteOverride != null
                 ? stageOverride.ChildSpriteOverride
                 : (chapterProfile != null ? chapterProfile.ChildSprite : null);
+
+        // ===== Layout resolve (tile scale + gap) =====
+        float tileScale = _defaultTileSize;
+        float tileGap = _defaultTileGap;
+
+        if (stageOverride != null && stageOverride.UseLayoutOverride)
+        {
+            tileScale = stageOverride.TileSize;
+            tileGap = stageOverride.TileGap;
+
+            if (tileScale <= 0f)
+            {
+                Debug.LogWarning($"[StageLoader] LayoutOverride fallback: TileSize is invalid. use default. tileScale={tileScale}");
+                tileScale = _defaultTileSize;
+            }
+
+            if (tileGap < 0f)
+            {
+                Debug.LogWarning($"[StageLoader] LayoutOverride fallback: TileGap is negative. clamp to 0. tileGap={tileGap}");
+                tileGap = 0f;
+            }
+        }
+
+        ctx._stageRuntime._tileScale = tileScale;
+        ctx._stageRuntime._tileGap = tileGap;
+        ctx._stageRuntime._cellPitch = Mathf.Max(0.01f, tileScale + tileGap);
     }
 
     // ===== (6) 캐릭터 생성 + Initialize + GapFiller =====
@@ -312,7 +339,10 @@ public class DummyStageLoader : IStageLoader
         int h = Mathf.Max(1, stageDef.BoardSize.y);
 
         ctx._stageRuntime._grid = new BoardGrid(w, h, stageDef.Cells);
-        ctx._stageRuntime._gridPresenter = new GridPresenter(ctx._stageRuntime._root.transform, w, h, _tileSize);
+        ctx._stageRuntime._gridPresenter = new GridPresenter(
+            ctx._stageRuntime._root.transform, w, h,
+            ctx._stageRuntime._tileScale,
+            ctx._stageRuntime._tileGap);
 
         ctx._stageRuntime._gridPresenter.SetTileSpriteProvider(ctx._stageRuntime._tileSpriteProvider);
 
@@ -585,33 +615,29 @@ public class DummyStageLoader : IStageLoader
         int w = Mathf.Max(1, stageDef.BoardSize.x);
         int h = Mathf.Max(1, stageDef.BoardSize.y);
 
+        ResolveTileMetrics(ctx, out float tileSize, out float tileGap, out float tilePitch);
+
         var pathRoot = new GameObject("[Path]");
         pathRoot.transform.SetParent(ctx._stageRuntime._root.transform, false);
         ctx._stageRuntime._pathRoot = pathRoot.transform;
 
-        // PathFadeFx 부착(프로토타입 대체 연출)
+        // PathFadeFx는 "Path 관련 렌더러"를 페이드시키는 용도였음.
+        // Path 마커는 없어졌지만 Border 렌더러는 여기에 붙으므로 유지해도 정상 동작함.
         if (pathRoot.GetComponent<PathFadeFx>() == null)
             pathRoot.AddComponent<PathFadeFx>();
 
         ctx._stageRuntime._pathPoints.Clear();
 
+        Vector3 origin = GetTileOriginLocal(w, h, tilePitch);
+
+        var orderedPathCells = new List<Vector2Int>(w * 2 + h * 2);
+
         // 테두리(오른쪽→위→왼쪽→아래) 셀 경로
         void AddCell(int x, int y)
         {
-            Vector3 local = GetTileCenterLocal(stageDef, x, y);
+            Vector3 local = origin + new Vector3(x * tilePitch, y * tilePitch, 0f);
             ctx._stageRuntime._pathPoints.Add(ToWorld(ctx, local));
-
-            var marker = CreateSpriteObject(
-                name: $"Path_{x}_{y}",
-                parent: pathRoot.transform,
-                localPosition: local,
-                localScale: Vector3.one * 0.22f,
-                sprite: GetWhiteSprite(),
-                color: Color_Path,
-                sortingOrder: Sorting_Path);
-
-            // 경로 마커는 타일 위에 올라오게(시각적)
-            marker.transform.localPosition = new Vector3(marker.transform.localPosition.x, marker.transform.localPosition.y, -0.05f);
+            orderedPathCells.Add(new Vector2Int(x, y));
         }
 
         // bottom (0,0) -> (w-1,0)
@@ -622,6 +648,191 @@ public class DummyStageLoader : IStageLoader
         for (int x = w - 2; x >= 0; x--) AddCell(x, h - 1);
         // left (0,h-2) -> (0,1)
         for (int y = h - 2; y >= 1; y--) AddCell(0, y);
+
+        // ===== Child Path Border (1 sprite, rotated by facing) =====
+        CreateChildPathBorderSpritesPerSide(
+            ctx: ctx,
+            w: w,
+            h: h,
+            tileSize: tileSize,
+            tilePitch: tilePitch,
+            parent: pathRoot.transform
+        );
+    }
+
+    private void ResolveTileMetrics(GameFlowContext ctx, out float tileSize, out float tileGap, out float tilePitch)
+    {
+        tileSize = 1f;
+        tileGap = 0f;
+
+        var ov = ctx?._stageRuntime?._stageVisualOverride;
+        if (ov != null && ov.UseLayoutOverride)
+        {
+            tileSize = Mathf.Max(0.01f, ov.TileSize);
+            tileGap = Mathf.Max(0f, ov.TileGap);
+        }
+
+        tilePitch = tileSize + tileGap;
+    }
+
+    private static Vector3 GetTileOriginLocal(int w, int h, float tilePitch)
+    {
+        return new Vector3(
+            -(w - 1) * 0.5f * tilePitch,
+            -(h - 1) * 0.5f * tilePitch,
+            0f
+        );
+    }
+    private void CreateChildPathBorderSpritesPerSide(
+    GameFlowContext ctx,
+    int w,
+    int h,
+    float tileSize,
+    float tilePitch,
+    Transform parent)
+    {
+        var ov = ctx?._stageRuntime?._stageVisualOverride;
+        if (ov == null || !ov.UseChildPathOuterBorder)
+            return;
+
+        Sprite sprite = ov.ChildPathOuterBorderSprite;
+        if (sprite == null)
+        {
+            Debug.LogWarning($"[PathBorder] Enabled but sprite missing. stageId={ctx?._stageRuntime?._stageId}");
+            return;
+        }
+
+        float z = 0;
+
+        // 0이면 Path 셀 중심과 겹침. “외곽을 둘러야” 요구라면 최소 0.5칸은 밀어야 함.
+        float extraCells = Mathf.Max(0f, ov.ChildPathOuterBorderOffsetCells);
+        float outwardWorld = (0.5f + extraCells) * tilePitch;
+
+        Vector3 origin = GetTileOriginLocal(w, h, tilePitch);
+
+        Vector3 CellCenter(int x, int y)
+            => origin + new Vector3(x * tilePitch, y * tilePitch, z);
+
+        // ===== 아래( bottom ) : y=0, x=0..w-1 (w개), Child 방향=Right, outward=Down =====
+        for (int x = 0; x < w; x++)
+        {
+            Vector3 pos = CellCenter(x, 0) + Vector3.down * outwardWorld;
+            CreateBorderOne(parent, $"Border_B_{x}_0", sprite, pos, RotationForFacing(E_Facing.Right), tileSize, Sorting_Path);
+        }
+
+        // ===== 오른쪽( right ) : x=w-1, y=0..h-1 (h개), Child 방향=Up, outward=Right =====
+        for (int y = 0; y < h; y++)
+        {
+            Vector3 pos = CellCenter(w - 1, y) + Vector3.right * outwardWorld;
+            CreateBorderOne(parent, $"Border_R_{w - 1}_{y}", sprite, pos, RotationForFacing(E_Facing.Up), tileSize, Sorting_Path);
+        }
+
+        // ===== 위( top ) : y=h-1, x=w-1..0 (w개), Child 방향=Left, outward=Up =====
+        for (int x = w - 1; x >= 0; x--)
+        {
+            Vector3 pos = CellCenter(x, h - 1) + Vector3.up * outwardWorld;
+            CreateBorderOne(parent, $"Border_T_{x}_{h - 1}", sprite, pos, RotationForFacing(E_Facing.Left), tileSize, Sorting_Path);
+        }
+
+        // ===== 왼쪽( left ) : x=0, y=h-1..0 (h개), Child 방향=Down, outward=Left =====
+        for (int y = h - 1; y >= 0; y--)
+        {
+            Vector3 pos = CellCenter(0, y) + Vector3.left * outwardWorld;
+            CreateBorderOne(parent, $"Border_L_0_{y}", sprite, pos, RotationForFacing(E_Facing.Down), tileSize, Sorting_Path);
+        }
+    }
+
+    private static void CreateBorderOne(
+        Transform parent,
+        string name,
+        Sprite sprite,
+        Vector3 localPos,
+        Quaternion localRot,
+        float tileSize,
+        int sortingOrder)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = localPos;
+        go.transform.localRotation = localRot;
+        go.transform.localScale = new Vector3(tileSize, tileSize, 1f);
+
+        var sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = sprite;
+        sr.color = Color.white;
+        sr.sortingOrder = sortingOrder;
+    }
+
+    private static bool IsDir4(Vector2Int d)
+    {
+        return d == Vector2Int.right || d == Vector2Int.left || d == Vector2Int.up || d == Vector2Int.down;
+    }
+
+    private static E_Facing CalcFacing(Vector2Int d)
+    {
+        if (d == Vector2Int.right) return E_Facing.Right;
+        if (d == Vector2Int.left) return E_Facing.Left;
+        if (d == Vector2Int.up) return E_Facing.Up;
+        if (d == Vector2Int.down) return E_Facing.Down;
+
+        Debug.LogWarning($"[PathBorder] CalcFacing fallback: invalid dir={d}. use Right.");
+        return E_Facing.Right;
+    }
+
+    private static Vector2 CalcOutwardNormal(Vector2Int dir, bool isCCW)
+    {
+        // CCW면 내부가 좌측 => 바깥은 우측(perpRight)
+        // CW면 내부가 우측 => 바깥은 좌측(perpLeft)
+        Vector2 d = new Vector2(dir.x, dir.y);
+
+        Vector2 perpRight = new Vector2(d.y, -d.x); // (dx,dy) -> (dy,-dx)
+        Vector2 perpLeft = new Vector2(-d.y, d.x); // (dx,dy) -> (-dy,dx)
+
+        Vector2 o = isCCW ? perpRight : perpLeft;
+
+        float mag = o.magnitude;
+        if (mag <= 0.0001f)
+        {
+            Debug.LogWarning("[PathBorder] Outward fallback: magnitude is 0. use (1,0).");
+            return Vector2.right;
+        }
+
+        return o / mag;
+    }
+
+    private static float CalcSignedArea(List<Vector2Int> poly)
+    {
+        // 셀 좌표로 shoelace (루프)
+        // 면적 부호만 필요
+        if (poly == null || poly.Count < 3)
+            return 0f;
+
+        long sum = 0;
+        int n = poly.Count;
+
+        for (int i = 0; i < n; i++)
+        {
+            Vector2Int a = poly[i];
+            Vector2Int b = poly[(i + 1) % n];
+            sum += (long)a.x * b.y - (long)b.x * a.y;
+        }
+
+        return 0.5f * sum;
+    }
+
+    private static Quaternion RotationForFacing(E_Facing facing)
+    {
+        // 기본 스프라이트 방향 = Right(0도) 기준
+        float z = facing switch
+        {
+            E_Facing.Right => 0f,
+            E_Facing.Up => 90f,
+            E_Facing.Left => 180f,
+            E_Facing.Down => 270f,
+            _ => 0f
+        };
+
+        return Quaternion.Euler(0f, 0f, z);
     }
 
     private void ApplyHolesFromStageDef(GameFlowContext ctx, StageDefinition stageDef)
@@ -877,18 +1088,21 @@ public class DummyStageLoader : IStageLoader
         fatherCtrl.BindInteractPort(new InteractPort_Registry(registry));
     }
 
-    private Vector3 GetTileCenterLocal(StageDefinition stageDef, int x, int y)
+    private Vector3 GetTileCenterLocal(StageDefinition stageDef, int x, int y, float cellPitch)
     {
         int w = Mathf.Max(1, stageDef.BoardSize.x);
         int h = Mathf.Max(1, stageDef.BoardSize.y);
 
-        Vector3 origin = new Vector3(-(w - 1) * 0.5f * _tileSize, -(h - 1) * 0.5f * _tileSize, 0f);
-        return origin + new Vector3(x * _tileSize, y * _tileSize, 0f);
+        cellPitch = Mathf.Max(0.01f, cellPitch);
+
+        Vector3 origin = new Vector3(-(w - 1) * 0.5f * cellPitch, -(h - 1) * 0.5f * cellPitch, 0f);
+        return origin + new Vector3(x * cellPitch, y * cellPitch, 0f);
     }
 
     private Vector3 ToWorld(GameFlowContext ctx, Vector3 localInRoot)
     {
         // StageRuntime root 기준 로컬 좌표를 월드로 변환
+        if (ctx?._stageRuntime?._root == null) return localInRoot;
         return ctx._stageRuntime._root.transform.TransformPoint(localInRoot);
     }
 
