@@ -14,18 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _fatherSpriteOverride: {fileID: 21300000, guid: c89b4f7245b7caa4d946ebebe34fe0dc, type: 3}
   _childSpriteOverride: {fileID: 21300000, guid: e2c6e5dbc88bf944e8ee2944888d0ccb, type: 3}
-  _floor: {fileID: 21300000, guid: 7841911ae7ad9904dbbc79f59a0b667d, type: 3}
-  _wall: {fileID: 21300000, guid: c0e837c84fb10c94c8ecd079329581b8, type: 3}
-  _hole: {fileID: 21300000, guid: 7ff8d84f17a223d419bd612138889d59, type: 3}
-  _filledHole: {fileID: 21300000, guid: d1171de56dcafe94d836cfcd8b52402e, type: 3}
-  _goal: {fileID: 21300000, guid: 585d86a1f05481148b31fdd6e975b713, type: 3}
+  _floor: {fileID: 1875721655078129991, guid: 7841911ae7ad9904dbbc79f59a0b667d, type: 3}
+  _wall: {fileID: -1999477535165504030, guid: c0e837c84fb10c94c8ecd079329581b8, type: 3}
+  _hole: {fileID: 1186743420283033922, guid: 7ff8d84f17a223d419bd612138889d59, type: 3}
+  _filledHole: {fileID: -3061982552703046507, guid: d1171de56dcafe94d836cfcd8b52402e, type: 3}
+  _goal: {fileID: 6684944200918065141, guid: 585d86a1f05481148b31fdd6e975b713, type: 3}
   _path: {fileID: 21300000, guid: 7841911ae7ad9904dbbc79f59a0b667d, type: 3}
   _innerOuterGap: {fileID: 0}
   _doorOpen: {fileID: 0}
-  _doorClosed: {fileID: 21300000, guid: e63f2f3e802585e44a2aa935ea37ba92, type: 3}
-  _switchOn: {fileID: 21300000, guid: f0f2f990c3134bc4f99eec92eababdf1, type: 3}
-  _switchOff: {fileID: 21300000, guid: 9c8ccd72040c92846a2b66d45f59d281, type: 3}
-  _gapFillerBlock: {fileID: 21300000, guid: 245faedf1c953d54e8033f7a428a839a, type: 3}
+  _doorClosed: {fileID: 7103030478198880690, guid: e63f2f3e802585e44a2aa935ea37ba92, type: 3}
+  _switchOn: {fileID: 5501834076098668930, guid: f0f2f990c3134bc4f99eec92eababdf1, type: 3}
+  _switchOff: {fileID: 1660391451524502293, guid: 9c8ccd72040c92846a2b66d45f59d281, type: 3}
+  _gapFillerBlock: {fileID: 6055803161161684635, guid: 245faedf1c953d54e8033f7a428a839a, type: 3}
   _useLayoutOverride: 1
   _tileSize: 1.13
   _tileGap: 0
