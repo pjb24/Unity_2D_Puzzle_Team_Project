@@ -6,6 +6,13 @@
 ///
 using UnityEngine;
 
+public enum E_InnerBaseBackgroundDrawMode
+{
+    Tiled,
+    Sliced,
+    Simple, // 폴백용(Transform scale)
+}
+
 [CreateAssetMenu(menuName = "Puzzle/Visual/Stage Visual Override")]
 public class StageVisualOverride : ScriptableObject
 {
@@ -22,6 +29,17 @@ public class StageVisualOverride : ScriptableObject
     [SerializeField] private Sprite _doorClosed;
     [SerializeField] private Sprite _switch;
 
+    [Header("InnerBase Background (Optional)")]
+    [SerializeField] private bool _useInnerBaseBackground = false;
+    [SerializeField] private Sprite _innerBaseBackgroundSprite;
+    [SerializeField] private E_InnerBaseBackgroundDrawMode _innerBaseBackgroundDrawMode = E_InnerBaseBackgroundDrawMode.Tiled;
+
+    [Tooltip("InnerBase rect(w,h)에 더해지는 셀 단위 여백. (x=좌/우, y=상/하)")]
+    [SerializeField] private Vector2 _innerBaseBackgroundPaddingCells = Vector2.zero;
+
+    [Tooltip("타일보다 낮게(뒤) 깔아야 배경처럼 보임. 기본 -10 권장.")]
+    [SerializeField] private int _innerBaseBackgroundSortingOrder = -10;
+
     [Header("Move Animation Override (AnimatorOverrideController)")]
     [SerializeField] private bool _useMoveAnimOverride = false;
     [SerializeField] private AnimatorOverrideController _fatherMoveAnimatorOverride;
@@ -35,6 +53,12 @@ public class StageVisualOverride : ScriptableObject
 
     public Sprite FatherSpriteOverride => _fatherSpriteOverride;
     public Sprite ChildSpriteOverride => _childSpriteOverride;
+
+    public bool UseInnerBaseBackground => _useInnerBaseBackground;
+    public Sprite InnerBaseBackgroundSprite => _innerBaseBackgroundSprite;
+    public E_InnerBaseBackgroundDrawMode InnerBaseBackgroundDrawMode => _innerBaseBackgroundDrawMode;
+    public Vector2 InnerBaseBackgroundPaddingCells => _innerBaseBackgroundPaddingCells;
+    public int InnerBaseBackgroundSortingOrder => _innerBaseBackgroundSortingOrder;
 
     public bool UseMoveAnimOverride => _useMoveAnimOverride;
     public AnimatorOverrideController FatherMoveAnimatorOverride => _fatherMoveAnimatorOverride;

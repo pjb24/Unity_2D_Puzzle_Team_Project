@@ -316,6 +316,9 @@ public class DummyStageLoader : IStageLoader
 
         ctx._stageRuntime._gridPresenter.SetTileSpriteProvider(ctx._stageRuntime._tileSpriteProvider);
 
+        // ===== InnerBase Background =====
+        ctx._stageRuntime._innerBaseBackground = InnerBaseBackgroundBuilder.BuildOrNull(ctx._stageRuntime, stageDef);
+
         // ===== 타일 생성 =====
         ctx._stageRuntime._tilesRoot = ctx._stageRuntime._gridPresenter.BuildTiles(ctx._stageRuntime._grid, ctx._stageRuntime._tiles);
         if (ctx._stageRuntime._tilesRoot == null)

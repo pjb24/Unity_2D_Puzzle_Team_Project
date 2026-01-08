@@ -14,6 +14,9 @@ public class StageRuntimeRefs
     public Sprite _resolvedFatherSprite;
     public Sprite _resolvedChildSprite;
 
+    // InnerBase Background
+    public GameObject _innerBaseBackground;
+
     // ===== Board =====
     public Transform _tilesRoot; // Slide 대상
     public List<Transform> _tiles = new();

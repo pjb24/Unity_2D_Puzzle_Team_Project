@@ -21,6 +21,11 @@ MonoBehaviour:
   _doorOpen: {fileID: 0}
   _doorClosed: {fileID: 0}
   _switch: {fileID: 0}
+  _useInnerBaseBackground: 1
+  _innerBaseBackgroundSprite: {fileID: 21300000, guid: 7841911ae7ad9904dbbc79f59a0b667d, type: 3}
+  _innerBaseBackgroundDrawMode: 1
+  _innerBaseBackgroundPaddingCells: {x: 0.2, y: 0.2}
+  _innerBaseBackgroundSortingOrder: -10
   _useMoveAnimOverride: 1
   _fatherMoveAnimatorOverride: {fileID: 22100000, guid: f583e2909e0ed7045a30dada3e71a9cf, type: 2}
   _childMoveAnimatorOverride: {fileID: 22100000, guid: 9c272eb2d5c936c4aa5233aa13cf3234, type: 2}
