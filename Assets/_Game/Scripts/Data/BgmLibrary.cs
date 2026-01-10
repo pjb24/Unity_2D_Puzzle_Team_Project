@@ -31,9 +31,6 @@ public struct BgmClipEntry
     [Header("Mix")]
     [Range(0f, 1f)] public float Volume;
 
-    [Tooltip("Optional. If null, AudioHub.BgmMixerGroup is used.")]
-    public AudioMixerGroup MixerGroupOverride;
-
     public void Sanitize()
     {
         if (Volume <= 0f) Volume = 1f;
@@ -52,7 +49,8 @@ public class BgmLibrary : ScriptableObject
         BuildCache(logWarnings: false);
     }
 
-    private void OnValidate()
+    [ContextMenu("Validate Audio Libraries")]
+    private void ValidateAndLog()
     {
         BuildCache(logWarnings: true);
     }

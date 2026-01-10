@@ -46,8 +46,6 @@ public struct SfxClipEntry
     [Tooltip("0 = 2D, 1 = 3D")]
     [Range(0f, 1f)] public float SpatialBlend;
 
-    public AudioMixerGroup MixerGroupOverride;
-
     [Header("De-dup Rules")]
     [Tooltip("Same id cannot play again until cooldown passes.")]
     [Min(0f)] public float CooldownSeconds;

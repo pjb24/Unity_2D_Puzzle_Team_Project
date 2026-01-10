@@ -2,7 +2,7 @@
 using System;
 using UnityEngine.SceneManagement;
 
-public class SceneGateway : ISceneGateway
+public class SceneGateway
 {
     private Action _pending;
 
