@@ -45,3 +45,4 @@ MonoBehaviour:
     ChildStepDelay: 0
   _defaultDifficulty: 1
   _ironmanHardReturnToChapterStart: 0
+  _prefabs: {fileID: 11400000, guid: e6f65a967ede1524e8b81b7bb93a46ad, type: 2}

@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 42b4c39bd3641f140ad4ef6a6196a0c5, type: 3}
+  m_Name: Stage Prefabs
+  m_EditorClassIdentifier: 
+  _father: {fileID: 2061127594526191390, guid: 561985293dbc4f045b1e6b6af9a7ab5a, type: 3}
+  _child: {fileID: 5138454229852829646, guid: 16a0fcc2a24958d4eb05112a0d230feb, type: 3}
+  _empty: {fileID: 2262745676867149356, guid: aca7dec59415b7747a69736b38fdd751, type: 3}
+  _floor: {fileID: 8928694188457598152, guid: 4e15ba1a8426b3a4fb2fb1b2850224d3, type: 3}
+  _wall: {fileID: 641911224300810276, guid: 1bd9f581896443e408533a05482c779d, type: 3}
+  _hole: {fileID: 8350717055079878484, guid: 6571705c9cf55834780c28d24399bda4, type: 3}
+  _filledHole: {fileID: 8645757636662087312, guid: 31cd85d1f69aa9548b4f05a68dd0fea4, type: 3}
+  _switchOn: {fileID: 3839538739992556550, guid: 2e8451614e797fb47bc6d5cbdedb146f, type: 3}
+  _switchOff: {fileID: 6399177535065323611, guid: 4653189795554a2428874573a40eb381, type: 3}
+  _door: {fileID: 5243378400533490205, guid: 242194f77a403e94b9fac6a3095dd078, type: 3}
+  _goal: {fileID: 5127202027197797402, guid: 32dd8be726d0fd14e952393185eb5bfa, type: 3}
+  _fillerBlock: {fileID: 1854182395736046377, guid: fbba9e608c548474fbd6e011cfbbe53d, type: 3}

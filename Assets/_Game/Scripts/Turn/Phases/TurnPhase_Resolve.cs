@@ -38,7 +38,7 @@ public class TurnPhase_Resolve : ITurnPhase
         else
         {
             // 골 정보가 없으면 기존 Father TriggerGoal로 폴백(무음 금지)
-            if (ctx != null && ctx.ChildGoalPathStep < 0 && ctx.FatherResult.TriggerGoal)
+            if (ctx != null && ctx.ChildGoalPathStep < 0)
             {
                 Debug.LogWarning("[TurnPhase_Resolve] ChildGoalPathStep is not set. Fallback to FatherResult.TriggerGoal.");
                 ctx.TurnCleared = true;

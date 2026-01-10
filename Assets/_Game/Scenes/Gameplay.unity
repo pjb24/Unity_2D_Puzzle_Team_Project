@@ -1802,7 +1802,6 @@ MonoBehaviour:
   _recorder: {fileID: 211024661}
   _turnDriver: {fileID: 454478395}
   _stageRoot: {fileID: 0}
-  _interactRegistry: {fileID: 0}
   _rewindMax: 3
 --- !u!1 &859788948
 GameObject:
@@ -3195,8 +3194,6 @@ MonoBehaviour:
   _turnDriver: {fileID: 454478395}
   _rewind: {fileID: 837744315}
   _moveAction: {fileID: 6435916166747322715, guid: 66c81aaae250dcf4081da648a1dd312e, type: 3}
-  _interactAction: {fileID: -8158701808267459545, guid: 66c81aaae250dcf4081da648a1dd312e, type: 3}
-  _cancelAction: {fileID: 6759318345473547059, guid: 66c81aaae250dcf4081da648a1dd312e, type: 3}
   _rewindEnter: {fileID: 7964470365606553529, guid: 66c81aaae250dcf4081da648a1dd312e, type: 3}
   _rewindPrev: {fileID: -4174605568873996031, guid: 66c81aaae250dcf4081da648a1dd312e, type: 3}
   _rewindNext: {fileID: 5169199558829856389, guid: 66c81aaae250dcf4081da648a1dd312e, type: 3}

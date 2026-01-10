@@ -4,7 +4,6 @@
 //   innerBase: 0 Floor, 1 Wall, 2 ToggleSwitch, 4 Hole
 //   ringTiles: 0 path, 1 Door(기본 닫힘), 2 switch-open wall(기본 닫힘), 3 Goal, 4 switch-close wall(기본 열림)
 // - Clear 조건: Child가 Goal(step) 도달
-
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
@@ -46,7 +45,7 @@ public static class StageJsonStageFactory
 
         int innerOffset = gap + 1;
 
-        var stage = ScriptableObject.CreateInstance<StageDefinition>();
+        var stage = new StageDefinition();
 
         // ---------- base cells ----------
         int w = Mathf.Max(1, outerSize);

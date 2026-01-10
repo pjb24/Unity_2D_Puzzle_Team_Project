@@ -131,6 +131,9 @@ public class StageLoader
         ctx._stageRuntime._root = new GameObject($"[StageRuntime] C{ctx._chapterIndex}_S{ctx._stageIndex}");
         var stageDef = ctx._stageDefinition;
 
+        var config = ctx._config.LoadGameConfig();
+        var prefabs = config.Prefabs;
+
         string stageId = stageDef != null ? stageDef.StageId : $"C{ctx._chapterIndex}_S{ctx._stageIndex}";
         ctx._stageRuntime._stageId = stageId;
 

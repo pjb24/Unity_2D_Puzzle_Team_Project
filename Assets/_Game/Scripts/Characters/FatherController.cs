@@ -26,7 +26,6 @@ public readonly struct FatherActionResult
     public readonly E_FatherActionResultCode Code;  // 이동 성공/실패 원인(벽/장애물/바운더리/점유)
     public readonly Vector2Int From;
     public readonly Vector2Int To;
-    public readonly bool TriggerGoal;   // 트리거(Goal / 스위치 등)
 
     // 2턴(늪) 지원: 기본 1
     public readonly int ConsumedTurns;
@@ -37,13 +36,11 @@ public readonly struct FatherActionResult
         E_FatherActionResultCode code,
         Vector2Int from,
         Vector2Int to,
-        bool triggerGoal,
         int consumedTurns = 1)
     {
         Code = code;
         From = from;
         To = to;
-        TriggerGoal = triggerGoal;
         ConsumedTurns = Mathf.Max(1, consumedTurns);
     }
 }
@@ -170,7 +167,7 @@ public partial class FatherController : MonoBehaviour
         if (dir == Vector2Int.zero)
         {
             Debug.LogWarning($"[FatherController] RequestAction fallback: invalid move cmd. cmd={cmd.Type}");
-            _lastResult = new FatherActionResult(E_FatherActionResultCode.None, Cell, Cell, false);
+            _lastResult = new FatherActionResult(E_FatherActionResultCode.None, Cell, Cell);
             _onActionCompleted?.Invoke();
             return;
         }
@@ -195,7 +192,7 @@ public partial class FatherController : MonoBehaviour
         if (_grid == null || _presenter == null)
         {
             Debug.LogWarning("[FatherController] TryMove fallback: grid/presenter is null.");
-            _lastResult = new FatherActionResult(E_FatherActionResultCode.None, Cell, Cell, false);
+            _lastResult = new FatherActionResult(E_FatherActionResultCode.None, Cell, Cell);
             return;
         }
 
@@ -205,14 +202,14 @@ public partial class FatherController : MonoBehaviour
         // 1) 보드 bounds
         if (!_grid.IsInBounds(to))
         {
-            _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_OutOfBounds, from, from, false);
+            _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_OutOfBounds, from, from);
             return;
         }
 
         // 2) InnerBase bounds
         if (_hasMoveBounds && !_moveBounds.Contains(to))
         {
-            _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_InnerBase, from, from, false);
+            _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_InnerBase, from, from);
             return;
         }
 
@@ -220,7 +217,7 @@ public partial class FatherController : MonoBehaviour
         var cellType = _grid.GetCell(to);
         if (_grid.IsBlockedCell(cellType))
         {
-            _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Cell, from, from, false);
+            _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Cell, from, from);
             return;
         }
 
@@ -228,7 +225,7 @@ public partial class FatherController : MonoBehaviour
         var toMeta = _grid.GetCellOverlay01(to);
         if (toMeta == E_CellType.Hole)
         {
-            _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Cell, from, from, false, consumedTurns: 1);
+            _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Cell, from, from);
             return;
         }
 
@@ -241,20 +238,20 @@ public partial class FatherController : MonoBehaviour
                 if (_gapFillerRegistry == null)
                 {
                     Debug.LogWarning("[FatherController] Push fallback: GapFillerBlockRegistry is null.");
-                    _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Occupied, from, from, false);
+                    _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Occupied, from, from);
                     return;
                 }
 
                 if (!_gapFillerRegistry.TryGet(to, out var block) || block == null)
                 {
                     Debug.LogWarning($"[FatherController] Push fallback: block not found in registry. cell={to}");
-                    _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Occupied, from, from, false);
+                    _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Occupied, from, from);
                     return;
                 }
 
                 if (!block.TryPush(dir))
                 {
-                    _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Occupied, from, from, false);
+                    _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Occupied, from, from);
                     return;
                 }
 
@@ -262,13 +259,13 @@ public partial class FatherController : MonoBehaviour
                 if (_grid.GetOcc(to) != E_Occupant.None)
                 {
                     Debug.LogWarning($"[FatherController] Push fallback: to still occupied after push. cell={to}");
-                    _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Occupied, from, from, false);
+                    _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Occupied, from, from);
                     return;
                 }
             }
             else
             {
-                _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Occupied, from, from, false);
+                _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Occupied, from, from);
                 return;
             }
         }
@@ -280,10 +277,7 @@ public partial class FatherController : MonoBehaviour
 
         bool triggerGoal = (cellType == E_CellType.Goal);
 
-        // “턴 비용(2턴)” (늪 이탈 시 2)
-        int consumedTurns = 1;
-
-        _lastResult = new FatherActionResult(E_FatherActionResultCode.Moved, from, to, triggerGoal, consumedTurns);
+        _lastResult = new FatherActionResult(E_FatherActionResultCode.Moved, from, to);
 
         // ===== 연출 이동(애니 + Lerp) =====
         // 이동 성공 시에만 Move 애니메이션 재생

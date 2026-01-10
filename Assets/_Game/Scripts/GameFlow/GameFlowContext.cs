@@ -3,7 +3,6 @@
 /// 목적
 /// “현재 진행 데이터 + 서비스 참조”를 한 덩어리로 상태들에 전달
 /// </summary>
-
 public class GameFlowContext
 {
     // ===== Progress =====

@@ -1,0 +1,23 @@
+fileFormatVersion: 2
+guid: 42b4c39bd3641f140ad4ef6a6196a0c5
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - _father: {instanceID: 0}
+  - _child: {instanceID: 0}
+  - _empty: {instanceID: 0}
+  - _floor: {instanceID: 0}
+  - _wall: {instanceID: 0}
+  - _hole: {instanceID: 0}
+  - _filledHole: {instanceID: 0}
+  - _switchOn: {instanceID: 0}
+  - _switchOff: {instanceID: 0}
+  - _door: {instanceID: 0}
+  - _goal: {instanceID: 0}
+  - _fillerBlock: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

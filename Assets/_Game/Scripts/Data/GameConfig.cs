@@ -60,8 +60,12 @@ public class GameConfig : ScriptableObject
     [SerializeField] private bool _ironmanHardReturnToChapterStart = false;
     public bool IronmanHardReturnToChapterStart => _ironmanHardReturnToChapterStart;
 
+    [Header("Stage Prefabs")]
+    [SerializeField] private StagePrefabs _prefabs;
+
     public IReadOnlyList<ChapterDefinition> Chapters => _chapters;
     public E_Difficulty DefaultDifficulty => _defaultDifficulty;
+    public StagePrefabs Prefabs => _prefabs;
 
     public DifficultyProfile GetProfile(E_Difficulty difficulty)
     {
