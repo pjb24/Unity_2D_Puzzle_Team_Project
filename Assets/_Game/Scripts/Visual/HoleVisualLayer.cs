@@ -137,7 +137,7 @@ public class HoleVisualLayer : MonoBehaviour
         go.transform.SetParent(transform, false);
         go.transform.position = _presenter.CellToWorld(cell);
 
-        float s = Mathf.Max(0.01f, _presenter._tileScale) * Mathf.Max(0.01f, _scaleMul);
+        float s = Mathf.Max(0.01f, _presenter._tileSize) * Mathf.Max(0.01f, _scaleMul);
         go.transform.localScale = new Vector3(s, s, 1f);
 
         sr = go.AddComponent<SpriteRenderer>();

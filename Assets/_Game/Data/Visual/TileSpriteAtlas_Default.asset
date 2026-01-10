@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5916e95e37a7a9443b912e466b6d0620, type: 3}
+  m_Name: TileSpriteAtlas_Default
+  m_EditorClassIdentifier: 
+  _entries:
+  - Layer: 0
+    Type: 0
+    Dir: 0
+    Sprite: {fileID: 1875721655078129991, guid: 7841911ae7ad9904dbbc79f59a0b667d, type: 3}
+  - Layer: 1
+    Type: 1
+    Dir: 0
+    Sprite: {fileID: -1999477535165504030, guid: c0e837c84fb10c94c8ecd079329581b8, type: 3}
+  - Layer: 1
+    Type: 2
+    Dir: 0
+    Sprite: {fileID: 5501834076098668930, guid: f0f2f990c3134bc4f99eec92eababdf1, type: 3}
+  - Layer: 1
+    Type: 3
+    Dir: 0
+    Sprite: {fileID: 1660391451524502293, guid: 9c8ccd72040c92846a2b66d45f59d281, type: 3}
+  - Layer: 1
+    Type: 4
+    Dir: 0
+    Sprite: {fileID: 1186743420283033922, guid: 7ff8d84f17a223d419bd612138889d59, type: 3}
+  - Layer: 1
+    Type: 5
+    Dir: 0
+    Sprite: {fileID: -3061982552703046507, guid: d1171de56dcafe94d836cfcd8b52402e, type: 3}
+  - Layer: 1
+    Type: 6
+    Dir: 0
+    Sprite: {fileID: 6055803161161684635, guid: 245faedf1c953d54e8033f7a428a839a, type: 3}
+  - Layer: 1
+    Type: 7
+    Dir: 0
+    Sprite: {fileID: 7103030478198880690, guid: e63f2f3e802585e44a2aa935ea37ba92, type: 3}
+  - Layer: 1
+    Type: 8
+    Dir: 0
+    Sprite: {fileID: 0}
+  - Layer: 1
+    Type: 9
+    Dir: 0
+    Sprite: {fileID: 6684944200918065141, guid: 585d86a1f05481148b31fdd6e975b713, type: 3}
+  - Layer: 0
+    Type: 10
+    Dir: 0
+    Sprite: {fileID: 21300000, guid: 3867d7f40d5f2f54fba83302d0ac01cb, type: 3}

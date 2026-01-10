@@ -205,7 +205,8 @@ public class DummyStageLoader : IStageLoader
         var stageOverride = StageVisualOverrideLoader.LoadOrNull(stageId);
         ctx._stageRuntime._stageVisualOverride = stageOverride;
 
-        ctx._stageRuntime._tileSpriteProvider = new CompositeTileSpriteProvider(stageId, baseTileProfile, stageOverride);
+        //ctx._stageRuntime._tileSpriteProvider = new CompositeTileSpriteProvider(stageId, baseTileProfile, stageOverride);
+        ctx._stageRuntime._tileSpriteProvider = null;
 
         ctx._stageRuntime._resolvedFatherSprite =
             stageOverride != null && stageOverride.FatherSpriteOverride != null
@@ -286,6 +287,8 @@ public class DummyStageLoader : IStageLoader
 
     private bool EnsureTileOverlayLayer(GameFlowContext ctx)
     {
+        return false;
+
         if (ctx?._stageRuntime?._root == null || ctx._stageRuntime._grid == null || ctx._stageRuntime._gridPresenter == null)
         {
             Debug.LogWarning("[StageLoader] EnsureTileOverlayLayer fallback: root/grid/presenter is null.");
@@ -362,21 +365,24 @@ public class DummyStageLoader : IStageLoader
         int h = Mathf.Max(1, stageDef.BoardSize.y);
 
         ctx._stageRuntime._grid = new BoardGrid(w, h, stageDef.Cells);
-        
-        ctx._stageRuntime._gridPresenter = new GridPresenter(
-            ctx._stageRuntime._root.transform, w, h,
-            ctx._stageRuntime._tileScale,
-            ctx._stageRuntime._tileGap);
 
-        ctx._stageRuntime._gridPresenter.SetTileSpriteProvider(ctx._stageRuntime._tileSpriteProvider);
+        ctx._stageRuntime._gridPresenter = new GridPresenter();
+        ctx._stageRuntime._gridPresenter.Initialize(
+            ctx._stageRuntime._root.transform,
+            ctx._stageRuntime._grid,
+            null
+            );
 
-        ctx._stageRuntime._gridPresenter.SetInnerBaseRect(stageDef.FatherMoveRect);
+        //ctx._stageRuntime._gridPresenter.SetTileSpriteProvider(ctx._stageRuntime._tileSpriteProvider);
+
+        //ctx._stageRuntime._gridPresenter.SetInnerBaseRect(stageDef.FatherMoveRect);
 
         // ===== InnerBase Background =====
         ctx._stageRuntime._innerBaseBackground = InnerBaseBackgroundBuilder.BuildOrNull(ctx._stageRuntime, stageDef);
 
         // ===== 타일 생성 =====
-        ctx._stageRuntime._tilesRoot = ctx._stageRuntime._gridPresenter.BuildTiles(ctx._stageRuntime._grid, ctx._stageRuntime._tiles);
+        ctx._stageRuntime._tilesRoot = ctx._stageRuntime._gridPresenter._root;
+        ctx._stageRuntime._gridPresenter.RebuildAll(E_Dir4.None);
         if (ctx._stageRuntime._tilesRoot == null)
             Debug.LogWarning("[StageLoader] Tiles build skipped (fallback): tilesRoot is null.");
     }
@@ -676,14 +682,7 @@ public class DummyStageLoader : IStageLoader
         for (int y = h - 2; y >= 1; y--) AddCell(0, y);
 
         // ===== Child Path Border (1 sprite, rotated by facing) =====
-        CreateChildPathBorderSpritesPerSide(
-            ctx: ctx,
-            w: w,
-            h: h,
-            tileSize: tileSize,
-            tilePitch: tilePitch,
-            parent: pathRoot.transform
-        );
+        //CreateChildPathBorderSpritesPerSide(ctx: ctx, w: w, h: h, tileSize: tileSize, tilePitch: tilePitch, parent: pathRoot.transform);
     }
 
     private void ResolveTileMetrics(GameFlowContext ctx, out float tileSize, out float tileGap, out float tilePitch)

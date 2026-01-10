@@ -13,9 +13,15 @@ public enum E_StageTransitionType
 public enum E_CellType
 {
     Empty,
+    Floor,
     Wall,
-    Obstacle,
+    ToggleSwitch,
+    Hole,
+    GapFillerBlock,
+    Door,
     Goal,
+
+    Obstacle,
 }
 
 public enum E_DoorAnchor

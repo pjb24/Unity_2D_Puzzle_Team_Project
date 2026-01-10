@@ -16,8 +16,8 @@ MonoBehaviour:
   _childPrefab: {fileID: 5138454229852829646, guid: 16a0fcc2a24958d4eb05112a0d230feb, type: 3}
   _fatherSprite: {fileID: 21300000, guid: c5209da4c4e0fbf45a2538144ea6014a, type: 3}
   _childSprite: {fileID: 21300000, guid: 6450e339aa9a58f41aba18550db22ebc, type: 3}
-  _tileVisualProfile: {fileID: 0}
-  _bgm: {fileID: 0}
-  _sfxStageEnter: {fileID: 0}
+  _tileVisualProfile: {fileID: 11400000, guid: 99dc07401104b394c8782fdcb7ca5044, type: 2}
+  _bgmId: 100
+  _stageEnterSfxId: 0
   _fatherMoveSpeed: 1
   _childStepSpeed: 1

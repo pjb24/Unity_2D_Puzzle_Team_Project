@@ -6,6 +6,17 @@
 /// 상태 변경 신호 브로드캐스트
 /// </summary>
 
+public enum E_GameFlowState
+{
+    Boot,
+    MainMenu,
+    ChapterLoad,
+    StageLoad,
+    Play,
+    StageClear,
+    Ending,
+}
+
 public class GameFlowStateMachine
 {
     private IGameFlowState _current;

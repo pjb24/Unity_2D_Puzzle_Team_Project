@@ -154,7 +154,7 @@ public class TileOverlayLayer : MonoBehaviour
         go.transform.SetParent(transform, false);
         go.transform.position = _presenter.CellToWorld(cell);
 
-        float s = Mathf.Max(0.01f, _presenter._tileScale) * Mathf.Max(0.01f, _overlayScaleMul);
+        float s = Mathf.Max(0.01f, _presenter._tileSize) * Mathf.Max(0.01f, _overlayScaleMul);
         go.transform.localScale = new Vector3(s, s, 1f);
 
         sr = go.AddComponent<SpriteRenderer>();

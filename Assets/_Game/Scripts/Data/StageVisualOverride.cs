@@ -8,14 +8,6 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum E_Dir4
-{
-    Up,
-    Right,
-    Down,
-    Left,
-}
-
 public enum E_InnerBaseBackgroundDrawMode
 {
     Tiled,

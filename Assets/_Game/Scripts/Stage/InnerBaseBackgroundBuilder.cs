@@ -51,7 +51,7 @@ public static class InnerBaseBackgroundBuilder
             return null;
         }
 
-        float ts = refs._gridPresenter._tileScale;
+        float ts = refs._gridPresenter._tileSize;
 
         Vector2 pad = ov.InnerBaseBackgroundPaddingCells;
         float wCells = rect.width + pad.x * 2f;

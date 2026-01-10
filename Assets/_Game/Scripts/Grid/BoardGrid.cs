@@ -85,6 +85,10 @@ public struct CellMeta
     // “이동을 막는 열린 Hole”
     // (데이터가 surface=Hole + filled=true로 들어와도 통과 가능하게 보정)
     public bool IsOpenHole => IsHole && !_isFilledHole;
+
+    public bool SwitchOn;
+    public bool DoorOn;
+    public bool IsChildPathOuterBorder;
 }
 
 public enum E_CellChangeKind
