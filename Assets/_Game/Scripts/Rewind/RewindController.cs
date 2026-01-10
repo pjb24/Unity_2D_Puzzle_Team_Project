@@ -23,7 +23,6 @@ public class RewindController : MonoBehaviour
 
     [Header("Stage Runtime")]
     [SerializeField] private Transform _stageRoot;
-    [SerializeField] private InteractRegistry _interactRegistry;
 
     [Header("Settings")]
     [SerializeField, Min(0)] private int _rewindMax = 10;
@@ -63,10 +62,9 @@ public class RewindController : MonoBehaviour
         _exitPort = exitPort;
     }
 
-    public void BindStageRuntime(Transform stageRoot, InteractRegistry registry, TurnSnapshotRecorder recorder = null)
+    public void BindStageRuntime(Transform stageRoot, TurnSnapshotRecorder recorder = null)
     {
         _stageRoot = stageRoot;
-        _interactRegistry = registry;
 
         if (recorder != null)
             _recorder = recorder;
@@ -310,12 +308,6 @@ public class RewindController : MonoBehaviour
         }
 
         _recorder.Restore(snap);
-
-        // 복원 후 1회 리빌드(스테이지 루트 범위만)
-        if (_interactRegistry != null && _stageRoot != null)
-            _interactRegistry.RebuildFromRoot(_stageRoot);
-        else
-            Debug.LogWarning("[RewindController] InteractRegistry rebuild skipped (fallback): registry/root is null.");
 
         if (_turnDriver == null)
         {

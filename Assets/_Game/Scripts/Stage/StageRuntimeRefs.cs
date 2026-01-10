@@ -45,9 +45,6 @@ public class StageRuntimeRefs
     // ===== Snapshot =====
     public TurnSnapshotRecorder _snapshot;
 
-    // ===== Interact =====
-    public InteractRegistry _interactRegistry;
-
     public BoardStateRewindable _boardStateRewindable;
     public List<ITurnTickable> _turnSystems = new List<ITurnTickable>(8);
 

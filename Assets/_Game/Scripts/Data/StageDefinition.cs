@@ -62,7 +62,6 @@ public struct ToggleSwitchSpawnData
     public E_SwitchMode _mode;
 
     public bool _startOn;
-    public bool _allowManualInteract;
 
     // DoorSpawnData._guid 목록과 매칭
     public string[] _targetDoorGuids;

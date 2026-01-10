@@ -37,7 +37,7 @@ MonoBehaviour:
     Type: 5
     Dir: 0
     Sprite: {fileID: -3061982552703046507, guid: d1171de56dcafe94d836cfcd8b52402e, type: 3}
-  - Layer: 1
+  - Layer: 2
     Type: 6
     Dir: 0
     Sprite: {fileID: 6055803161161684635, guid: 245faedf1c953d54e8033f7a428a839a, type: 3}

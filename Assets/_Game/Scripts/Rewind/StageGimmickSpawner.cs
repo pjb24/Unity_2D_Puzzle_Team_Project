@@ -147,7 +147,6 @@ public static class StageGimmickSpawner
                 s._cell,
                 s._mode,
                 s._startOn,
-                s._allowManualInteract,
                 s._targetDoorGuids);
         }
     }

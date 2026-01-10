@@ -5,7 +5,7 @@ using UnityEngine;
 
 public interface IStageGimmickInitializable
 {
-    void InitializeGimmick(StageRuntimeRefs refs, BoardGrid grid, GridPresenter presenter, InteractRegistry registry);
+    void InitializeGimmick(StageRuntimeRefs refs, BoardGrid grid, GridPresenter presenter);
 }
 
 public interface ILinkBinder
@@ -64,12 +64,8 @@ public class DummyStageLoader : IStageLoader
         // 3) 런타임 refs 생성
         CreateStageRuntime(ctx, stageDef);
 
-        // 3.1) InteractRegistry 생성(루트 하위)
-        var registry = EnsureInteractRegistry(ctx);
-        ctx._stageRuntime._interactRegistry = registry;
-
         // 6) 스폰(그리드/프리젠터/컨트롤러 포함)
-        SpawnStageActorsAndSystems(ctx, stageDef, registry);
+        SpawnStageActorsAndSystems(ctx, stageDef);
 
         // 5) 테두리 경로 생성(2D Sprite 마커)
         CreateDummyPath(ctx, stageDef);
@@ -78,7 +74,7 @@ public class DummyStageLoader : IStageLoader
         StageGimmickSpawner.SpawnDoorsAndToggleSwitches(ctx._stageRuntime, stageDef);
 
         // ---- (0-5) 기믹 초기화 파이프라인 ----
-        RunPostSpawnPipeline(ctx, registry);
+        RunPostSpawnPipeline(ctx);
 
         // Stage 생성 직후(턴 시작 전) 스냅샷 1회 저장 (turnIndex=0)
         CaptureStageCreatedSnapshot(ctx);
@@ -100,7 +96,6 @@ public class DummyStageLoader : IStageLoader
         // 1) 레지스트리/리스트 정리 (참조 끊기)
         try
         {
-            ctx._stageRuntime._fatherController?.UnbindInteractPort();
             ctx._stageRuntime._fatherController?.UnbindGapFillerRegistry();
         }
         catch (Exception ex)
@@ -114,9 +109,6 @@ public class DummyStageLoader : IStageLoader
             ctx._stageRuntime._snapshot.ClearAll();
             ctx._stageRuntime._snapshot.BindStageRoot(null);
         }
-
-        if (ctx._stageRuntime._interactRegistry != null)
-            ctx._stageRuntime._interactRegistry.Clear();
 
         if (ctx._stageRuntime._turnSystems != null)
             ctx._stageRuntime._turnSystems.Clear();
@@ -246,7 +238,7 @@ public class DummyStageLoader : IStageLoader
     }
 
     // ===== (6) 캐릭터 생성 + Initialize + GapFiller =====
-    private void SpawnStageActorsAndSystems(GameFlowContext ctx, StageDefinition stageDef, InteractRegistry registry)
+    private void SpawnStageActorsAndSystems(GameFlowContext ctx, StageDefinition stageDef)
     {
         var profile = ctx._chapterVisualProfile;
         if (profile == null)
@@ -254,14 +246,10 @@ public class DummyStageLoader : IStageLoader
 
         // ===== (4) 보드 생성 (2D Sprite) =====
         BuildGridAndTiles(ctx, stageDef);
-        EnsureTileOverlayLayer(ctx);
 
         // 6) Father/Child 생성 + 초기화
         SpawnActorVisuals(ctx, profile);
         InitializeControllers(ctx, stageDef);
-
-        // 6.1) Father에 InteractPort 주입
-        BindFatherInteractPort(ctx, registry);
 
         // Hole 적용 + 메움 블록 스폰/바인딩
         ApplyHolesFromStageDef(ctx, stageDef);
@@ -285,42 +273,12 @@ public class DummyStageLoader : IStageLoader
         BindGapFillerToFather(ctx, gapRegistry);
     }
 
-    private bool EnsureTileOverlayLayer(GameFlowContext ctx)
-    {
-        return false;
-
-        if (ctx?._stageRuntime?._root == null || ctx._stageRuntime._grid == null || ctx._stageRuntime._gridPresenter == null)
-        {
-            Debug.LogWarning("[StageLoader] EnsureTileOverlayLayer fallback: root/grid/presenter is null.");
-            return false;
-        }
-
-        var root = ctx._stageRuntime._root.transform;
-        var existing = root.Find(TileOverlayRootName);
-        if (existing != null)
-            return true;
-
-        var go = new GameObject(TileOverlayRootName);
-        go.transform.SetParent(root, false);
-
-        var layer = go.AddComponent<TileOverlayLayer>();
-        layer.Initialize(ctx._stageRuntime._grid, ctx._stageRuntime._gridPresenter, ctx._stageRuntime._tileSpriteProvider);
-        return true;
-    }
-
-    private void RunPostSpawnPipeline(GameFlowContext ctx, InteractRegistry registry)
+    private void RunPostSpawnPipeline(GameFlowContext ctx)
     {
         // 1) BoardStateRewindable 추가(보드 자체 변화 복원)
-        EnsureBoardStateRewindable(ctx, registry);
+        EnsureBoardStateRewindable(ctx);
         // 2) 보드/프리젠터 생성 후 기믹 Initialize
-        InitializeGimmicks(ctx, registry);
-
-        // 3) 씬에 존재하는 다수 Interactable 등록(프리팹 배치 + 런타임 생성 모두 커버)
-        // - 런타임 생성 Interactable이 Initialize에서 Register를 안 해도 여기서 잡힘
-        if (registry != null && ctx?._stageRuntime?._root != null)
-            registry.RebuildFromRoot(ctx._stageRuntime._root.transform);
-        else
-            Debug.LogWarning("[StageLoader] Registry rebuild skipped (fallback): registry/root is null.");
+        InitializeGimmicks(ctx);
 
         // 4) 링크(스위치→문 등) 바인딩
         BindLinks(ctx);
@@ -510,7 +468,7 @@ public class DummyStageLoader : IStageLoader
 
     // ---- helpers ----
 
-    private void EnsureBoardStateRewindable(GameFlowContext ctx, InteractRegistry registry)
+    private void EnsureBoardStateRewindable(GameFlowContext ctx)
     {
         if (ctx?._stageRuntime?._root == null)
         {
@@ -523,7 +481,7 @@ public class DummyStageLoader : IStageLoader
         var bsr = root.GetComponent<BoardStateRewindable>();
         if (bsr == null) bsr = root.AddComponent<BoardStateRewindable>();
 
-        bsr.Initialize(ctx._stageRuntime._grid, registry);
+        bsr.Initialize(ctx._stageRuntime._grid);
 
         // RewindKey 보장
         EnsureRewindKey(root);
@@ -531,7 +489,7 @@ public class DummyStageLoader : IStageLoader
         ctx._stageRuntime._boardStateRewindable = bsr;
     }
 
-    private void InitializeGimmicks(GameFlowContext ctx, InteractRegistry registry)
+    private void InitializeGimmicks(GameFlowContext ctx)
     {
         if (ctx?._stageRuntime?._root == null) return;
 
@@ -545,7 +503,7 @@ public class DummyStageLoader : IStageLoader
 
             try
             {
-                init.InitializeGimmick(ctx._stageRuntime, ctx._stageRuntime._grid, ctx._stageRuntime._gridPresenter, registry);
+                init.InitializeGimmick(ctx._stageRuntime, ctx._stageRuntime._grid, ctx._stageRuntime._gridPresenter);
             }
             catch (Exception ex)
             {
@@ -593,27 +551,6 @@ public class DummyStageLoader : IStageLoader
 
             ctx._stageRuntime._turnSystems.Add(sys);
         }
-    }
-
-    // ===== (3) InteractRegistry 생성 =====
-    private InteractRegistry EnsureInteractRegistry(GameFlowContext ctx)
-    {
-        if (ctx == null || ctx._stageRuntime == null || ctx._stageRuntime._root == null)
-        {
-            Debug.LogWarning("[StageLoader] EnsureInteractRegistry fallback: runtime/root is null.");
-            return null;
-        }
-
-        var root = ctx._stageRuntime._root.transform;
-
-        // 이미 있으면 재사용
-        var existing = root.GetComponentInChildren<InteractRegistry>(includeInactive: true);
-        if (existing != null)
-            return existing;
-
-        var go = new GameObject(InteractRegistryName);
-        go.transform.SetParent(root, false);
-        return go.AddComponent<InteractRegistry>();
     }
 
     private GapFillerBlockRegistry EnsureGapFillerRegistry(GameFlowContext ctx)
@@ -709,72 +646,6 @@ public class DummyStageLoader : IStageLoader
         );
     }
 
-    // DummyStageLoader.cs (기존 CreateChildPathBorderSpritesPerSide 교체)
-    private static void CreateChildPathBorderSpritesPerSide(
-        GameFlowContext ctx,
-        int w,
-        int h,
-        float tileSize,
-        float tilePitch,
-        Transform parent)
-    {
-        var runtime = ctx?._stageRuntime;
-        var ov = runtime?._stageVisualOverride;
-
-        if (ov == null || !ov.UseChildPathOuterBorder)
-            return;
-
-        var provider = runtime?._tileSpriteProvider;
-        if (provider == null)
-        {
-            Debug.LogWarning($"[PathBorder] Enabled but TileSpriteProvider is null. stageId={runtime?._stageId}");
-            return;
-        }
-
-        var selector = TileSelector.Make(E_TileLayer.Ring, E_TileVisualKey.ChildPathOuterBorder);
-
-        // 스프라이트 없으면 생성 안 함 (Composite provider가 selector 단위 1회 Warning)
-        if (!provider.TryGetSprite(in selector, out var sprite) || sprite == null)
-            return;
-
-        float z = 0f;
-
-        float extraCells = Mathf.Max(0f, ov.ChildPathOuterBorderOffsetCells);
-        float outwardWorld = (0.5f + extraCells) * tilePitch;
-
-        Vector3 origin = GetTileOriginLocal(w, h, tilePitch);
-
-        Vector3 CellCenter(int x, int y) => origin + new Vector3(x * tilePitch, y * tilePitch, z);
-
-        // 아래: y=0, x=0..w-1 (w개), Child 방향=Right
-        for (int x = 0; x < w; x++)
-        {
-            Vector3 pos = CellCenter(x, 0) + Vector3.down * outwardWorld;
-            CreateBorderOne(parent, $"Border_B_{x}_0", sprite, pos, RotationForFacing(E_Facing.Right), tileSize, Sorting_Path);
-        }
-
-        // 오른쪽: x=w-1, y=0..h-1 (h개), Child 방향=Up
-        for (int y = 0; y < h; y++)
-        {
-            Vector3 pos = CellCenter(w - 1, y) + Vector3.right * outwardWorld;
-            CreateBorderOne(parent, $"Border_R_{w - 1}_{y}", sprite, pos, RotationForFacing(E_Facing.Up), tileSize, Sorting_Path);
-        }
-
-        // 위: y=h-1, x=w-1..0 (w개), Child 방향=Left
-        for (int x = w - 1; x >= 0; x--)
-        {
-            Vector3 pos = CellCenter(x, h - 1) + Vector3.up * outwardWorld;
-            CreateBorderOne(parent, $"Border_T_{x}_{h - 1}", sprite, pos, RotationForFacing(E_Facing.Left), tileSize, Sorting_Path);
-        }
-
-        // 왼쪽: x=0, y=h-1..0 (h개), Child 방향=Down
-        for (int y = h - 1; y >= 0; y--)
-        {
-            Vector3 pos = CellCenter(0, y) + Vector3.left * outwardWorld;
-            CreateBorderOne(parent, $"Border_L_0_{y}", sprite, pos, RotationForFacing(E_Facing.Down), tileSize, Sorting_Path);
-        }
-    }
-
     private static void CreateBorderOne(
         Transform parent,
         string name,
@@ -794,63 +665,6 @@ public class DummyStageLoader : IStageLoader
         sr.sprite = sprite;
         sr.color = Color.white;
         sr.sortingOrder = sortingOrder;
-    }
-
-    private static bool IsDir4(Vector2Int d)
-    {
-        return d == Vector2Int.right || d == Vector2Int.left || d == Vector2Int.up || d == Vector2Int.down;
-    }
-
-    private static E_Facing CalcFacing(Vector2Int d)
-    {
-        if (d == Vector2Int.right) return E_Facing.Right;
-        if (d == Vector2Int.left) return E_Facing.Left;
-        if (d == Vector2Int.up) return E_Facing.Up;
-        if (d == Vector2Int.down) return E_Facing.Down;
-
-        Debug.LogWarning($"[PathBorder] CalcFacing fallback: invalid dir={d}. use Right.");
-        return E_Facing.Right;
-    }
-
-    private static Vector2 CalcOutwardNormal(Vector2Int dir, bool isCCW)
-    {
-        // CCW면 내부가 좌측 => 바깥은 우측(perpRight)
-        // CW면 내부가 우측 => 바깥은 좌측(perpLeft)
-        Vector2 d = new Vector2(dir.x, dir.y);
-
-        Vector2 perpRight = new Vector2(d.y, -d.x); // (dx,dy) -> (dy,-dx)
-        Vector2 perpLeft = new Vector2(-d.y, d.x); // (dx,dy) -> (-dy,dx)
-
-        Vector2 o = isCCW ? perpRight : perpLeft;
-
-        float mag = o.magnitude;
-        if (mag <= 0.0001f)
-        {
-            Debug.LogWarning("[PathBorder] Outward fallback: magnitude is 0. use (1,0).");
-            return Vector2.right;
-        }
-
-        return o / mag;
-    }
-
-    private static float CalcSignedArea(List<Vector2Int> poly)
-    {
-        // 셀 좌표로 shoelace (루프)
-        // 면적 부호만 필요
-        if (poly == null || poly.Count < 3)
-            return 0f;
-
-        long sum = 0;
-        int n = poly.Count;
-
-        for (int i = 0; i < n; i++)
-        {
-            Vector2Int a = poly[i];
-            Vector2Int b = poly[(i + 1) % n];
-            sum += (long)a.x * b.y - (long)b.x * a.y;
-        }
-
-        return 0.5f * sum;
     }
 
     private static Quaternion RotationForFacing(E_Facing facing)
@@ -903,29 +717,6 @@ public class DummyStageLoader : IStageLoader
             meta._isFilledHole = false;
             grid.SetMeta(c, meta, notify: true);
         }
-    }
-
-    private void EnsureHoleVisualLayer(GameFlowContext ctx)
-    {
-        if (ctx?._stageRuntime?._root == null || ctx._stageRuntime._grid == null || ctx._stageRuntime._gridPresenter == null)
-        {
-            Debug.LogWarning("[StageLoader] EnsureHoleVisualLayer fallback: root/grid/presenter is null.");
-            return;
-        }
-
-        var root = ctx._stageRuntime._root.transform;
-        var existing = root.Find(HolesRootName);
-        if (existing != null) return; // 중복 생성 방지
-
-        var grid = ctx._stageRuntime._grid;
-        var presenter = ctx._stageRuntime._gridPresenter;
-
-        var holesRoot = new GameObject(HolesRootName);
-        holesRoot.transform.SetParent(root, false);
-
-        var map = BuildHoleRenderersMap(holesRoot.transform, grid, presenter);
-        SubscribeHoleVisualUpdates(grid, map);
-        RefreshHoleVisualsAll(grid, map);
     }
 
     private Dictionary<int, SpriteRenderer> BuildHoleRenderersMap(Transform holesRoot, BoardGrid grid, GridPresenter presenter)
@@ -1095,42 +886,6 @@ public class DummyStageLoader : IStageLoader
 
         if (go.GetComponent<RewindKey>() == null)
             go.AddComponent<RewindKey>();
-    }
-
-    // ===== (6.1) Father InteractPort 주입 =====
-    private void BindFatherInteractPort(GameFlowContext ctx, InteractRegistry registry)
-    {
-        if (ctx == null || ctx._stageRuntime == null)
-        {
-            Debug.LogWarning("[StageLoader] BindFatherInteractPort fallback: runtime is null.");
-            return;
-        }
-
-        var fatherCtrl = ctx._stageRuntime._fatherController;
-        if (fatherCtrl == null)
-        {
-            Debug.LogWarning("[StageLoader] BindFatherInteractPort fallback: fatherController is null.");
-            return;
-        }
-
-        if (registry == null)
-        {
-            Debug.LogWarning("[StageLoader] BindFatherInteractPort fallback: registry is null. Interact will not work.");
-            return;
-        }
-
-        fatherCtrl.BindInteractPort(new InteractPort_Registry(registry));
-    }
-
-    private Vector3 GetTileCenterLocal(StageDefinition stageDef, int x, int y, float cellPitch)
-    {
-        int w = Mathf.Max(1, stageDef.BoardSize.x);
-        int h = Mathf.Max(1, stageDef.BoardSize.y);
-
-        cellPitch = Mathf.Max(0.01f, cellPitch);
-
-        Vector3 origin = new Vector3(-(w - 1) * 0.5f * cellPitch, -(h - 1) * 0.5f * cellPitch, 0f);
-        return origin + new Vector3(x * cellPitch, y * cellPitch, 0f);
     }
 
     private Vector3 ToWorld(GameFlowContext ctx, Vector3 localInRoot)

@@ -1,7 +1,7 @@
 // TurnInputRouter.cs
 ///
 /// 되감기 모드(RewindController.IsRewindActive)일 때:
-/// Move / Interact / TurnCancel 입력은 차단
+/// Move 입력을 차단
 /// RewindPrev/Next/Commit은 TurnCommand enqueue 하지 않고 즉시 RewindController로 전달
 /// 되감기 모드가 아닐 때:
 /// Prev / Next / Commit은 무시(안전)
@@ -19,8 +19,6 @@ public class TurnInputRouter : MonoBehaviour
 
     [Header("Input Actions")]
     [SerializeField] private InputActionReference _moveAction;  // Vector2
-    [SerializeField] private InputActionReference _interactAction;
-    [SerializeField] private InputActionReference _cancelAction;
 
     [SerializeField] private InputActionReference _rewindEnter;
     [SerializeField] private InputActionReference _rewindPrev;
@@ -63,8 +61,6 @@ public class TurnInputRouter : MonoBehaviour
     private void OnEnable()
     {
         Bind(_moveAction, OnMovePerformed);
-        Bind(_interactAction, OnInteractPerformed);
-        Bind(_cancelAction, OnCancelPerformed);
 
         Bind(_rewindEnter, OnRewindEnter);
         Bind(_rewindPrev, OnRewindPrev);
@@ -76,8 +72,6 @@ public class TurnInputRouter : MonoBehaviour
     private void OnDisable()
     {
         Unbind(_moveAction, OnMovePerformed);
-        Unbind(_interactAction, OnInteractPerformed);
-        Unbind(_cancelAction, OnCancelPerformed);
 
         Unbind(_rewindEnter, OnRewindEnter);
         Unbind(_rewindPrev, OnRewindPrev);
@@ -120,22 +114,6 @@ public class TurnInputRouter : MonoBehaviour
         if (cmd.Type == E_TurnCommandType.None) return;
 
         _buffer.Enqueue(cmd);
-    }
-
-    private void OnInteractPerformed(InputAction.CallbackContext ctx)
-    {
-        if (IsRewindActive()) return;
-        if (!IsInputAllowed()) return;
-
-        _buffer.Enqueue(new TurnCommand(E_TurnCommandType.Interact));
-    }
-
-    private void OnCancelPerformed(InputAction.CallbackContext ctx)
-    {
-        if (IsRewindActive()) return;
-        if (!IsInputAllowed()) return;
-
-        // _buffer.Enqueue(new TurnCommand(E_TurnCommandType.Cancel));
     }
 
     private TurnCommand ToDigitalCommand(Vector2 v)

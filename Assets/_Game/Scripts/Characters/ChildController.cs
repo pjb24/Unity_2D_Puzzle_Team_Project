@@ -134,9 +134,6 @@ public partial class ChildController : MonoBehaviour
         // 이동 성공 시에만 이동 애니메이션 1회 재생
         _animDriver?.PlayMove();
 
-        // === Child 이동 SFX: 이동 성공 확정 + VisualMove 시작 직전 1회 ===
-        AudioHub.Ensure().PlaySfx(E_SfxId.Move_Child);
-
         Vector3 to = _path.Points[_pathPos];
 
         StartMoveFx(

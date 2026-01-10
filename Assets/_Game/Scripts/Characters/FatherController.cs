@@ -65,10 +65,6 @@ public partial class FatherController : MonoBehaviour
     private BoardGrid _grid;
     private GridPresenter _presenter;
 
-    private IInteractPort _interactPort;
-    public void BindInteractPort(IInteractPort port) => _interactPort = port;
-    public void UnbindInteractPort() => _interactPort = null;
-
     // ===== GapFiller =====
     private GapFillerBlockRegistry _gapFillerRegistry;
     public void BindGapFillerRegistry(GapFillerBlockRegistry registry) => _gapFillerRegistry = registry;
@@ -168,19 +164,6 @@ public partial class FatherController : MonoBehaviour
 
     public void RequestAction(TurnCommand cmd)
     {
-        if (cmd.Type == E_TurnCommandType.Interact)
-        {
-            if (_interactPort == null)
-                Debug.LogWarning("[FatherController] Interact fallback: interact port is null.");
-
-            _interactPort?.RequestInteract(Cell, Facing);
-
-            // Interact는 이동이 아니므로 애니 트리거 없음
-            _lastResult = new FatherActionResult(E_FatherActionResultCode.None, Cell, Cell, false);
-            _onActionCompleted?.Invoke();
-            return;
-        }
-
         Vector2Int dir = cmd.Type switch
         {
             E_TurnCommandType.MoveUp => Vector2Int.up,

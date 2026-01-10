@@ -98,7 +98,6 @@ public static class StageJsonStageFactory
                                 _cell = cell,
                                 _mode = E_SwitchMode.HoldWhilePressed,
                                 _startOn = false,
-                                _allowManualInteract = false,
                                 _targetDoorGuids = Array.Empty<string>(),
                             });
                             break;

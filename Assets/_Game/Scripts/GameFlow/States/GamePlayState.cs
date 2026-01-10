@@ -86,7 +86,7 @@ public class GamePlayState : IGameFlowState
             Debug.LogWarning("[GamePlayState] Snapshot scope bind skipped (fallback): snapshot/root is null.");
 
         if (_rewind != null)
-            _rewind.BindStageRuntime(rt._root != null ? rt._root.transform : null, rt._interactRegistry, snapshot);
+            _rewind.BindStageRuntime(rt._root != null ? rt._root.transform : null, snapshot);
 
         // DifficultyProfile 결정
         _profile = null;

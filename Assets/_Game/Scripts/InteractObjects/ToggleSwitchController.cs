@@ -13,7 +13,7 @@ public enum E_SwitchMode
 [DisallowMultipleComponent]
 [RequireComponent(typeof(RewindKey))]
 public class ToggleSwitchController : MonoBehaviour,
-    IInteractable, IRewindable, ITurnTickable, IStageGimmickInitializable, ILinkBinder
+    IRewindable, ITurnTickable, IStageGimmickInitializable, ILinkBinder
 {
     [Serializable]
     public struct ToggleSwitchState
@@ -31,8 +31,6 @@ public class ToggleSwitchController : MonoBehaviour,
 
     [Header("Behavior")]
     [SerializeField] private bool _startOn = false;
-    [Tooltip("OnEnter 자동 토글 외에, Interact로 수동 토글을 허용할지")]
-    [SerializeField] private bool _allowManualInteract = false;
 
     [Header("GUID Links (Door RewindKey GUID, N or D format)")]
     [SerializeField] private List<string> _targetGuids = new();
@@ -40,7 +38,6 @@ public class ToggleSwitchController : MonoBehaviour,
     // ===== runtime refs =====
     private BoardGrid _grid;
     private GridPresenter _presenter;
-    private InteractRegistry _registry;
 
     private FatherController _father;
     private GapFillerBlockRegistry _gapFillerRegistry;
@@ -75,12 +72,11 @@ public class ToggleSwitchController : MonoBehaviour,
     // =========================
 
     // 런타임 스폰에서 호출(필수)
-    public void ConfigureRuntime(Vector2Int cell, E_SwitchMode mode, bool startOn, bool allowManualInteract, IReadOnlyList<string> targetDoorGuids)
+    public void ConfigureRuntime(Vector2Int cell, E_SwitchMode mode, bool startOn, IReadOnlyList<string> targetDoorGuids)
     {
         _cell = cell;
         _mode = mode;
         _startOn = startOn;
-        _allowManualInteract = allowManualInteract;
 
         _targetGuids.Clear();
         if (targetDoorGuids != null)
@@ -90,12 +86,11 @@ public class ToggleSwitchController : MonoBehaviour,
         }
     }
 
-    public void InitializeGimmick(StageRuntimeRefs refs, BoardGrid grid, GridPresenter presenter, InteractRegistry registry)
+    public void InitializeGimmick(StageRuntimeRefs refs, BoardGrid grid, GridPresenter presenter)
     {
         _refs = refs;
         _grid = grid;
         _presenter = presenter;
-        _registry = registry;
 
         _father = refs != null ? refs._fatherController : null;
         _gapFillerRegistry = refs != null ? refs._gapFillerRegistry : null;
@@ -123,14 +118,6 @@ public class ToggleSwitchController : MonoBehaviour,
 
         // 위치 스냅(필요 없으면 삭제)
         transform.position = _presenter.CellToWorld(_cell) + new Vector3(0f, 0f, -0.2f);
-
-        if (_registry == null)
-        {
-            Debug.LogWarning("[ToggleSwitchController] InitializeGimmick fallback: registry is null.");
-            return;
-        }
-
-        _registry.Register(this);
 
         ApplyVisual();
     }
@@ -300,70 +287,6 @@ public class ToggleSwitchController : MonoBehaviour,
         }
 
         return false;
-    }
-
-    // =========================
-    // Manual Interact (optional)
-    // =========================
-    public bool TryInteract(in FatherInteractArgs args)
-    {
-        if (!_allowManualInteract)
-            return false;
-
-        if (args.TargetCell != _cell && args.FatherCell != _cell)
-            return false;
-
-        // 수동 상호작용은 “진입과 동일한 트리거”로 취급
-        bool onCell = (args.FatherCell == _cell);
-
-        switch (_mode)
-        {
-            case E_SwitchMode.OneShotLatch:
-                {
-                    if (_consumed)
-                        return false;
-
-                    InvertDoorsOrWarn("Manual.OneShotLatch");
-                    _isOn = true;
-                    _consumed = true;
-                    NotifyAndVisual();
-
-                    if (onCell) _isPressed = true;
-                    return true;
-                }
-
-            case E_SwitchMode.ToggleOnEnter:
-                {
-                    InvertDoorsOrWarn("Manual.Toggle");
-                    _isOn = !_isOn;
-                    NotifyAndVisual();
-
-                    if (onCell) _isPressed = true;
-                    return true;
-                }
-
-            case E_SwitchMode.HoldWhilePressed:
-                {
-                    // Hold는 수동으로 “On/Off 강제”가 애매하니, 누르면 On으로만 처리(원하면 정책 바꿔도 됨)
-                    if (!_isOn)
-                    {
-                        InvertDoorsOrWarn("Manual.HoldOn");
-                        _isOn = true;
-                        NotifyAndVisual();
-                    }
-
-                    if (onCell) _isPressed = true;
-                    return true;
-                }
-        }
-
-        return false;
-    }
-
-    private void OnDestroy()
-    {
-        // UnloadStage 시 Destroy 지연 프레임에서도 registry가 “씬 전체 스캔”으로 재등록되는 문제를 막기 위해, 명시적 해제
-        _registry?.Unregister(this);
     }
 
     // =========================

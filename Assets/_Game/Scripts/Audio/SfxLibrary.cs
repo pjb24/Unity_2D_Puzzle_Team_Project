@@ -15,7 +15,6 @@ public enum E_SfxId
     NoRewind_ChildFail,
 
     Move_Father,
-    Move_Child,
 
     ChildBlocked_Wall,
 
@@ -87,7 +86,8 @@ public class SfxLibrary : ScriptableObject
         BuildCache(logWarnings: false);
     }
 
-    private void OnValidate()
+    [ContextMenu("Validate Audio Libraries")]
+    private void ValidateAndLog()
     {
         BuildCache(logWarnings: true);
     }
