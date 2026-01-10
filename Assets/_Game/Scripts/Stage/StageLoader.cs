@@ -11,35 +11,28 @@ public class StageLoader
 
     // Registry GameObject name (under StageRuntime root)
     private const string GapFillerRegistryName = "GapFillerBlockRegistry";
-    private const string HolesRootName = "[Holes]";
-    private const string TileOverlayRootName = "[TileOverlays]";
-
-    // Sorting order (2D)
-    private const int Sorting_Tile = 0;
-    private const int Sorting_Hole = 1;
-    private const int Sorting_Path = 2;
-    private const int Sorting_Block = 3;
-    private const int Sorting_Character = 4;
-    private const int Sorting_Overlay = 10;
 
     // Colors (구분 가능)
-    private static readonly Color Color_Floor = new(0.85f, 0.85f, 0.85f, 1f);
-    private static readonly Color Color_Wall = new(0.15f, 0.15f, 0.15f, 1f);
-    private static readonly Color Color_Switch = new(1.00f, 0.20f, 0.20f, 1f);
-    private static readonly Color Color_Door = new(0.70f, 0.10f, 0.10f, 1f);
-    private static readonly Color Color_Goal = new(0.25f, 1.00f, 0.25f, 1f);
-    private static readonly Color Color_Path = new(1.00f, 0.80f, 0.10f, 1f);
     private static readonly Color Color_Father = new(0.10f, 0.80f, 1.00f, 1f);
     private static readonly Color Color_Child = new(1.00f, 0.20f, 1.00f, 1f);
     private static readonly Color Color_Block = new(0.70f, 0.40f, 0.10f, 1f);
-    private static readonly Color Color_Hole = new(0.05f, 0.05f, 0.05f, 1f);
 
     private static Sprite _whiteSprite;
     private static Texture2D _whiteTex;
 
     public void LoadStage(GameFlowContext ctx, Action onComplete)
     {
-        if (!ValidateLoadContext(ctx)) return;
+        if (ctx == null)
+        {
+            Debug.LogWarning("[StageLoader] LoadStage fallback: ctx is null.");
+            return;
+        }
+
+        if (ctx._config == null)
+        {
+            Debug.LogError("[StageLoader] LoadStage failed: ctx._config is null.");
+            return;
+        }
 
         // 1) 이전 스테이지 정리
         UnloadStage(ctx);
@@ -144,23 +137,6 @@ public class StageLoader
         Debug.Log("[StageLoader] Captured stage-created snapshot (turnIndex=0).");
     }
 
-    private bool ValidateLoadContext(GameFlowContext ctx)
-    {
-        if (ctx == null)
-        {
-            Debug.LogWarning("[StageLoader] LoadStage fallback: ctx is null.");
-            return false;
-        }
-
-        if (ctx._config == null)
-        {
-            Debug.LogError("[StageLoader] LoadStage failed: ctx._config is null.");
-            return false;
-        }
-
-        return true;
-    }
-
     private StageDefinition GetStageDefinitionOrFail(GameFlowContext ctx)
     {
         var stageDef = ctx._config.GetStageDefinition(ctx._chapterIndex, ctx._stageIndex);
@@ -180,9 +156,6 @@ public class StageLoader
 
         string stageId = stageDef != null ? stageDef.StageId : $"C{ctx._chapterIndex}_S{ctx._stageIndex}";
         ctx._stageRuntime._stageId = stageId;
-
-        ctx._stageRuntime._resolvedFatherSprite = null;
-        ctx._stageRuntime._resolvedChildSprite = null;
 
         // ===== Layout resolve (tile scale + gap) =====
         float tileScale = _defaultTileSize;
@@ -257,16 +230,6 @@ public class StageLoader
             name: "Child(Dummy)",
             parent: ctx._stageRuntime._root.transform,
             fallbackColor: Color_Child);
-
-        SpriteApplyUtil.TryApplySpriteKeepPrevious(
-            SpriteApplyUtil.FindSpriteRendererOrNull(ctx._stageRuntime._father),
-            ctx._stageRuntime._resolvedFatherSprite,
-            "Father");
-
-        SpriteApplyUtil.TryApplySpriteKeepPrevious(
-            SpriteApplyUtil.FindSpriteRendererOrNull(ctx._stageRuntime._child),
-            ctx._stageRuntime._resolvedChildSprite,
-            "Child");
     }
 
     // ===== (4) 보드 생성 (2D Sprite) =====
@@ -638,8 +601,7 @@ public class StageLoader
                 localPosition: Vector3.zero,
                 localScale: Vector3.one * 0.85f,
                 sprite: GetWhiteSprite(),
-                color: Color_Block,
-                sortingOrder: Sorting_Block);
+                color: Color_Block);
 
             // 시각상 셀 위치로 이동(컨트롤러가 SnapToCell도 수행)
             go.transform.position = presenter.CellToWorld(c);
@@ -672,7 +634,6 @@ public class StageLoader
         if (sr == null) sr = go.AddComponent<SpriteRenderer>();
         sr.sprite = sprite != null ? sprite : GetWhiteSprite();
         sr.color = fallbackColor;
-        sr.sortingOrder = Sorting_Character;
 
         // 기본 크기(프로필 프리팹 없을 때만)
         go.transform.localScale = Vector3.one * 0.85f;
@@ -701,8 +662,7 @@ public class StageLoader
         Vector3 localPosition,
         Vector3 localScale,
         Sprite sprite,
-        Color color,
-        int sortingOrder)
+        Color color)
     {
         var go = new GameObject(name);
         go.transform.SetParent(parent, false);
@@ -712,7 +672,6 @@ public class StageLoader
         var sr = go.AddComponent<SpriteRenderer>();
         sr.sprite = sprite != null ? sprite : GetWhiteSprite();
         sr.color = color;
-        sr.sortingOrder = sortingOrder;
 
         return go;
     }

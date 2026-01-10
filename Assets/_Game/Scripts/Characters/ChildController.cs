@@ -29,8 +29,8 @@ public partial class ChildController : MonoBehaviour
     private Coroutine _moveCo;
 
     [Header("Move FX (Lerp)")]
-    [SerializeField] private bool _useLerp = true;
     [SerializeField] private float _lerpDuration = 0.12f;
+    [SerializeField] private float _rewindRestoreMoveDuration = 0.12f;
 
     // ===== Move Animation (Optional) =====
     private ChildAnimDriver _animDriver;
@@ -38,8 +38,6 @@ public partial class ChildController : MonoBehaviour
     public void UnbindAnimDriver() => _animDriver = null;
 
     private VisualMoveAgent _visualMove;
-    private bool _useRewindRestoreLerp;
-    private float _rewindRestoreMoveDuration;
 
     private bool _warnedRestoreMissingMoveAgent;
     private bool _warnedRestoreInvalidDuration;
@@ -52,15 +50,11 @@ public partial class ChildController : MonoBehaviour
     public void Initialize(
         ChildPathRuntime path,
         ChildPathBlockerRegistry blockers,
-        int startPos = 0,
-        bool useRewindRestoreLerp = false,
-        float rewindRestoreMoveDuration = 0f)
+        int startPos = 0
+        )
     {
         _path = path;
         _pathBlockers = blockers;
-
-        _useRewindRestoreLerp = useRewindRestoreLerp;
-        _rewindRestoreMoveDuration = rewindRestoreMoveDuration;
 
         if (_animDriver == null)
             _animDriver = GetComponent<ChildAnimDriver>();
@@ -144,13 +138,6 @@ public partial class ChildController : MonoBehaviour
     private void StartMoveFx(Vector3 toWorld, Action onDone)
     {
         StopMoveFxIfAny();
-
-        if (!_useLerp)
-        {
-            transform.position = toWorld;
-            onDone?.Invoke();
-            return;
-        }
 
         if (_lerpDuration <= 0f)
         {

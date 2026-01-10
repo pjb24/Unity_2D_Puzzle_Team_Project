@@ -85,7 +85,7 @@ public partial class FatherController : IRewindable
         if (moved)
             _animDriver?.PlayMove(Facing);
 
-        if (_useRewindRestoreLerp && moved)
+        if (moved)
         {
             if (_visualMove == null)
             {

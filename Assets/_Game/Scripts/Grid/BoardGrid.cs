@@ -45,12 +45,6 @@ public enum E_CellTrapMask
     // 확장: Spike, Laser 등
 }
 
-public enum E_CellVisualTag
-{
-    None = 0,
-    Gap = 1, // InnerBase ↔ ChildPath 사이 빈 공간
-}
-
 [Serializable]
 public struct CellMeta
 {
@@ -58,8 +52,6 @@ public struct CellMeta
     public E_CellDir _dir;
     public int _regionId;
     public E_CellTrapMask _trapMask;
-
-    public E_CellVisualTag _visualTag;
 
     // “Hole을 메운 상태”
     // 규칙(권장): FilledHole이면 _surface=Normal + _isFilledHole=true
@@ -71,15 +63,12 @@ public struct CellMeta
         _dir = E_CellDir.None,
         _regionId = 0,
         _trapMask = E_CellTrapMask.None,
-
-        _visualTag = E_CellVisualTag.None,
         _isFilledHole = false,
     };
 
     public bool IsHole => _surface == E_CellSurface.Hole;
     public bool IsSwamp => _surface == E_CellSurface.Swamp;
 
-    public bool IsGap => _visualTag == E_CellVisualTag.Gap;
     public bool IsFilledHole => _isFilledHole;
 
     // “이동을 막는 열린 Hole”

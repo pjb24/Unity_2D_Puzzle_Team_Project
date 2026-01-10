@@ -22,7 +22,6 @@ public class GameFlowContext
     public StageRuntimeRefs _stageRuntime;
     public StageLoader _stageLoader;
     public StageProgression _progression;
-    public object _ui;
 
     // ===== FX / Audio =====
     public StageTransitionFx _transitionFx;

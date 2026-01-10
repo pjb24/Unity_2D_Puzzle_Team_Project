@@ -59,7 +59,7 @@ public partial class ChildController : IRewindable
         if (moved)
             _animDriver?.PlayMove();
 
-        if (_useRewindRestoreLerp && moved)
+        if (moved)
         {
             if (_visualMove == null)
             {

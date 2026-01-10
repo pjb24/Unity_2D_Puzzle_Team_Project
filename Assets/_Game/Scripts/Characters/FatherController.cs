@@ -75,8 +75,8 @@ public partial class FatherController : MonoBehaviour
     private bool _hasMoveBounds;
 
     [Header("Move FX (Lerp)")]
-    [SerializeField] private bool _useLerp = true;
     [SerializeField] private float _moveDuration = 0.12f;
+    [SerializeField] private float _rewindRestoreMoveDuration = 0.12f;
 
     private Coroutine _moveCo;
 
@@ -86,8 +86,6 @@ public partial class FatherController : MonoBehaviour
     public void UnbindAnimDriver() => _animDriver = null;
 
     private VisualMoveAgent _visualMove;
-    private bool _useRewindRestoreLerp;
-    private float _rewindRestoreMoveDuration;
 
     private bool _warnedRestoreMissingMoveAgent;
     private bool _warnedRestoreInvalidDuration;
@@ -343,13 +341,6 @@ public partial class FatherController : MonoBehaviour
     {
         // 중복 이동 정리
         StopMoveFxIfAny();
-
-        if (!_useLerp)
-        {
-            transform.position = toWorld;
-            onDone?.Invoke();
-            return;
-        }
 
         if (_moveDuration <= 0f)
         {

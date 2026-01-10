@@ -9,8 +9,6 @@ public class StageRuntimeRefs
 
     // ===== Visual =====
     public string _stageId;
-    public Sprite _resolvedFatherSprite;
-    public Sprite _resolvedChildSprite;
 
     // ===== Layout =====
     // tileScale: 스프라이트 스케일
