@@ -14,13 +14,17 @@ public enum E_CellType
 {
     Empty,
     Floor,
-    Wall,
-    ToggleSwitch,
-    Hole,
-    GapFillerBlock,
+    OuterBorder,
 
+    Wall,
+    Hole,
+    FilledHole,
+    SwitchOn,
+    SwitchOff,
     Door,
     Goal,
+
+    FillerBlock,
 }
 
 [System.Serializable]

@@ -224,8 +224,9 @@ public partial class FatherController : MonoBehaviour
             return;
         }
 
-        var toMeta = _grid.GetMeta(to);
-        if (toMeta.IsOpenHole)
+
+        var toMeta = _grid.GetCellOverlay01(to);
+        if (toMeta == E_CellType.Hole)
         {
             _lastResult = new FatherActionResult(E_FatherActionResultCode.Blocked_Cell, from, from, false, consumedTurns: 1);
             return;
@@ -281,9 +282,6 @@ public partial class FatherController : MonoBehaviour
 
         // “턴 비용(2턴)” (늪 이탈 시 2)
         int consumedTurns = 1;
-        var fromMeta = _grid.GetMeta(from);
-        if (fromMeta.IsSwamp && !toMeta.IsSwamp)
-            consumedTurns = 2;
 
         _lastResult = new FatherActionResult(E_FatherActionResultCode.Moved, from, to, triggerGoal, consumedTurns);
 

@@ -21,6 +21,7 @@ public class StageRuntimeRefs
     // ===== Board =====
     public Transform _tilesRoot; // Slide 대상
     public List<Transform> _tiles = new();
+
     public BoardGrid _grid;
     public GridPresenter _gridPresenter;
 
@@ -38,7 +39,6 @@ public class StageRuntimeRefs
     // ===== Snapshot =====
     public TurnSnapshotRecorder _snapshot;
 
-    public BoardStateRewindable _boardStateRewindable;
     public List<ITurnTickable> _turnSystems = new List<ITurnTickable>(8);
 
     public ChildPathBlockerRegistry _childPathBlockers;

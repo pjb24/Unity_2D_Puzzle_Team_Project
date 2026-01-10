@@ -86,6 +86,7 @@ public static class StageJsonStageFactory
                     switch (v)
                     {
                         case InnerBase_Floor:
+                            cells[cell.y * w + cell.x] = E_CellType.Floor;
                             break;
 
                         case InnerBase_Wall:

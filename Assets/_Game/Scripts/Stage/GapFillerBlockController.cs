@@ -25,8 +25,6 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
     [SerializeField] private bool _useLerp = true;
     [SerializeField] private float _moveDuration = 0.12f;
 
-    private SpriteRenderer _sr;
-
     public Vector2Int Cell => _cell;
     public bool IsAlive => _isAlive;
 
@@ -43,8 +41,6 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
             Debug.LogWarning("[GapFillerBlock] Initialize fallback: grid/presenter is null.");
             return;
         }
-
-        _sr = Proto2DVisual.EnsureSpriteRenderer(gameObject, (int)E_ProtoSort.Actor, Proto2DVisual.GapBlock);
 
         _cell = spawnCell;
 
@@ -112,19 +108,16 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
             return false;
 
         // Hole이면: 블록 소멸 + HoleFilled 상태로 전환(진입 가능 + FilledHole 스프라이트)
-        var meta = _grid.GetMeta(to);
-        if (meta.IsOpenHole)
+        var cellOv1 = _grid.GetCellOverlay01(to);
+        if (cellOv1 == E_CellType.Hole)
         {
             _grid.SetOcc(from, E_Occupant.None);
-
-            meta._surface = E_CellSurface.Normal;   // 중요: “열린 Hole” 해제
-            meta._isFilledHole = true;
-            _grid.SetMeta(to, meta, notify: true);
-
+            _grid.SetCellOverlay01(to, E_CellType.FilledHole);
+            
             _registry?.Unregister(from, this);
-
             _isAlive = false;
             gameObject.SetActive(false);
+
             return true;
         }
 
@@ -242,16 +235,15 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
         _cell = newCell;
         _isAlive = s._isAlive;
 
-        _sr = Proto2DVisual.EnsureSpriteRenderer(gameObject, (int)E_ProtoSort.Actor, Proto2DVisual.GapBlock);
-
         if (_isAlive)
         {
-            // “살아있는 블록이 Hole 위” OpenHole 기준으로 수정
-            if (_grid.GetMeta(_cell).IsOpenHole)
+            var cellOv1 = _grid.GetCellOverlay01(_cell);
+            if (cellOv1 == E_CellType.Hole)
             {
                 Debug.LogWarning($"[GapFillerBlock] RestoreState fallback: alive block on OpenHole cell. cell={_cell} -> deactivate");
                 _isAlive = false;
                 gameObject.SetActive(false);
+
                 return;
             }
 
