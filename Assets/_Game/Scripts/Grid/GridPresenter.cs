@@ -7,24 +7,14 @@ public class GridPresenter
     public float _tileSize = 1f;
 
     private BoardGrid _grid;
-    private TileSpriteResolver _resolver;
-
-    private Transform _baseRoot;
-    private Transform _overlay1Root;
-    private Transform _overlay2Root;
-
-    private SpriteRenderer[,] _base;
-    private SpriteRenderer[,] _ov1;
-    private SpriteRenderer[,] _ov2;
 
     public Vector3 _originLocal; // root 기준 원점(셀 0,0의 중심)
     public Transform _root;      // StageRuntime root
 
-    public void Initialize(Transform root, BoardGrid grid, TileSpriteResolver resolver)
+    public void Initialize(Transform root, BoardGrid grid)
     {
         _root = root;
         _grid = grid;
-        _resolver = resolver;
 
         if (_grid == null)
         {
@@ -32,19 +22,10 @@ public class GridPresenter
             return;
         }
 
-        if (_resolver == null)
-        {
-            Debug.LogWarning("[GridPresenter] Initialize failed: resolver is null");
-            return;
-        }
-
         _originLocal = new Vector3(
             -(_grid._w - 1) * 0.5f * _tileSize,
             -(_grid._h - 1) * 0.5f * _tileSize,
             0f);
-
-        EnsureRoots();
-        BuildRenderers();
     }
 
     public void RebuildAll(E_Dir4 childFacing)
@@ -68,10 +49,6 @@ public class GridPresenter
             return;
 
         BuildKeysAtCell(x, y, childFacing, out TileVisualKey baseKey, out bool hasOv1, out TileVisualKey ov1Key, out bool hasOv2, out TileVisualKey ov2Key);
-
-        ApplyKey(_base[x, y], baseKey);
-        ApplyOptionalKey(_ov1[x, y], hasOv1, ov1Key);
-        ApplyOptionalKey(_ov2[x, y], hasOv2, ov2Key);
     }
 
     // =========================
@@ -151,129 +128,11 @@ public class GridPresenter
     }
 
     // =========================
-    // Apply (적용 1곳)
-    // =========================
-    private void ApplyOptionalKey(SpriteRenderer sr, bool hasKey, in TileVisualKey key)
-    {
-        if (!hasKey)
-        {
-            sr.sprite = null;
-            sr.enabled = false;
-            sr.transform.localRotation = Quaternion.identity;
-            return;
-        }
-
-        ApplyKey(sr, key);
-    }
-
-    private void ApplyKey(SpriteRenderer sr, in TileVisualKey key)
-    {
-        if (_resolver.TryGetSprite(key, out Sprite sprite))
-        {
-            sr.sprite = sprite;
-            sr.enabled = true;
-
-            ApplyRotation(sr, key);
-            return;
-        }
-
-        // Missing은 Resolver가 Warning 처리함.
-        sr.sprite = null;
-        sr.enabled = false;
-        sr.transform.localRotation = Quaternion.identity;
-    }
-
-    private static void ApplyRotation(SpriteRenderer sr, in TileVisualKey key)
-    {
-        if (!TileVisualKey.IsDirectionalType(key.Type))
-        {
-            sr.transform.localRotation = Quaternion.identity;
-            return;
-        }
-
-        if (key.Dir == E_Dir4.None)
-        {
-            Debug.LogWarning($"[GridPresenter] Directional key has dir=None. key={key}");
-            sr.transform.localRotation = Quaternion.identity;
-            return;
-        }
-
-        float z = key.Dir switch
-        {
-            E_Dir4.Up => 0f,
-            E_Dir4.Right => -90f,
-            E_Dir4.Down => 180f,
-            E_Dir4.Left => 90f,
-            _ => 0f,
-        };
-
-        sr.transform.localRotation = Quaternion.Euler(0f, 0f, z);
-    }
-
-    // =========================
     // Renderer build
     // =========================
-    private void BuildRenderers()
-    {
-        int w = _grid._w;
-        int h = _grid._h;
-
-        _base = new SpriteRenderer[w, h];
-        _ov1 = new SpriteRenderer[w, h];
-        _ov2 = new SpriteRenderer[w, h];
-
-        for (int y = 0; y < h; y++)
-            for (int x = 0; x < w; x++)
-            {
-                Vector3 pos = CellToWorld(new Vector2Int(x, y));
-
-                _base[x, y] = CreateCellRenderer(_baseRoot, x, y, pos, 0);
-                _ov1[x, y] = CreateCellRenderer(_overlay1Root, x, y, pos, 1);
-                _ov2[x, y] = CreateCellRenderer(_overlay2Root, x, y, pos, 2);
-            }
-    }
-
-    private SpriteRenderer CreateCellRenderer(Transform parent, int x, int y, Vector3 pos, int sortingOrder)
-    {
-        var go = new GameObject($"Cell_{x}_{y}");
-        go.transform.SetParent(parent, false);
-        go.transform.position = pos;
-
-        var sr = go.AddComponent<SpriteRenderer>();
-        sr.sortingOrder = sortingOrder;
-        sr.enabled = false;
-        sr.sprite = null;
-
-        return sr;
-    }
-
-    private void EnsureRoots()
-    {
-        if (_baseRoot == null)
-        {
-            var go = new GameObject("[Tiles_Base]");
-            go.transform.SetParent(_root, false);
-            _baseRoot = go.transform;
-        }
-
-        if (_overlay1Root == null)
-        {
-            var go = new GameObject("[Tiles_Overlay1]");
-            go.transform.SetParent(_root, false);
-            _overlay1Root = go.transform;
-        }
-
-        if (_overlay2Root == null)
-        {
-            var go = new GameObject("[Tiles_Overlay2]");
-            go.transform.SetParent(_root, false);
-            _overlay2Root = go.transform;
-        }
-    }
-
     private bool IsReady()
     {
-        return _grid != null && _resolver != null && _base != null;
+        return _grid != null;
     }
 
     public Vector3 CellToWorld(Vector2Int c)

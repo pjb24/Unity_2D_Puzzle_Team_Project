@@ -281,8 +281,7 @@ public class StageLoader
         ctx._stageRuntime._gridPresenter = new GridPresenter();
         ctx._stageRuntime._gridPresenter.Initialize(
             ctx._stageRuntime._root.transform,
-            ctx._stageRuntime._grid,
-            null
+            ctx._stageRuntime._grid
             );
 
         // ===== 타일 생성 =====

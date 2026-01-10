@@ -73,6 +73,9 @@ public class TurnDriver : MonoBehaviour
         _input = new TurnInputBuffer();
         _ctx = new TurnContext(father, child, snapshot);
 
+        _father = father;
+        _child = child;
+
         // Inject
         _ctx.InjectDifficulty(profile);
         _ctx.InjectSignals(this);
