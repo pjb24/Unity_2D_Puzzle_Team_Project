@@ -99,15 +99,11 @@ public partial class FatherController : MonoBehaviour
         BoardGrid grid,
         GridPresenter presenter,
         Vector2Int spawnCell,
-        RectInt moveBounds,
-        bool useRewindRestoreLerp,
-        float rewindRestoreMoveDuration)
+        RectInt moveBounds
+        )
     {
         _grid = grid;
         _presenter = presenter;
-
-        _useRewindRestoreLerp = useRewindRestoreLerp;
-        _rewindRestoreMoveDuration = rewindRestoreMoveDuration;
 
         if (_animDriver == null)
             _animDriver = GetComponent<FatherAnimDriver>();

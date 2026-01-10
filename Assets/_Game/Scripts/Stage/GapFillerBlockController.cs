@@ -17,7 +17,6 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
     private BoardGrid _grid;
     private GridPresenter _presenter;
     private GapFillerBlockRegistry _registry;
-    private ITileSpriteProvider _tileSprites;
 
     [SerializeField] private Vector2Int _cell;
     [SerializeField] private bool _isAlive = true;
@@ -33,12 +32,11 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
 
     private Coroutine _moveCo;
 
-    public void Initialize(BoardGrid grid, GridPresenter presenter, GapFillerBlockRegistry registry, Vector2Int spawnCell, ITileSpriteProvider tileSprites)
+    public void Initialize(BoardGrid grid, GridPresenter presenter, GapFillerBlockRegistry registry, Vector2Int spawnCell)
     {
         _grid = grid;
         _presenter = presenter;
         _registry = registry;
-        _tileSprites = tileSprites;
 
         if (_grid == null || _presenter == null)
         {
@@ -47,7 +45,6 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
         }
 
         _sr = Proto2DVisual.EnsureSpriteRenderer(gameObject, (int)E_ProtoSort.Actor, Proto2DVisual.GapBlock);
-        ApplySpriteOnceOrWarn();
 
         _cell = spawnCell;
 
@@ -75,28 +72,6 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
         _grid.SetOcc(_cell, E_Occupant.GapFillerBlock);
         SnapToCell();
         gameObject.SetActive(true);
-    }
-
-    private void ApplySpriteOnceOrWarn()
-    {
-        if (_sr == null)
-            return;
-
-        if (_tileSprites == null)
-        {
-            Debug.LogWarning("[GapFillerBlock] Sprite fallback: TileSpriteProvider is null. (keep proto)");
-            return;
-        }
-
-        var selector = TileSelector.Make(E_TileLayer.InnerBase, E_TileVisualKey.GapFillerBlock);
-        if (_tileSprites.TryGetSprite(selector, out var sp) && sp != null)
-        {
-            _sr.sprite = sp;
-            _sr.color = Color.white;
-            return;
-        }
-
-        Debug.LogWarning("[GapFillerBlock] Sprite missing: GapFillerBlock (keep previous/proto).");
     }
 
     public bool TryPush(Vector2Int dir)
@@ -268,7 +243,6 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
         _isAlive = s._isAlive;
 
         _sr = Proto2DVisual.EnsureSpriteRenderer(gameObject, (int)E_ProtoSort.Actor, Proto2DVisual.GapBlock);
-        ApplySpriteOnceOrWarn();
 
         if (_isAlive)
         {

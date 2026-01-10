@@ -18,16 +18,9 @@ public enum E_CellType
     ToggleSwitch,
     Hole,
     GapFillerBlock,
+
     Door,
     Goal,
-
-    Obstacle,
-}
-
-public enum E_DoorAnchor
-{
-    Cell = 0,
-    ChildPathStep = 1,
 }
 
 [System.Serializable]
@@ -40,29 +33,20 @@ public struct SpawnInfo
 [Serializable]
 public struct DoorSpawnData
 {
-    public E_DoorAnchor _anchor;
-
-    // anchor=Cell일 때만 직접 편집
-    public Vector2Int _cell;
-
     // anchor=ChildPathStep일 때 사용
     public int _pathStep;
-
     public bool _startOpen;
-
     // ToggleSwitch가 참조할 GUID (RewindKey GuidString, N or D)
     public string _guid;
+    public Vector2Int _cell;
 }
 
 [Serializable]
 public struct ToggleSwitchSpawnData
 {
     public Vector2Int _cell;
-
     public E_SwitchMode _mode;
-
     public bool _startOn;
-
     // DoorSpawnData._guid 목록과 매칭
     public string[] _targetDoorGuids;
 }
@@ -132,9 +116,6 @@ public class StageDefinition : ScriptableObject
 
     [SerializeField] private int _childGoalPathStep = -1;
 
-    [Header("Audio")]
-    [SerializeField] private StageAudioProfile _audioProfile;
-
     // ===== Public getters =====
     public string StageId => _stageId;
     public Vector2Int BoardSize => _boardSize;
@@ -154,8 +135,6 @@ public class StageDefinition : ScriptableObject
 
     public int ChildStartPathStep => _childStartPathStep;
     public int ChildGoalPathStep => _childGoalPathStep;
-
-    public StageAudioProfile AudioProfile => _audioProfile;
 
     private void OnValidate()
     {
@@ -298,68 +277,57 @@ public class StageDefinition : ScriptableObject
                     Debug.LogWarning($"[StageDefinition] DoorSpawns duplicated guid detected. guid={n} index={i}", this);
             }
 
-            // ChildPathStep 앵커면: step -> cell 자동 정렬 + blockedSteps 자동 포함
-            if (d._anchor == E_DoorAnchor.ChildPathStep)
+            // step -> cell 자동 정렬 + blockedSteps 자동 포함
+            if (pathCount <= 0 || perimeter == null)
             {
-                if (pathCount <= 0 || perimeter == null)
-                {
-                    Debug.LogWarning($"[StageDefinition] DoorSpawns[{i}] anchor=ChildPathStep but path is empty.", this);
-                    continue;
-                }
-
-                int step = d._pathStep;
-                if (step < 0) step = 0;
-                if (step >= pathCount) step = pathCount - 1;
-
-                if (step != d._pathStep)
-                {
-                    d._pathStep = step;
-                    _doorSpawns[i] = d;
-#if UNITY_EDITOR
-                    UnityEditor.EditorUtility.SetDirty(this);
-#endif
-                }
-
-                int idx = perimeter[step];
-                int x = idx % _boardSize.x;
-                int y = idx / _boardSize.x;
-                var cell = new Vector2Int(x, y);
-
-                if (d._cell != cell)
-                {
-                    d._cell = cell;
-                    _doorSpawns[i] = d;
-#if UNITY_EDITOR
-                    UnityEditor.EditorUtility.SetDirty(this);
-#endif
-                }
-
-                // step 중복 경고
-                if (!stepSet.Add(step))
-                    Debug.LogWarning($"[StageDefinition] DoorSpawns duplicated ChildPathStep. step={step} index={i}", this);
-
-                // blockedSteps에 없으면 자동 추가 + Warning(무음 금지)
-                if (!ContainsStep(_blockedPathSteps, step))
-                {
-                    Debug.LogWarning($"[StageDefinition] BlockedPathSteps auto-sync: added step from Door. step={step} doorIndex={i}", this);
-                    AppendBlockedStep(step);
-#if UNITY_EDITOR
-                    UnityEditor.EditorUtility.SetDirty(this);
-#endif
-                }
-
-                // cell 중복 경고
-                if (!cellSet.Add(cell))
-                    Debug.LogWarning($"[StageDefinition] DoorSpawns duplicated cell. cell={cell} index={i}", this);
-
+                Debug.LogWarning($"[StageDefinition] DoorSpawns[{i}] anchor=ChildPathStep but path is empty.", this);
                 continue;
             }
 
-            // anchor=Cell: cell 범위만 검증
-            ValidateCellInBoard(d._cell, $"DoorSpawns[{i}] Cell");
+            int step = d._pathStep;
+            if (step < 0) step = 0;
+            if (step >= pathCount) step = pathCount - 1;
 
-            if (!cellSet.Add(d._cell))
-                Debug.LogWarning($"[StageDefinition] DoorSpawns duplicated cell. cell={d._cell} index={i}", this);
+            if (step != d._pathStep)
+            {
+                d._pathStep = step;
+                _doorSpawns[i] = d;
+#if UNITY_EDITOR
+                UnityEditor.EditorUtility.SetDirty(this);
+#endif
+            }
+
+            int idx = perimeter[step];
+            int x = idx % _boardSize.x;
+            int y = idx / _boardSize.x;
+            var cell = new Vector2Int(x, y);
+
+            if (d._cell != cell)
+            {
+                d._cell = cell;
+                _doorSpawns[i] = d;
+#if UNITY_EDITOR
+                UnityEditor.EditorUtility.SetDirty(this);
+#endif
+            }
+
+            // step 중복 경고
+            if (!stepSet.Add(step))
+                Debug.LogWarning($"[StageDefinition] DoorSpawns duplicated ChildPathStep. step={step} index={i}", this);
+
+            // blockedSteps에 없으면 자동 추가 + Warning(무음 금지)
+            if (!ContainsStep(_blockedPathSteps, step))
+            {
+                Debug.LogWarning($"[StageDefinition] BlockedPathSteps auto-sync: added step from Door. step={step} doorIndex={i}", this);
+                AppendBlockedStep(step);
+#if UNITY_EDITOR
+                UnityEditor.EditorUtility.SetDirty(this);
+#endif
+            }
+
+            // cell 중복 경고
+            if (!cellSet.Add(cell))
+                Debug.LogWarning($"[StageDefinition] DoorSpawns duplicated cell. cell={cell} index={i}", this);
         }
     }
 

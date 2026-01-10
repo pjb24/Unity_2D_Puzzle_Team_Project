@@ -36,19 +36,6 @@ public class StageLoadState : IGameFlowState
             return;
         }
 
-        // 전환 타입 확보(연출 시작 전에 필요)
-        var def = ctx._config?.GetStageDefinition(ctx._chapterIndex, ctx._stageIndex);
-        if (def == null)
-        {
-            Debug.LogWarning("[StageLoadState] StageDefinition not found. Transition=Fade (fallback).");
-        }
-        else
-        {
-            ctx._stageDefinition = def;
-        }
-
-        E_StageTransitionType t = (def != null) ? def.TransitionType : E_StageTransitionType.Fade;
-
         // TransitionFx 확보
         if (ctx._transitionFx == null)
         {
@@ -61,7 +48,7 @@ public class StageLoadState : IGameFlowState
         if (ctx._audioHub == null)
             ctx._audioHub = AudioHub.Ensure();
 
-        if (ctx._transitionFx == null || t == E_StageTransitionType.None)
+        if (ctx._transitionFx == null)
         {
             // 폴백: 즉시 로드
             ctx._stageLoader.LoadStage(ctx, () =>
@@ -73,7 +60,7 @@ public class StageLoadState : IGameFlowState
         }
 
         // 정상: Out -> (LoadStage at midpoint) -> In
-        ctx._transitionFx.Play(ctx, t,
+        ctx._transitionFx.Play(ctx, E_StageTransitionType.Fade,
             onMidpointAsync: (continueAfterLoad) =>
             {
                 ctx._stageLoader.LoadStage(ctx, () =>
@@ -97,8 +84,7 @@ public class StageLoadState : IGameFlowState
         if (ctx == null || ctx._audioHub == null)
             return;
 
-        float volumeScale;
-        E_BgmId bgmId = StageAudioSelector.SelectBgmId(ctx._stageDefinition, ctx._chapterVisualProfile, out volumeScale);
+        E_BgmId bgmId = ctx._gameConfig.Chapters[ctx._chapterIndex].Stages[ctx._stageIndex].BgmId;
 
         if (bgmId == E_BgmId.None)
         {
@@ -106,11 +92,7 @@ public class StageLoadState : IGameFlowState
         }
         else
         {
-            ctx._audioHub.PlayBgmIfChanged(bgmId, volumeScale);
+            ctx._audioHub.PlayBgmIfChanged(bgmId);
         }
-
-        E_SfxId enterSfxId = StageAudioSelector.SelectStageEnterSfx(ctx._stageDefinition, ctx._chapterVisualProfile);
-        if (enterSfxId != E_SfxId.None)
-            ctx._audioHub.PlaySfx(enterSfxId);
     }
 }

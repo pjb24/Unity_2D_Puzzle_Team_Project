@@ -33,7 +33,6 @@ public class ChapterLoadState : IGameFlowState
         if (ctx._gameConfig == null)
         {
             Debug.LogWarning("[ChapterLoadState] GameConfig is null. ChapterVisualProfile cleared (fallback).");
-            ctx._chapterVisualProfile = null;
             _sm.ChangeState(ctx, _next);
             return;
         }
@@ -45,18 +44,12 @@ public class ChapterLoadState : IGameFlowState
         }
 
         var chapter = ctx._gameConfig.Chapters[ctx._chapterIndex];
-        var profile = (chapter != null) ? chapter.VisualProfile : null;
-
-        if (profile == null)
-            Debug.LogWarning($"[ChapterLoadState] ChapterVisualProfile is null (chapterIndex={ctx._chapterIndex}). Visual swap skipped (fallback).");
-
-        ctx._chapterVisualProfile = profile;
 
         // 오디오(있으면 적용)
         EnsureAudioHub(ctx);
 
-        if (ctx._audioHub != null && profile != null)
-            ctx._audioHub.PlayBgmIfChanged(profile.BgmId);
+        if (ctx._audioHub != null)
+            ctx._audioHub.PlayBgmIfChanged(chapter.BgmId);
 
         _sm.ChangeState(ctx, _next);
     }

@@ -21,7 +21,6 @@ public class DoorController : MonoBehaviour, IRewindable
     private ChildPathBlockerRegistry _childPathBlockers;
     private int _childPathStep = -1;
 
-    private ITileSpriteProvider _tileSprites;
     private SpriteRenderer _sr;
 
     private bool _isOpen;
@@ -35,8 +34,8 @@ public class DoorController : MonoBehaviour, IRewindable
         Vector2Int cell,
         bool startOpen,
         ChildPathBlockerRegistry childPathBlockers,
-        int childPathStep,
-        ITileSpriteProvider tileSprites)
+        int childPathStep
+        )
     {
         _grid = grid;
         _presenter = presenter;
@@ -45,7 +44,6 @@ public class DoorController : MonoBehaviour, IRewindable
         _childPathBlockers = childPathBlockers;
         _childPathStep = childPathStep;
 
-        _tileSprites = tileSprites;
         _sr = GetComponentInChildren<SpriteRenderer>(includeInactive: true);
 
         if (_grid == null || _presenter == null)
@@ -119,45 +117,18 @@ public class DoorController : MonoBehaviour, IRewindable
 
         if (_isOpen)
         {
-            if (_tileSprites != null)
-            {
-                var selector = TileSelector.Make(E_TileLayer.Ring, E_TileVisualKey.DoorOpen);
-                if (_tileSprites.TryGetSprite(selector, out var s) && s != null)
-                {
-                    _sr.enabled = true;
-                    _sr.sprite = s;
-                    _sr.color = Color.white;
-                    transform.localScale = Vector3.one;
-                }
-            }
-            else
-            {
-                // 스프라이트 없으면 이전 유지 + 숨김(프로토 동작)
-                if (_sr != null) _sr.enabled = false;
-                transform.localScale = Vector3.zero;
-            }
+            // 스프라이트 없으면 이전 유지 + 숨김(프로토 동작)
+            if (_sr != null) _sr.enabled = false;
+            transform.localScale = Vector3.zero;
 
             return;
         }
 
         // closed
         if (_sr != null) _sr.enabled = true;
-
-        if (_tileSprites != null)
-        {
-            var selector = TileSelector.Make(E_TileLayer.Ring, E_TileVisualKey.DoorClosed);
-            if (_tileSprites.TryGetSprite(selector, out var c) && c != null)
-            {
-                _sr.sprite = c;
-                _sr.color = Color.white;
-                transform.localScale = Vector3.one;
-            }
-        }
-        else
-        {
-            // 스프라이트 없으면 이전 유지 + 기존 스케일 표현 유지
-            transform.localScale = new Vector3(0.9f, 0.9f, 1f);
-        }
+        
+        // 스프라이트 없으면 이전 유지 + 기존 스케일 표현 유지
+        transform.localScale = new Vector3(0.9f, 0.9f, 1f);
     }
 
     public object CaptureState()

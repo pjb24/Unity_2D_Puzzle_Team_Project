@@ -1,7 +1,14 @@
 // StageProgression.cs
 using UnityEngine;
 
-public class StageProgression : IStageProgression
+public enum E_StageAdvanceResult
+{
+    NextStage,
+    NextChapter,
+    Ending,
+}
+
+public class StageProgression
 {
     public E_StageAdvanceResult EvaluateNext(GameFlowContext ctx)
     {

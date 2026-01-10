@@ -5,11 +5,10 @@
 /// GameConfig에 참조가 있으면 그걸 사용
 /// 없으면 Resources 경로 규칙으로 로드
 ///
-
 using System.Collections.Generic;
 using UnityEngine;
 
-public class ResourcesConfigProvider : IConfigProvider
+public class ResourcesConfigProvider
 {
     private const string _gameConfigPath = "Configs/GameConfig"; // Resources/Configs/GameConfig.asset
     private GameConfig _cachedGameConfig;
@@ -30,6 +29,7 @@ public class ResourcesConfigProvider : IConfigProvider
         return _cachedGameConfig;
     }
 
+    // 챕터/스테이지 인덱스로 StageDefinition 접근
     public StageDefinition GetStageDefinition(int chapterIndex, int stageIndex)
     {
         var cfg = LoadGameConfig();
@@ -49,20 +49,8 @@ public class ResourcesConfigProvider : IConfigProvider
             return null;
         }
 
-        // 1) GameConfig가 StageDefinition 레퍼런스를 들고 있으면 그걸 우선 사용
-        var def = chapter.Stages[stageIndex];
-        if (def != null) return def;
-
-        // 2) 비어있으면 파일명 규칙으로 Resources에서 로드
-        // 규칙: Resources/Stages/ChapterXX_StageYY.asset
-        string chapterId = chapter.ChapterId; // "Chapter01"
-        string stageIdAsset = $"Stage{(stageIndex + 1):00}"; // "Stage01"
-        string assetPath = $"Stages/{chapterId}_{stageIdAsset}";
-
-        def = Resources.Load<StageDefinition>(assetPath);
-        if (def != null) return def;
-
-
+        // TODO: JSON 파일을 SO로 가지고 있는 방향으로 변경 //
+        // TODO: 파일 이름을 {N}chapter_{M}stage.json으로 변경 //
         // 3) JSON 폴백 규칙: Resources/Stages/{N}stage.json
         // - 요구사항: 1stage.json~4stage.json
         string jsonKey = $"{(stageIndex + 1)}stage";
@@ -72,7 +60,7 @@ public class ResourcesConfigProvider : IConfigProvider
         var textAsset = Resources.Load<TextAsset>($"Stages/{jsonKey}");
         if (textAsset == null)
         {
-            Debug.LogError($"[Config] StageDefinition not found. asset={assetPath}.asset, json=Resources/Stages/{jsonKey}.json");
+            Debug.LogError($"[Config] StageDefinition not found. json=Resources/Stages/{jsonKey}.json");
             return null;
         }
 

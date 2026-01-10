@@ -13,17 +13,15 @@ public class GameFlowContext
 
     // ===== Runtime/Config =====
     public GameConfig _gameConfig;
-    public ChapterVisualProfile _chapterVisualProfile;
     public StageDefinition _stageDefinition;
 
     // ===== Services =====
     public GameFlowSignalBus _signals;
-
-    public ISceneGateway _scene;
-    public IConfigProvider _config;
+    public SceneGateway _scene;
+    public ResourcesConfigProvider _config;
     public StageRuntimeRefs _stageRuntime;
-    public IStageLoader _stageLoader;
-    public IStageProgression _progression;
+    public StageLoader _stageLoader;
+    public StageProgression _progression;
     public object _ui;
 
     // ===== FX / Audio =====
@@ -79,7 +77,6 @@ public class GameFlowContext
         _isEnding = false;
 
         // 진행도가 바뀌었으니, 캐시된 정의는 무효화 (StageLoad에서 다시 채움)
-        _chapterVisualProfile = null;
         _stageDefinition = null;
 
         // 챕터 복귀면 실패 누적도 무조건 리셋

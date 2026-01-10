@@ -23,13 +23,15 @@ public class GameFlowOrchestrator : MonoBehaviour
 
         _ctx = new GameFlowContext
         {
+            _chapterIndex = 0,
+            _stageIndex = 0,
+            _isEnding = false,
+
             _signals = new GameFlowSignalBus(),
             _scene = new SceneGateway(),
             _config = new ResourcesConfigProvider(),
-            _stageLoader = new DummyStageLoader(),
+            _stageLoader = new StageLoader(),
             _progression = new StageProgression(),
-            _chapterIndex = 0,
-            _stageIndex = 0,
         };
         _ctx._gameConfig = _ctx._config.LoadGameConfig();
 

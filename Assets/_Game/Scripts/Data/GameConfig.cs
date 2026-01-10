@@ -30,11 +30,18 @@ public class DifficultyProfile
 }
 
 [System.Serializable]
+public class StageDefinitionFiles
+{
+    public TextAsset _stageAsset;
+    public E_BgmId BgmId;
+}
+
+[System.Serializable]
 public class ChapterDefinition
 {
     public string ChapterId = "Chapter_01";
-    public ChapterVisualProfile VisualProfile;
-    public List<StageDefinition> Stages = new();
+    public E_BgmId BgmId = E_BgmId.Chapter_01;
+    public List<StageDefinitionFiles> Stages = new();
 }
 
 [CreateAssetMenu(menuName = "Puzzle/Data/Game Config")]
@@ -79,7 +86,7 @@ public class GameConfig : ScriptableObject
             var ch = _chapters[c];
             if (ch == null) continue;
 
-            if (ch.Stages == null) ch.Stages = new List<StageDefinition>();
+            if (ch.Stages == null) ch.Stages = new List<StageDefinitionFiles>();
             for (int s = ch.Stages.Count - 1; s >= 0; s--)
             {
                 if (ch.Stages[s] == null)

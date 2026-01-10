@@ -57,17 +57,7 @@ public static class StageGimmickSpawner
 
             // 초기 스프라이트(있으면 적용, 없으면 이전 유지)
             var sr = go.GetComponent<SpriteRenderer>();
-            if (sr != null && refs._tileSpriteProvider != null)
-            {
-                var key = d._startOpen ? E_TileVisualKey.DoorOpen : E_TileVisualKey.DoorClosed;
-                var selector = TileSelector.Make(E_TileLayer.Ring, key);
-                if (refs._tileSpriteProvider.TryGetSprite(selector, out var s) && s != null)
-                {
-                    sr.sprite = s;
-                    sr.color = Color.white;
-                }
-            }
-
+            
             var keyComp = go.AddComponent<RewindKey>();
             if (!string.IsNullOrWhiteSpace(d._guid))
             {
@@ -81,7 +71,7 @@ public static class StageGimmickSpawner
 
             var door = go.AddComponent<DoorController>();
 
-            int step = (d._anchor == E_DoorAnchor.ChildPathStep) ? d._pathStep : -1;
+            int step = d._pathStep;
 
             door.Initialize(
                 refs._grid,
@@ -89,8 +79,8 @@ public static class StageGimmickSpawner
                 d._cell,
                 d._startOpen,
                 refs._childPathBlockers,
-                step,
-                refs._tileSpriteProvider);
+                step
+                );
         }
     }
 
@@ -123,23 +113,7 @@ public static class StageGimmickSpawner
 
             // 초기 스프라이트(ON/OFF)
             var sr = go.GetComponent<SpriteRenderer>();
-            if (sr != null && refs._tileSpriteProvider != null)
-            {
-                var want = s._startOn ? E_TileVisualKey.SwitchOn : E_TileVisualKey.SwitchOff;
-                var selector = TileSelector.Make(E_TileLayer.InnerBase, want);
-                if (refs._tileSpriteProvider.TryGetSprite(selector, out var sp) && sp != null)
-                {
-                    sr.sprite = sp;
-                    sr.color = Color.white;
-                }
-                else if (refs._tileSpriteProvider.TryGetSprite(selector, out var legacy) && legacy != null)
-                {
-                    Debug.LogWarning($"[StageGimmickSpawner] Switch sprite fallback: legacy Switch. want={want}");
-                    sr.sprite = legacy;
-                    sr.color = Color.white;
-                }
-            }
-
+            
             go.AddComponent<RewindKey>();
 
             var sw = go.AddComponent<ToggleSwitchController>();

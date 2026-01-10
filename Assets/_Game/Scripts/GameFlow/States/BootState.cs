@@ -1,12 +1,11 @@
 // BootState.cs
 ///
-/// 요구: Boot → MainMenu
+/// Boot → MainMenu
 /// 핵심:
 /// GameConfig 로드 성공 확인
 /// MainMenu 씬 로드
 /// 상태 전환(메뉴 상태로)
 ///
-
 using UnityEngine;
 
 public class BootState : IGameFlowState

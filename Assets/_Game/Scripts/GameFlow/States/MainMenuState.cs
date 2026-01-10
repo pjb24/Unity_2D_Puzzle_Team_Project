@@ -1,6 +1,6 @@
 // MainMenuState.cs
 /// <summary>
-/// 요구: MainMenu → ChapterLoad (그리고 Gameplay 씬 로드)
+/// MainMenu → ChapterLoad (그리고 Gameplay 씬 로드)
 /// 핵심:
 /// UI 버튼은 IStartGamePort만 호출
 /// Start가 오면 Gameplay 로드 후 ChapterLoad로 전환

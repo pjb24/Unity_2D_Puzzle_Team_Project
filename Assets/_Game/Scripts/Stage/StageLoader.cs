@@ -1,26 +1,15 @@
-// DummyStageLoader.cs
+// StageLoader.cs
 using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public interface IStageGimmickInitializable
-{
-    void InitializeGimmick(StageRuntimeRefs refs, BoardGrid grid, GridPresenter presenter);
-}
-
-public interface ILinkBinder
-{
-    void BindAllLinks(StageRuntimeRefs refs);
-}
-
-public class DummyStageLoader : IStageLoader
+public class StageLoader
 {
     // ===== Tunables =====
     private readonly float _defaultTileSize = 1.0f;
     private readonly float _defaultTileGap = 0.0f;
 
     // Registry GameObject name (under StageRuntime root)
-    private const string InteractRegistryName = "InteractRegistry";
     private const string GapFillerRegistryName = "GapFillerBlockRegistry";
     private const string HolesRootName = "[Holes]";
     private const string TileOverlayRootName = "[TileOverlays]";
@@ -58,17 +47,18 @@ public class DummyStageLoader : IStageLoader
         // 2) StageDefinition 가져오기
         var stageDef = GetStageDefinitionOrFail(ctx);
         if (stageDef == null) return;
+        ctx._stageDefinition = stageDef;
 
         Debug.Log("[StageLoader] Chapter: " + ctx._chapterIndex + " , Stage: " + ctx._stageIndex);
 
         // 3) 런타임 refs 생성
-        CreateStageRuntime(ctx, stageDef);
+        CreateStageRuntime(ctx);
 
         // 6) 스폰(그리드/프리젠터/컨트롤러 포함)
-        SpawnStageActorsAndSystems(ctx, stageDef);
+        SpawnStageActorsAndSystems(ctx);
 
         // 5) 테두리 경로 생성(2D Sprite 마커)
-        CreateDummyPath(ctx, stageDef);
+        CreateDummyPath(ctx);
 
         // 런타임 기믹 스폰(Doors + ToggleSwitches)
         StageGimmickSpawner.SpawnDoorsAndToggleSwitches(ctx._stageRuntime, stageDef);
@@ -182,55 +172,21 @@ public class DummyStageLoader : IStageLoader
         return stageDef;
     }
 
-    private void CreateStageRuntime(GameFlowContext ctx, StageDefinition stageDef)
+    private void CreateStageRuntime(GameFlowContext ctx)
     {
         ctx._stageRuntime = new StageRuntimeRefs();
         ctx._stageRuntime._root = new GameObject($"[StageRuntime] C{ctx._chapterIndex}_S{ctx._stageIndex}");
-        ctx._stageDefinition = stageDef;
+        var stageDef = ctx._stageDefinition;
 
         string stageId = stageDef != null ? stageDef.StageId : $"C{ctx._chapterIndex}_S{ctx._stageIndex}";
         ctx._stageRuntime._stageId = stageId;
 
-        var chapterProfile = ctx._chapterVisualProfile;
-        var baseTileProfile = chapterProfile != null ? chapterProfile.TileVisualProfile : null;
-
-        var stageOverride = StageVisualOverrideLoader.LoadOrNull(stageId);
-        ctx._stageRuntime._stageVisualOverride = stageOverride;
-
-        //ctx._stageRuntime._tileSpriteProvider = new CompositeTileSpriteProvider(stageId, baseTileProfile, stageOverride);
-        ctx._stageRuntime._tileSpriteProvider = null;
-
-        ctx._stageRuntime._resolvedFatherSprite =
-            stageOverride != null && stageOverride.FatherSpriteOverride != null
-                ? stageOverride.FatherSpriteOverride
-                : (chapterProfile != null ? chapterProfile.FatherSprite : null);
-
-        ctx._stageRuntime._resolvedChildSprite =
-            stageOverride != null && stageOverride.ChildSpriteOverride != null
-                ? stageOverride.ChildSpriteOverride
-                : (chapterProfile != null ? chapterProfile.ChildSprite : null);
+        ctx._stageRuntime._resolvedFatherSprite = null;
+        ctx._stageRuntime._resolvedChildSprite = null;
 
         // ===== Layout resolve (tile scale + gap) =====
         float tileScale = _defaultTileSize;
         float tileGap = _defaultTileGap;
-
-        if (stageOverride != null && stageOverride.UseLayoutOverride)
-        {
-            tileScale = stageOverride.TileSize;
-            tileGap = stageOverride.TileGap;
-
-            if (tileScale <= 0f)
-            {
-                Debug.LogWarning($"[StageLoader] LayoutOverride fallback: TileSize is invalid. use default. tileScale={tileScale}");
-                tileScale = _defaultTileSize;
-            }
-
-            if (tileGap < 0f)
-            {
-                Debug.LogWarning($"[StageLoader] LayoutOverride fallback: TileGap is negative. clamp to 0. tileGap={tileGap}");
-                tileGap = 0f;
-            }
-        }
 
         ctx._stageRuntime._tileScale = tileScale;
         ctx._stageRuntime._tileGap = tileGap;
@@ -238,17 +194,15 @@ public class DummyStageLoader : IStageLoader
     }
 
     // ===== (6) 캐릭터 생성 + Initialize + GapFiller =====
-    private void SpawnStageActorsAndSystems(GameFlowContext ctx, StageDefinition stageDef)
+    private void SpawnStageActorsAndSystems(GameFlowContext ctx)
     {
-        var profile = ctx._chapterVisualProfile;
-        if (profile == null)
-            Debug.LogWarning("[StageLoader] ChapterVisualProfile is null. Use sprite fallback visuals.");
+        var stageDef = ctx._stageDefinition;
 
         // ===== (4) 보드 생성 (2D Sprite) =====
         BuildGridAndTiles(ctx, stageDef);
 
         // 6) Father/Child 생성 + 초기화
-        SpawnActorVisuals(ctx, profile);
+        SpawnActorVisuals(ctx);
         InitializeControllers(ctx, stageDef);
 
         // Hole 적용 + 메움 블록 스폰/바인딩
@@ -286,11 +240,11 @@ public class DummyStageLoader : IStageLoader
         CollectTurnSystems(ctx);
     }
 
-    private void SpawnActorVisuals(GameFlowContext ctx, ChapterVisualProfile profile)
+    private void SpawnActorVisuals(GameFlowContext ctx)
     {
         // Father
         ctx._stageRuntime._father = SpawnVisual(
-            prefab: profile != null ? profile.FatherPrefab : null,
+            prefab: null,
             sprite: null,
             name: "Father(Dummy)",
             parent: ctx._stageRuntime._root.transform,
@@ -298,7 +252,7 @@ public class DummyStageLoader : IStageLoader
 
         // Child
         ctx._stageRuntime._child = SpawnVisual(
-            prefab: profile != null ? profile.ChildPrefab : null,
+            prefab: null,
             sprite: null,
             name: "Child(Dummy)",
             parent: ctx._stageRuntime._root.transform,
@@ -331,13 +285,6 @@ public class DummyStageLoader : IStageLoader
             null
             );
 
-        //ctx._stageRuntime._gridPresenter.SetTileSpriteProvider(ctx._stageRuntime._tileSpriteProvider);
-
-        //ctx._stageRuntime._gridPresenter.SetInnerBaseRect(stageDef.FatherMoveRect);
-
-        // ===== InnerBase Background =====
-        ctx._stageRuntime._innerBaseBackground = InnerBaseBackgroundBuilder.BuildOrNull(ctx._stageRuntime, stageDef);
-
         // ===== 타일 생성 =====
         ctx._stageRuntime._tilesRoot = ctx._stageRuntime._gridPresenter._root;
         ctx._stageRuntime._gridPresenter.RebuildAll(E_Dir4.None);
@@ -348,10 +295,6 @@ public class DummyStageLoader : IStageLoader
     private void InitializeControllers(GameFlowContext ctx, StageDefinition stageDef)
     {
         var stageId = ctx?._stageRuntime?._stageId ?? "UNKNOWN_STAGE";
-        var stageOverride = ctx?._stageRuntime?._stageVisualOverride;
-
-        bool useRestoreLerp = stageOverride != null && stageOverride.UseRewindRestoreLerp;
-        float restoreDur = stageOverride != null ? stageOverride.RewindRestoreMoveDuration : 0f;
 
         // FatherController 부착 + 초기화
         ctx._stageRuntime._fatherController = EnsureController<FatherController>(ctx._stageRuntime._father);
@@ -374,9 +317,8 @@ public class DummyStageLoader : IStageLoader
             ctx._stageRuntime._grid,
             ctx._stageRuntime._gridPresenter,
             stageDef.FatherSpawn._cell,
-            moveRect,
-            useRestoreLerp,
-            restoreDur);
+            moveRect
+            );
 
         // ChildController 부착 + 초기화
         ctx._stageRuntime._childController = EnsureController<ChildController>(ctx._stageRuntime._child);
@@ -405,38 +347,10 @@ public class DummyStageLoader : IStageLoader
         }
 
         // ChildController는 Registry 버전 Initialize 사용
-        ctx._stageRuntime._childController.Initialize(pathRuntime, ctx._stageRuntime._childPathBlockers, startPos, useRestoreLerp, restoreDur);
-
-        // Stage별 Move 애니 교체(AOC)
-        ApplyStageMoveAnimOverrideOrWarn(stageId, stageOverride, fatherAnim, childAnim);
-    }
-
-    private static void ApplyStageMoveAnimOverrideOrWarn(
-    string stageId,
-    StageVisualOverride stageOverride,
-    FatherAnimDriver fatherAnim,
-    ChildAnimDriver childAnim)
-    {
-        if (stageOverride == null)
-            return;
-
-        if (!stageOverride.UseMoveAnimOverride)
-            return;
-
-        if (fatherAnim == null || childAnim == null)
-        {
-            Debug.LogWarning($"[StageLoader] MoveAnimOverride fallback: anim driver missing. stageId={stageId}");
-            return;
-        }
-
-        if (stageOverride.FatherMoveAnimatorOverride == null || stageOverride.ChildMoveAnimatorOverride == null)
-        {
-            Debug.LogWarning($"[StageLoader] MoveAnimOverride fallback: AOC missing. stageId={stageId}");
-            return;
-        }
-
-        fatherAnim.ApplyAnimatorOverrideOrWarn(stageOverride.FatherMoveAnimatorOverride, stageId);
-        childAnim.ApplyAnimatorOverrideOrWarn(stageOverride.ChildMoveAnimatorOverride, stageId);
+        ctx._stageRuntime._childController.Initialize(
+            pathRuntime,
+            ctx._stageRuntime._childPathBlockers,
+            startPos);
     }
 
     private T EnsureController<T>(GameObject go) where T : MonoBehaviour
@@ -499,7 +413,7 @@ public class DummyStageLoader : IStageLoader
         for (int i = 0; i < behaviours.Length; i++)
         {
             if (behaviours[i] == null) continue;
-            if (behaviours[i] is not IStageGimmickInitializable init) continue;
+            if (behaviours[i] is not ToggleSwitchController init) continue;
 
             try
             {
@@ -522,7 +436,7 @@ public class DummyStageLoader : IStageLoader
         for (int i = 0; i < behaviours.Length; i++)
         {
             if (behaviours[i] == null) continue;
-            if (behaviours[i] is not ILinkBinder binder) continue;
+            if (behaviours[i] is not ToggleSwitchController binder) continue;
 
             try
             {
@@ -573,13 +487,15 @@ public class DummyStageLoader : IStageLoader
     }
 
     // ===== (5) 테두리 경로 생성 (2D Sprite 마커) =====
-    private void CreateDummyPath(GameFlowContext ctx, StageDefinition stageDef)
+    private void CreateDummyPath(GameFlowContext ctx)
     {
         if (ctx == null || ctx._stageRuntime == null || ctx._stageRuntime._root == null)
         {
             Debug.LogWarning("[StageLoader] CreateDummyPath fallback: runtime/root is null.");
             return;
         }
+
+        var stageDef = ctx._stageDefinition;
 
         int w = Mathf.Max(1, stageDef.BoardSize.x);
         int h = Mathf.Max(1, stageDef.BoardSize.y);
@@ -617,23 +533,12 @@ public class DummyStageLoader : IStageLoader
         for (int x = w - 2; x >= 0; x--) AddCell(x, h - 1);
         // left (0,h-2) -> (0,1)
         for (int y = h - 2; y >= 1; y--) AddCell(0, y);
-
-        // ===== Child Path Border (1 sprite, rotated by facing) =====
-        //CreateChildPathBorderSpritesPerSide(ctx: ctx, w: w, h: h, tileSize: tileSize, tilePitch: tilePitch, parent: pathRoot.transform);
     }
 
     private void ResolveTileMetrics(GameFlowContext ctx, out float tileSize, out float tileGap, out float tilePitch)
     {
         tileSize = 1f;
         tileGap = 0f;
-
-        var ov = ctx?._stageRuntime?._stageVisualOverride;
-        if (ov != null && ov.UseLayoutOverride)
-        {
-            tileSize = Mathf.Max(0.01f, ov.TileSize);
-            tileGap = Mathf.Max(0f, ov.TileGap);
-        }
-
         tilePitch = tileSize + tileGap;
     }
 
@@ -644,42 +549,6 @@ public class DummyStageLoader : IStageLoader
             -(h - 1) * 0.5f * tilePitch,
             0f
         );
-    }
-
-    private static void CreateBorderOne(
-        Transform parent,
-        string name,
-        Sprite sprite,
-        Vector3 localPos,
-        Quaternion localRot,
-        float tileSize,
-        int sortingOrder)
-    {
-        var go = new GameObject(name);
-        go.transform.SetParent(parent, false);
-        go.transform.localPosition = localPos;
-        go.transform.localRotation = localRot;
-        go.transform.localScale = new Vector3(tileSize, tileSize, 1f);
-
-        var sr = go.AddComponent<SpriteRenderer>();
-        sr.sprite = sprite;
-        sr.color = Color.white;
-        sr.sortingOrder = sortingOrder;
-    }
-
-    private static Quaternion RotationForFacing(E_Facing facing)
-    {
-        // 기본 스프라이트 방향 = Right(0도) 기준
-        float z = facing switch
-        {
-            E_Facing.Right => 0f,
-            E_Facing.Up => 90f,
-            E_Facing.Left => 180f,
-            E_Facing.Down => 270f,
-            _ => 0f
-        };
-
-        return Quaternion.Euler(0f, 0f, z);
     }
 
     private void ApplyHolesFromStageDef(GameFlowContext ctx, StageDefinition stageDef)
@@ -716,74 +585,6 @@ public class DummyStageLoader : IStageLoader
             meta._surface = E_CellSurface.Hole;
             meta._isFilledHole = false;
             grid.SetMeta(c, meta, notify: true);
-        }
-    }
-
-    private Dictionary<int, SpriteRenderer> BuildHoleRenderersMap(Transform holesRoot, BoardGrid grid, GridPresenter presenter)
-    {
-        int w = grid._w;
-        int h = grid._h;
-
-        // 인덱스로 빠르게 접근 (딕셔너리지만 셀 수가 작아서 충분)
-        var map = new Dictionary<int, SpriteRenderer>(w * h);
-
-        for (int y = 0; y < h; y++)
-        {
-            for (int x = 0; x < w; x++)
-            {
-                int idx = y * w + x;
-                var cell = new Vector2Int(x, y);
-
-                Vector3 world = presenter.CellToWorld(cell);
-
-                var go = new GameObject($"Hole_{x}_{y}");
-                go.transform.SetParent(holesRoot, false);
-                go.transform.position = new Vector3(world.x, world.y, -0.02f);
-                go.transform.localScale = Vector3.one * 0.92f;
-
-                var sr = go.AddComponent<SpriteRenderer>();
-                sr.sprite = GetWhiteSprite();
-                sr.color = Color_Hole;
-                sr.sortingOrder = Sorting_Hole;
-                // 초기 비활성(아래에서 Refresh)
-                sr.enabled = false;
-
-                map[idx] = sr;
-            }
-        }
-
-        return map;
-    }
-
-    private void SubscribeHoleVisualUpdates(BoardGrid grid, Dictionary<int, SpriteRenderer> map)
-    {
-        int w = grid._w;
-
-        // meta 변경에 따라 표시 갱신
-        grid.AddListenerOnMetaChanged((cell, meta) =>
-        {
-            int idx = cell.y * w + cell.x;
-            if (!map.TryGetValue(idx, out var sr)) return;
-            sr.enabled = meta.IsHole;
-        });
-    }
-
-    private void RefreshHoleVisualsAll(BoardGrid grid, Dictionary<int, SpriteRenderer> map)
-    {
-        int w = grid._w;
-        int h = grid._h;
-
-        // 초기 상태 반영
-        for (int y = 0; y < h; y++)
-        {
-            for (int x = 0; x < w; x++)
-            {
-                var cell = new Vector2Int(x, y);
-                int idx = y * w + x;
-
-                if (!map.TryGetValue(idx, out var sr)) continue;
-                sr.enabled = grid.GetMeta(cell).IsHole;
-            }
         }
     }
 
@@ -848,7 +649,7 @@ public class DummyStageLoader : IStageLoader
             EnsureRewindKey(go);
 
             var ctrl = go.AddComponent<GapFillerBlockController>();
-            ctrl.Initialize(grid, presenter, gapRegistry, c, ctx._stageRuntime._tileSpriteProvider);
+            ctrl.Initialize(grid, presenter, gapRegistry, c);
         }
     }
 

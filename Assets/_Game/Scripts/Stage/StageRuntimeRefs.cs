@@ -9,8 +9,6 @@ public class StageRuntimeRefs
 
     // ===== Visual =====
     public string _stageId;
-    public StageVisualOverride _stageVisualOverride;
-    public ITileSpriteProvider _tileSpriteProvider;
     public Sprite _resolvedFatherSprite;
     public Sprite _resolvedChildSprite;
 
@@ -21,9 +19,6 @@ public class StageRuntimeRefs
     public float _tileScale = 1f;
     public float _tileGap = 0f;
     public float _cellPitch = 1f;
-
-    // InnerBase Background
-    public GameObject _innerBaseBackground;
 
     // ===== Board =====
     public Transform _tilesRoot; // Slide 대상

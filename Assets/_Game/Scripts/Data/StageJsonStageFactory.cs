@@ -156,7 +156,6 @@ public static class StageJsonStageFactory
 
                 doorSpawns.Add(new DoorSpawnData
                 {
-                    _anchor = E_DoorAnchor.ChildPathStep,
                     _cell = cell,
                     _pathStep = step,
                     _startOpen = startOpen,
@@ -265,7 +264,7 @@ public static class StageJsonStageFactory
         for (int i = 0; i < doorSpawns.Count; i++)
         {
             var d = doorSpawns[i];
-            if (d._anchor == E_DoorAnchor.ChildPathStep && !d._startOpen)
+            if (!d._startOpen)
                 blockedSteps.Add(d._pathStep);
         }
 
@@ -405,7 +404,6 @@ public static class StageJsonStageFactory
 
                 doorSpawns.Add(new DoorSpawnData
                 {
-                    _anchor = E_DoorAnchor.ChildPathStep,
                     _cell = cell,
                     _pathStep = step,
                     _startOpen = false,

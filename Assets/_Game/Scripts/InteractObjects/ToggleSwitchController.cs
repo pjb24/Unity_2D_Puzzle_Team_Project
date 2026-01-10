@@ -13,7 +13,7 @@ public enum E_SwitchMode
 [DisallowMultipleComponent]
 [RequireComponent(typeof(RewindKey))]
 public class ToggleSwitchController : MonoBehaviour,
-    IRewindable, ITurnTickable, IStageGimmickInitializable, ILinkBinder
+    IRewindable, ITurnTickable
 {
     [Serializable]
     public struct ToggleSwitchState
@@ -54,7 +54,6 @@ public class ToggleSwitchController : MonoBehaviour,
     private bool _warnedNotInitialized;
     private bool _warnedNoTargets;
 
-    private ITileSpriteProvider _tileSprites;
     private SpriteRenderer _sr;
 
     private bool _warnedMissingOnSprite;
@@ -95,7 +94,6 @@ public class ToggleSwitchController : MonoBehaviour,
         _father = refs != null ? refs._fatherController : null;
         _gapFillerRegistry = refs != null ? refs._gapFillerRegistry : null;
 
-        _tileSprites = refs != null ? refs._tileSpriteProvider : null;
         _sr = GetComponentInChildren<SpriteRenderer>(includeInactive: true);
 
         // scope에 registry를 못 넣은 경우 1회 폴백(무음 금지)
@@ -337,21 +335,6 @@ public class ToggleSwitchController : MonoBehaviour,
         if (_sr == null)
         {
             Debug.LogWarning("[ToggleSwitchController] ApplyStateSprite fallback: SpriteRenderer missing.");
-            return;
-        }
-
-        if (_tileSprites == null)
-        {
-            Debug.LogWarning("[ToggleSwitchController] ApplyStateSprite fallback: TileSpriteProvider is null. (keep previous)");
-            return;
-        }
-
-        E_TileVisualKey want = _isOn ? E_TileVisualKey.SwitchOn : E_TileVisualKey.SwitchOff;
-        var selector = TileSelector.Make(E_TileLayer.InnerBase, want);
-        if (_tileSprites.TryGetSprite(selector, out var sp) && sp != null)
-        {
-            _sr.sprite = sp;
-            _sr.color = Color.white;
             return;
         }
 

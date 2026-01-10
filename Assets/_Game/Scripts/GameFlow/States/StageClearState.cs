@@ -72,7 +72,6 @@ public class StageClearState : IGameFlowState
                     ctx._stageIndex = 0;
 
                     // 새 챕터/스테이지 재조회 유도
-                    ctx._chapterVisualProfile = null;
                     ctx._stageDefinition = null;
 
                     if (_chapterLoad == null)

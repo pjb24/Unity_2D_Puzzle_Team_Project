@@ -14,12 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _chapters:
   - ChapterId: Chapter_01
-    VisualProfile: {fileID: 11400000, guid: d00934c87d45b8743b11cb4a0afbde11, type: 2}
+    BgmId: 100
     Stages:
-    - {fileID: 0}
-    - {fileID: 0}
-    - {fileID: 0}
-    - {fileID: 0}
+    - _stageAsset: {fileID: 4900000, guid: 5578a22a6ccb76745b7ec6c7625d4140, type: 3}
+      BgmId: 100
+    - _stageAsset: {fileID: 4900000, guid: 1d4357471db6d044a8ddc5fd3f552467, type: 3}
+      BgmId: 100
+    - _stageAsset: {fileID: 4900000, guid: e89874244d9d78b4a8ace5b53df70bc4, type: 3}
+      BgmId: 100
+    - _stageAsset: {fileID: 4900000, guid: fdafd7e120c9df64ebdea9453b537850, type: 3}
+      BgmId: 100
   _difficultyProfiles:
   - _difficulty: 0
     RewindMax: 3

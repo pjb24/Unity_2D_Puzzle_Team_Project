@@ -186,7 +186,7 @@ public class BoardGrid
         _occ[ToIndex(c)] = occ;
     }
 
-    public bool IsBlockedCell(E_CellType t) => (t == E_CellType.Wall || t == E_CellType.Obstacle);
+    public bool IsBlockedCell(E_CellType t) => (t == E_CellType.Wall || t == E_CellType.Hole);
 
     // ---- Meta ----
 
