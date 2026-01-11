@@ -1,3 +1,4 @@
+// StageScaleApplier.cs
 using UnityEngine;
 
 public class StageScaleApplier

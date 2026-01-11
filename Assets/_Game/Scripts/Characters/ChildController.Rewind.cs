@@ -42,7 +42,6 @@ public partial class ChildController : IRewindable
 
         // 이동 연출 중이면 중단 (정상 동작)
         StopMoveFxIfAny();
-        _visualMove?.StopMove();
 
         int fromPos = _pathPos;
 
@@ -61,29 +60,10 @@ public partial class ChildController : IRewindable
 
         if (moved)
         {
-            if (_visualMove == null)
-            {
-                if (!_warnedRestoreMissingMoveAgent)
-                {
-                    _warnedRestoreMissingMoveAgent = true;
-                    Debug.LogWarning("[ChildController] RestoreState fallback: VisualMoveAgent missing. (snap restore)");
-                }
-                transform.position = toWorld;
-                return;
-            }
+            StartMoveFx(
+            toWorld: toWorld,
+            onDone: () => _onStepCompleted?.Invoke(false));
 
-            if (_rewindRestoreMoveDuration <= 0f)
-            {
-                if (!_warnedRestoreInvalidDuration)
-                {
-                    _warnedRestoreInvalidDuration = true;
-                    Debug.LogWarning($"[ChildController] RestoreState fallback: invalid rewind restore duration={_rewindRestoreMoveDuration}. (snap restore)");
-                }
-                transform.position = toWorld;
-                return;
-            }
-
-            _visualMove.MoveTo(toWorld, _rewindRestoreMoveDuration);
             return;
         }
 

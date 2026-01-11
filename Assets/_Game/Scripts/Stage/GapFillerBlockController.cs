@@ -213,6 +213,7 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
             _grid.SetOcc(_cell, E_Occupant.None);
             _registry?.Unregister(_cell, this);
         }
+        var from = _cell;
 
         var newCell = new Vector2Int(s._x, s._y);
         if (!_grid.IsInBounds(newCell))
@@ -223,6 +224,7 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
             Debug.LogWarning($"[GapFillerBlock] RestoreState fallback: out of bounds -> clamp. to={newCell} clamp={clamped}");
             newCell = clamped;
         }
+        var to = newCell;
 
         // InnerBase 밖 복원은 Clamp + Warning (무음 금지)
         if (_registry != null && !_registry.IsAllowedCell(newCell, _grid))
@@ -250,7 +252,8 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
             _grid.SetOcc(_cell, E_Occupant.GapFillerBlock);
             _registry?.Register(this, _cell);
             gameObject.SetActive(true);
-            SnapToCell();
+            StartMoveFx(_presenter.CellToWorld(from), _presenter.CellToWorld(to));
+
         }
         else
         {

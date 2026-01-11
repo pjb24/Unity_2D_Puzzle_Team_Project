@@ -369,9 +369,6 @@ public class StageLoader
 
             rt._father = go;
 
-            var move = go.GetComponent<VisualMoveAgent>();
-            if (move == null) move = go.AddComponent<VisualMoveAgent>();
-
             var ctrl = go.GetComponent<FatherController>();
             if (ctrl == null) ctrl = go.AddComponent<FatherController>();
             rt._fatherController = ctrl;
@@ -385,9 +382,6 @@ public class StageLoader
             var go = SpawnPrefabOrFallback(prefabs != null ? prefabs.Child : null, "[Child]", actorsRoot, Vector3.zero, 1f);
 
             rt._child = go;
-
-            var move = go.GetComponent<VisualMoveAgent>();
-            if (move == null) move = go.AddComponent<VisualMoveAgent>();
 
             var ctrl = go.GetComponent<ChildController>();
             if (ctrl == null) ctrl = go.AddComponent<ChildController>();

@@ -30,20 +30,11 @@ public partial class ChildController : MonoBehaviour
 
     [Header("Move FX (Lerp)")]
     [SerializeField] private float _lerpDuration = 0.12f;
-    [SerializeField] private float _rewindRestoreMoveDuration = 0.12f;
 
     // ===== Move Animation (Optional) =====
     private ChildAnimDriver _animDriver;
     public void BindAnimDriver(ChildAnimDriver driver) => _animDriver = driver;
     public void UnbindAnimDriver() => _animDriver = null;
-
-    private VisualMoveAgent _visualMove;
-
-    private bool _warnedRestoreMissingMoveAgent;
-    private bool _warnedRestoreInvalidDuration;
-
-    public void BindVisualMoveAgent(VisualMoveAgent agent) => _visualMove = agent;
-    public void UnbindVisualMoveAgent() => _visualMove = null;
 
     public E_ChildBlockedCause LastBlockedCause { get; private set; } = E_ChildBlockedCause.None;
 

@@ -65,12 +65,11 @@ public class DoorController : MonoBehaviour, IRewindable
         }
 
         transform.position = _presenter.CellToWorld(_cell);
-        SetOpen(startOpen, notify: false); // 여기서 ChildBlock도 함께 정리됨
+        SetOpen(startOpen); // 여기서 ChildBlock도 함께 정리됨
     }
 
-    public void SetOpen(bool open) => SetOpen(open, notify: true);
 
-    private void SetOpen(bool open, bool notify)
+    public void SetOpen(bool open)
     {
         if (_grid == null)
         {
@@ -113,26 +112,18 @@ public class DoorController : MonoBehaviour, IRewindable
 
     private void ApplyVisual()
     {
-        // 기존 프로토 규칙 유지:
-        // - Open 스프라이트가 있으면 "보이게"
-        // - 없으면 "안 보이게" (이전과 동일 동작)
         if (_sr == null)
             _sr = GetComponentInChildren<SpriteRenderer>(includeInactive: true);
 
         if (_isOpen)
         {
-            // 스프라이트 없으면 이전 유지 + 숨김(프로토 동작)
             if (_sr != null) _sr.enabled = false;
-            transform.localScale = Vector3.zero;
 
             return;
         }
 
         // closed
         if (_sr != null) _sr.enabled = true;
-        
-        // 스프라이트 없으면 이전 유지 + 기존 스케일 표현 유지
-        transform.localScale = _scale;
     }
 
     public object CaptureState()
@@ -155,6 +146,6 @@ public class DoorController : MonoBehaviour, IRewindable
         }
 
         // Restore에서도 SyncChildPathBlocker가 같이 돌아서 되감기 정합성 유지
-        SetOpen(s._isOpen, notify: false);
+        SetOpen(s._isOpen);
     }
 }

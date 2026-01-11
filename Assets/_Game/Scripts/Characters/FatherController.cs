@@ -73,7 +73,6 @@ public partial class FatherController : MonoBehaviour
 
     [Header("Move FX (Lerp)")]
     [SerializeField] private float _moveDuration = 0.12f;
-    [SerializeField] private float _rewindRestoreMoveDuration = 0.12f;
 
     private Coroutine _moveCo;
 
@@ -81,14 +80,6 @@ public partial class FatherController : MonoBehaviour
     private FatherAnimDriver _animDriver;
     public void BindAnimDriver(FatherAnimDriver driver) => _animDriver = driver;
     public void UnbindAnimDriver() => _animDriver = null;
-
-    private VisualMoveAgent _visualMove;
-
-    private bool _warnedRestoreMissingMoveAgent;
-    private bool _warnedRestoreInvalidDuration;
-
-    public void BindVisualMoveAgent(VisualMoveAgent agent) => _visualMove = agent;
-    public void UnbindVisualMoveAgent() => _visualMove = null;
 
     public void Initialize(
         BoardGrid grid,
@@ -274,8 +265,6 @@ public partial class FatherController : MonoBehaviour
         _grid.SetOcc(from, E_Occupant.None);
         _grid.SetOcc(to, E_Occupant.Father);
         Cell = to;
-
-        bool triggerGoal = (cellType == E_CellType.Goal);
 
         _lastResult = new FatherActionResult(E_FatherActionResultCode.Moved, from, to);
 

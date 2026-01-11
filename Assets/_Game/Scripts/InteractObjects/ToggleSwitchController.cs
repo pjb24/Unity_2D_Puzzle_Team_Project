@@ -11,7 +11,6 @@ public enum E_SwitchMode
 }
 
 [DisallowMultipleComponent]
-[RequireComponent(typeof(RewindKey))]
 public class ToggleSwitchController : MonoBehaviour,
     IRewindable, ITurnTickable
 {
@@ -62,10 +61,6 @@ public class ToggleSwitchController : MonoBehaviour,
 
     private bool _warnedMissingOnSprite;
     private bool _warnedMissingOffSprite;
-
-    private event Action<bool> _onStateChanged;
-    public void AddListenerOnStateChanged(Action<bool> cb) => _onStateChanged += cb;
-    public void RemoveListenerOnStateChanged(Action<bool> cb) => _onStateChanged -= cb;
 
     public Vector2Int Cell => _cell;
     public bool IsOn => _isOn;
@@ -218,6 +213,7 @@ public class ToggleSwitchController : MonoBehaviour,
 
         bool entered = onCell && !_isPressed;
         bool exited = !onCell && _isPressed;
+        bool prevIsOn = _isOn;
 
         switch (_mode)
         {
@@ -228,7 +224,7 @@ public class ToggleSwitchController : MonoBehaviour,
                         InvertDoorsOrWarn("OneShotLatch.Enter");
                         _isOn = true;
                         _consumed = true;
-                        NotifyAndVisual();
+                        ApplyVisual();
                     }
                     break;
                 }
@@ -239,7 +235,7 @@ public class ToggleSwitchController : MonoBehaviour,
                     {
                         InvertDoorsOrWarn("ToggleOnEnter.Enter");
                         _isOn = !_isOn;
-                        NotifyAndVisual();
+                        ApplyVisual();
                     }
                     break;
                 }
@@ -250,20 +246,25 @@ public class ToggleSwitchController : MonoBehaviour,
                     {
                         InvertDoorsOrWarn("Hold.Enter");
                         _isOn = true;
-                        NotifyAndVisual();
+                        ApplyVisual();
                     }
                     else if (exited)
                     {
                         InvertDoorsOrWarn("Hold.Exit");
                         _isOn = false;
-                        NotifyAndVisual();
+                        ApplyVisual();
                     }
                     break;
                 }
         }
 
-        if (_isOn) AudioHub.Ensure().PlaySfx(E_SfxId.Switch_On);
-        else AudioHub.Ensure().PlaySfx(E_SfxId.Switch_Off);
+        bool changed = (_isOn != prevIsOn);
+
+        if (changed)
+        {
+            E_SfxId sfxId = _isOn ? E_SfxId.Switch_On : E_SfxId.Switch_Off;
+            AudioHub.Ensure().PlaySfx(sfxId);
+        }
 
         _isPressed = onCell;
     }
@@ -316,22 +317,7 @@ public class ToggleSwitchController : MonoBehaviour,
         }
     }
 
-    private void NotifyAndVisual()
-    {
-        ApplyVisual();
-        _onStateChanged?.Invoke(_isOn);
-    }
-
     private void ApplyVisual()
-    {
-        // (A) 스프라이트 즉시 교체(ON/OFF)
-        ApplyStateSpriteOrWarn();
-
-        // (B) 최소 연출(기존 유지)
-        transform.localScale = _isOn ? new Vector3(0.85f, 0.85f, 1f) : Vector3.one;
-    }
-
-    private void ApplyStateSpriteOrWarn()
     {
         if (_sr == null)
             _sr = GetComponentInChildren<SpriteRenderer>(includeInactive: true);
@@ -342,7 +328,6 @@ public class ToggleSwitchController : MonoBehaviour,
             return;
         }
 
-        // 무음 금지: 상태별 1회 경고
         if (_isOn)
         {
             if (_onSprite != null)

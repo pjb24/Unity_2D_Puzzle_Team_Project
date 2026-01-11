@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 3868993394145629581}
   - component: {fileID: 149550555856131176}
   - component: {fileID: -7475876774375699434}
-  - component: {fileID: 7975752449385310930}
+  - component: {fileID: 434457876731156237}
   m_Layer: 0
   m_Name: "\uBC00\uAE30 \uBE14\uB7ED_0"
   m_TagString: Untagged
@@ -104,8 +104,8 @@ MonoBehaviour:
   _cell: {x: 0, y: 0}
   _isAlive: 1
   _useLerp: 1
-  _moveDuration: 0.12
---- !u!114 &7975752449385310930
+  _moveDuration: 0.2
+--- !u!114 &434457876731156237
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -117,4 +117,3 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 23cfa18e978342c4cb4f50cafb9b50e9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _guidRaw: f7e8271df46b423a91ed90417a06ba08

@@ -5,10 +5,13 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class RewindKey : MonoBehaviour
 {
-    [SerializeField] private string _guidRaw;
-
     private Guid _guidCache;
     private bool _initialized;
+
+    private void Awake()
+    {
+        EnsureGuid();
+    }
 
     public Guid Guid
     {
@@ -62,7 +65,6 @@ public class RewindKey : MonoBehaviour
         }
 
         _guidCache = guid;
-        _guidRaw = guid.ToString("N");
         _initialized = true;
         return true;
     }
@@ -72,18 +74,10 @@ public class RewindKey : MonoBehaviour
         if (_initialized)
             return;
 
-        if (string.IsNullOrEmpty(_guidRaw))
-        {
-            _guidCache = System.Guid.NewGuid();
-            _guidRaw = _guidCache.ToString("N");
+        _guidCache = System.Guid.NewGuid();
 #if UNITY_EDITOR
-            UnityEditor.EditorUtility.SetDirty(this);
+        UnityEditor.EditorUtility.SetDirty(this);
 #endif
-        }
-        else
-        {
-            _guidCache = System.Guid.Parse(_guidRaw);
-        }
 
         _initialized = true;
     }
@@ -97,15 +91,4 @@ public class RewindKey : MonoBehaviour
 
         return Guid.TryParse(raw, out guid);
     }
-
-#if UNITY_EDITOR
-    private void OnValidate()
-    {
-        if (string.IsNullOrEmpty(_guidRaw))
-        {
-            _guidRaw = System.Guid.NewGuid().ToString("N");
-            UnityEditor.EditorUtility.SetDirty(this);
-        }
-    }
-#endif
 }

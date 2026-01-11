@@ -1,3 +1,4 @@
+// StageScalePolicy.cs
 using UnityEngine;
 
 public static class StageScalePolicy

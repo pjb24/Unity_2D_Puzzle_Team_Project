@@ -43,7 +43,6 @@ public partial class FatherController : IRewindable
         // 이동 연출 중이면 중단 (무음 금지 아님: 정상 동작이므로 Warning 불필요)
         // (StopMoveFxIfAny는 FatherController.cs에 있음)
         StopMoveFxIfAny();
-        _visualMove?.StopMove();
 
         Vector2Int from = Cell;
         Vector2Int to = new Vector2Int(s._x, s._y);
@@ -87,29 +86,10 @@ public partial class FatherController : IRewindable
 
         if (moved)
         {
-            if (_visualMove == null)
-            {
-                if (!_warnedRestoreMissingMoveAgent)
-                {
-                    _warnedRestoreMissingMoveAgent = true;
-                    Debug.LogWarning("[FatherController] RestoreState fallback: VisualMoveAgent missing. (snap restore)");
-                }
-                transform.position = toWorld;
-                return;
-            }
-
-            if (_rewindRestoreMoveDuration <= 0f)
-            {
-                if (!_warnedRestoreInvalidDuration)
-                {
-                    _warnedRestoreInvalidDuration = true;
-                    Debug.LogWarning($"[FatherController] RestoreState fallback: invalid rewind restore duration={_rewindRestoreMoveDuration}. (snap restore)");
-                }
-                transform.position = toWorld;
-                return;
-            }
-
-            _visualMove.MoveTo(toWorld, _rewindRestoreMoveDuration);
+            StartMoveFx(
+                    fromWorld: _presenter.CellToWorld(from),
+                    toWorld: _presenter.CellToWorld(to),
+                    onDone: () => _onActionCompleted?.Invoke());
             return;
         }
 
