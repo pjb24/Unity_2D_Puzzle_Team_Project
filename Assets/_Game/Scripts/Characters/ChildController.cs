@@ -141,6 +141,14 @@ public partial class ChildController : MonoBehaviour
         _moveCo = StartCoroutine(CoMove(toWorld, _lerpDuration, () =>
         {
             _moveCo = null;
+            int next = _pathPos + 1;
+            if (next >= _path.Count)
+            {
+                next = 0; // 루프: 끝이면 처음으로
+            }
+            Vector3 from = _path.Points[_pathPos];
+            Vector3 toNext = _path.Points[next];
+            UpdateFacingByNextStepWorld(from, toNext);
             onDone?.Invoke();
         }));
     }

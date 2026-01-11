@@ -223,7 +223,7 @@ public class StageLoader
         rt._gapFillerRegistry.ConfigureMoveBounds(stageDef.FatherMoveRect, rt._grid);
 
         // ===== Spawn: Base Tiles + Walls =====
-        SpawnBaseAndWalls(stageDef, prefabs, baseRoot, overlayRoot, rt._gridPresenter, rt._tileScale);
+        SpawnBaseAndWalls(stageDef, prefabs, baseRoot, overlayRoot, rt._gridPresenter, rt._tileScale, pathRuntime);
 
         // ===== Spawn: Borders =====
         SpawnBorders(stageDef, prefabs, borderRoot, rt._gridPresenter, rt._tileScale, rt._cellPitch);
@@ -250,7 +250,7 @@ public class StageLoader
         ctx._stageRuntime = rt;
     }
 
-    private void SpawnBaseAndWalls(StageDefinition stageDef, StagePrefabs prefabs, Transform baseRoot, Transform overlayRoot, GridPresenter presenter, float tileScale)
+    private void SpawnBaseAndWalls(StageDefinition stageDef, StagePrefabs prefabs, Transform baseRoot, Transform overlayRoot, GridPresenter presenter, float tileScale, ChildPathRuntime pathRuntime)
     {
         int w = stageDef.BoardSize.x;
         int h = stageDef.BoardSize.y;
@@ -290,7 +290,9 @@ public class StageLoader
                 // Goal은 StageJson이 cells에 박아두므로 여기서 렌더
                 if (t == E_CellType.Goal)
                 {
-                    var goalGo = SpawnPrefabOrFallback(prefabs != null ? prefabs.Goal : null, "[Goal]", overlayRoot, presenter.CellToLocal(cell), tileScale);
+                    Vector3 pos = presenter.CellToLocal(cell);
+                    var goalGo = SpawnPrefabOrFallback(prefabs != null ? prefabs.Goal : null, "[Goal]", overlayRoot, pos, tileScale);
+                    ApplyGoalRotation(goalGo, stageDef.ChildGoalPathStep, pathRuntime);
                 }
             }
     }
@@ -605,5 +607,58 @@ public class StageLoader
         };
 
         return Quaternion.Euler(0f, 0f, z);
+    }
+
+    // ===== Goal rotation helpers =====
+    private void ApplyGoalRotation(GameObject goalGo, int goalPathStep, ChildPathRuntime pathRuntime)
+    {
+        if (goalGo == null)
+            return;
+
+        if (pathRuntime == null || pathRuntime.Points == null || pathRuntime.Points.Count < 2)
+        {
+            Debug.LogWarning("[StageLoader] Goal rotation fallback: pathRuntime is null or too few points.");
+            return;
+        }
+
+        int count = pathRuntime.Count;
+        int prev = (goalPathStep - 1 + count) % count;
+
+        if (!TryGetFacingZByDelta(pathRuntime.Points[prev], pathRuntime.Points[goalPathStep], out float z))
+        {
+            Debug.LogWarning($"[StageLoader] Goal rotation fallback: invalid delta. prev={pathRuntime.Points[prev]} cur={pathRuntime.Points[goalPathStep]}");
+            return;
+        }
+
+        goalGo.transform.localRotation = Quaternion.Euler(0f, 0f, z);
+    }
+
+    private static bool TryGetFacingZByDelta(Vector3 from, Vector3 to, out float z)
+    {
+        Vector3 d = to - from;
+
+        const float eps = 0.0001f;
+        float ax = Mathf.Abs(d.x);
+        float ay = Mathf.Abs(d.y);
+
+        if (ax < eps && ay < eps)
+        {
+            z = 0f;
+            return false; // 정지
+        }
+
+        bool diagonal = (ax >= eps && ay >= eps);
+        if (diagonal)
+        {
+            Debug.LogWarning($"[StageLoader] Facing fallback: diagonal delta detected. from={from} to={to} delta={d}");
+        }
+
+        // ChildController.Facing과 동일 매핑
+        if (ax >= ay)
+            z = (d.x >= 0f) ? 90f : -90f;   // Right / Left
+        else
+            z = (d.y >= 0f) ? 180f : 0f;  // Up / Down
+
+        return true;
     }
 }
