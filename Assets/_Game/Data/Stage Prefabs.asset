@@ -12,6 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 42b4c39bd3641f140ad4ef6a6196a0c5, type: 3}
   m_Name: Stage Prefabs
   m_EditorClassIdentifier: 
+  _border: {fileID: 3434587539500429557, guid: a94f2a5b747fa9242ac8512ab0e8ce0f, type: 3}
+  _borderGap: 0.55
   _father: {fileID: 2061127594526191390, guid: 561985293dbc4f045b1e6b6af9a7ab5a, type: 3}
   _child: {fileID: 5138454229852829646, guid: 16a0fcc2a24958d4eb05112a0d230feb, type: 3}
   _empty: {fileID: 2262745676867149356, guid: aca7dec59415b7747a69736b38fdd751, type: 3}

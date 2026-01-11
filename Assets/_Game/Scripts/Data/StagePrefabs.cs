@@ -4,7 +4,12 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Puzzle/Data/Stage Prefabs")]
 public class StagePrefabs : ScriptableObject
 {
-    [Header("CellBase")]
+    [Header("Border")]
+    [SerializeField] private GameObject _border;
+    [Tooltip("외곽 방향으로 밀어낼 Gap(셀 단위). 모든 변이 공유.")]
+    [SerializeField] private float _borderGap = 0f;
+
+    [Header("Characters")]
     [SerializeField] private GameObject _father;
     [SerializeField] private GameObject _child;
 
@@ -24,6 +29,9 @@ public class StagePrefabs : ScriptableObject
 
     [Header("CellOverlay02")]
     [SerializeField] private GameObject _fillerBlock;
+
+    public GameObject Border => _border;
+    public float BorderGap => _borderGap;
 
     public GameObject Father => _father;
     public GameObject Child => _child;

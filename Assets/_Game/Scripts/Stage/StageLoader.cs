@@ -190,6 +190,9 @@ public class StageLoader
         var blocksRoot = new GameObject("[Blocks]").transform;
         blocksRoot.SetParent(tilesRoot, false);
 
+        var borderRoot = new GameObject("[Border]").transform;
+        borderRoot.SetParent(tilesRoot, false);
+
         // ===== Board Model & Presenter =====
         int w = stageDef.BoardSize.x;
         int h = stageDef.BoardSize.y;
@@ -221,6 +224,9 @@ public class StageLoader
 
         // ===== Spawn: Base Tiles + Walls =====
         SpawnBaseAndWalls(stageDef, prefabs, baseRoot, overlayRoot, rt._gridPresenter, rt._tileScale);
+
+        // ===== Spawn: Borders =====
+        SpawnBorders(stageDef, prefabs, borderRoot, rt._gridPresenter, rt._tileScale, rt._cellPitch);
 
         // ===== Spawn: Holes =====
         SpawnHoles(stageDef, prefabs, overlayRoot, rt._gridPresenter, rt._tileScale);
@@ -287,6 +293,86 @@ public class StageLoader
                     var goalGo = SpawnPrefabOrFallback(prefabs != null ? prefabs.Goal : null, "[Goal]", overlayRoot, presenter.CellToLocal(cell), tileScale);
                 }
             }
+    }
+
+    private void SpawnBorders(StageDefinition stageDef, StagePrefabs prefabs, Transform borderRoot, GridPresenter presenter, float tileScale, float cellPitch)
+    {
+        GameObject borderPrefab = null;
+        float gapCells = 0f;
+
+        if (prefabs != null)
+        {
+            borderPrefab = prefabs.Border;
+            gapCells = prefabs.BorderGap;
+        }
+
+        if (borderPrefab == null)
+        {
+            WarnMissingPrefabOnce("BorderPrefab");
+            return;
+        }
+
+        int w = stageDef.BoardSize.x;
+        int h = stageDef.BoardSize.y;
+
+        // Top/Bottom: 길이 = w
+        SpawnBorderTop(borderPrefab, borderRoot, presenter, tileScale, cellPitch, gapCells, w, h);
+        SpawnBorderBottom(borderPrefab, borderRoot, presenter, tileScale, cellPitch, gapCells, w, h);
+
+        // Left/Right: 길이 = h
+        SpawnBorderLeft(borderPrefab, borderRoot, presenter, tileScale, cellPitch, gapCells, w, h);
+        SpawnBorderRight(borderPrefab, borderRoot, presenter, tileScale, cellPitch, gapCells, w, h);
+    }
+
+    private void SpawnBorderTop(GameObject prefab, Transform parent, GridPresenter presenter, float tileScale, float cellPitch, float gapCells, int w, int h)
+    {
+        // Top: y = h-1, 방향=Down, Gap=+Up
+        for (int x = 0; x < w; x++)
+            SpawnBorderTile(prefab, parent, presenter, tileScale, cellPitch, gapCells, E_BorderSide.Top, x, new Vector2Int(x, h - 1));
+    }
+
+    private void SpawnBorderBottom(GameObject prefab, Transform parent, GridPresenter presenter, float tileScale, float cellPitch, float gapCells, int w, int h)
+    {
+        // Bottom: y = 0, 방향=Up, Gap=+Down
+        for (int x = 0; x < w; x++)
+            SpawnBorderTile(prefab, parent, presenter, tileScale, cellPitch, gapCells, E_BorderSide.Bottom, x, new Vector2Int(x, 0));
+    }
+
+    private void SpawnBorderLeft(GameObject prefab, Transform parent, GridPresenter presenter, float tileScale, float cellPitch, float gapCells, int w, int h)
+    {
+        // Left: x = 0, 방향=Right, Gap=+Left
+        for (int y = 0; y < h; y++)
+            SpawnBorderTile(prefab, parent, presenter, tileScale, cellPitch, gapCells, E_BorderSide.Left, y, new Vector2Int(0, y));
+    }
+
+    private void SpawnBorderRight(GameObject prefab, Transform parent, GridPresenter presenter, float tileScale, float cellPitch, float gapCells, int w, int h)
+    {
+        // Right: x = w-1, 방향=Left, Gap=+Right
+        for (int y = 0; y < h; y++)
+            SpawnBorderTile(prefab, parent, presenter, tileScale, cellPitch, gapCells, E_BorderSide.Right, y, new Vector2Int(w - 1, y));
+    }
+
+    private void SpawnBorderTile(GameObject prefab, Transform parent, GridPresenter presenter, float tileScale, float cellPitch, float gapCells, E_BorderSide side, int index, Vector2Int cell)
+    {
+        Vector3 basePos = presenter.CellToLocal(cell);
+
+        Vector2 outward2 = GetBorderOutward(side);
+        Vector3 outward = new Vector3(outward2.x, outward2.y, 0f);
+
+        Vector3 offset = outward * (gapCells * cellPitch);
+
+        // SpawnPrefabOrFallback 스타일 유지 + 회전만 추가
+        var go = SpawnPrefabOrFallback(prefab, "[Border]", parent, basePos + offset, tileScale);
+        if (go == null)
+        {
+            Debug.LogWarning("[StageLoader] SpawnBorderTile fallback: spawn returned null.");
+            return;
+        }
+
+        go.name = $"[Border] {side} {index}";
+        go.transform.localRotation = GetBorderRotation(side);
+
+        // Sorting은 프리팹 값만 사용 (여기서 sortingOrder 변경 금지)
     }
 
     private void SpawnHoles(StageDefinition stageDef, StagePrefabs prefabs, Transform overlayRoot, GridPresenter presenter, float tileScale)
@@ -479,5 +565,45 @@ public class StageLoader
 
         _warnedMissingPrefabs.Add(key);
         Debug.LogWarning($"[StageLoader] Prefab missing: {key}. Spawning minimal fallback objects (no sprite).");
+    }
+
+    // ===== Border helpers =====
+
+    public enum E_BorderSide
+    {
+        Top,
+        Bottom,
+        Left,
+        Right,
+    }
+
+    // Gap 이동 방향(외곽 방향)
+    private static Vector2 GetBorderOutward(E_BorderSide side)
+    {
+        return side switch
+        {
+            E_BorderSide.Top => Vector2.up,
+            E_BorderSide.Bottom => Vector2.down,
+            E_BorderSide.Left => Vector2.left,
+            E_BorderSide.Right => Vector2.right,
+            _ => Vector2.zero
+        };
+    }
+
+    // 방향 규칙:
+    // Bottom: Up / Top: Down / Left: Right / Right: Left
+    // (프리팹 기본이 Up(0도)이라고 가정)
+    private static Quaternion GetBorderRotation(E_BorderSide side)
+    {
+        float z = side switch
+        {
+            E_BorderSide.Bottom => 0f,     // Up
+            E_BorderSide.Top => 180f,      // Down
+            E_BorderSide.Left => -90f,     // Right
+            E_BorderSide.Right => 90f,     // Left
+            _ => 0f
+        };
+
+        return Quaternion.Euler(0f, 0f, z);
     }
 }
