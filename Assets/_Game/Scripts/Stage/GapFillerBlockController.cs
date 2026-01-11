@@ -97,11 +97,6 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
         if (_registry != null && !_registry.IsAllowedCell(to, _grid))
             return false;
 
-        // 정적 지형 막힘(벽/장애물)
-        var cellType = _grid.GetCell(to);
-        if (_grid.IsBlockedCell(cellType))
-            return false;
-
         // 다른 점유(블록/캐릭터 등)면 밀기 불가
         var occ = _grid.GetOcc(to);
         if (occ != E_Occupant.None)
@@ -113,13 +108,18 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
         {
             _grid.SetOcc(from, E_Occupant.None);
             _grid.SetCellOverlay01(to, E_CellType.FilledHole);
-            
+
             _registry?.Unregister(from, this);
             _isAlive = false;
             gameObject.SetActive(false);
 
             return true;
         }
+
+        // 정적 지형 막힘(벽/장애물)
+        var cellType = _grid.GetCell(to);
+        if (_grid.IsBlockedCell(cellType))
+            return false;
 
         // 일반 이동
         _grid.SetOcc(from, E_Occupant.None);
