@@ -226,7 +226,9 @@ public class StageLoader
         var holeRegGo = new GameObject("HoleVisualRegistry");
         holeRegGo.transform.SetParent(rt._root.transform, false);
         rt._holeVisualRegistry = holeRegGo.AddComponent<HoleVisualRegistry>();
-        rt._holeVisualRegistry.Configure(prefabs != null ? prefabs.FilledHole : null);
+        rt._holeVisualRegistry.Configure(rt._grid, prefabs != null ? prefabs.FilledHole : null);
+        if (holeRegGo.GetComponent<RewindKey>() == null)
+            holeRegGo.AddComponent<RewindKey>();
 
         // ===== Spawn: Base Tiles + Walls =====
         SpawnBaseAndWalls(stageDef, prefabs, baseRoot, overlayRoot, rt._gridPresenter, rt._tileScale, pathRuntime);
