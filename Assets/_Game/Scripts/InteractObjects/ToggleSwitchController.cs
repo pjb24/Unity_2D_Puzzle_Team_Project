@@ -35,6 +35,10 @@ public class ToggleSwitchController : MonoBehaviour,
     [Header("GUID Links (Door RewindKey GUID, N or D format)")]
     [SerializeField] private List<string> _targetGuids = new();
 
+    [Header("On/Off Sprite")]
+    [SerializeField] private Sprite _offSprite;
+    [SerializeField] private Sprite _onSprite;
+
     // ===== runtime refs =====
     private BoardGrid _grid;
     private GridPresenter _presenter;
@@ -341,6 +345,12 @@ public class ToggleSwitchController : MonoBehaviour,
         // 무음 금지: 상태별 1회 경고
         if (_isOn)
         {
+            if (_onSprite != null)
+            {
+                _sr.sprite = _onSprite;
+                return;
+            }
+
             if (!_warnedMissingOnSprite)
             {
                 _warnedMissingOnSprite = true;
@@ -349,6 +359,12 @@ public class ToggleSwitchController : MonoBehaviour,
         }
         else
         {
+            if (_offSprite != null)
+            {
+                _sr.sprite = _offSprite;
+                return;
+            }
+
             if (!_warnedMissingOffSprite)
             {
                 _warnedMissingOffSprite = true;

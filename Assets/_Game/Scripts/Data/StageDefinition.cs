@@ -87,7 +87,6 @@ public class StageDefinition
     [Header("Board")]
     [SerializeField] private Vector2Int _boardSize = new(7, 7);
 
-    // 배열 방식
     [SerializeField] private E_CellType[] _cells; // length = w*h
 
     [Header("Spawn")]

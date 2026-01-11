@@ -19,8 +19,7 @@ MonoBehaviour:
   _wall: {fileID: 641911224300810276, guid: 1bd9f581896443e408533a05482c779d, type: 3}
   _hole: {fileID: 8350717055079878484, guid: 6571705c9cf55834780c28d24399bda4, type: 3}
   _filledHole: {fileID: 8645757636662087312, guid: 31cd85d1f69aa9548b4f05a68dd0fea4, type: 3}
-  _switchOn: {fileID: 3839538739992556550, guid: 2e8451614e797fb47bc6d5cbdedb146f, type: 3}
-  _switchOff: {fileID: 6399177535065323611, guid: 4653189795554a2428874573a40eb381, type: 3}
+  _toggleSwitch: {fileID: 6399177535065323611, guid: 4653189795554a2428874573a40eb381, type: 3}
   _door: {fileID: 5243378400533490205, guid: 242194f77a403e94b9fac6a3095dd078, type: 3}
   _goal: {fileID: 5127202027197797402, guid: 32dd8be726d0fd14e952393185eb5bfa, type: 3}
   _fillerBlock: {fileID: 1854182395736046377, guid: fbba9e608c548474fbd6e011cfbbe53d, type: 3}

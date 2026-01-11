@@ -1,8 +1,6 @@
 // DoorController.cs
 using System;
 using UnityEngine;
-using UnityEngine.InputSystem;
-using static UnityEditor.Experimental.GraphView.GraphView;
 
 [DisallowMultipleComponent]
 public class DoorController : MonoBehaviour, IRewindable

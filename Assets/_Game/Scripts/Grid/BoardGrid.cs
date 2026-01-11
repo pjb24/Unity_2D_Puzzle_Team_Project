@@ -5,7 +5,6 @@
 /// 인덱스: idx = y * width + x
 /// 저장:
 /// _cells[idx] : E_CellType (정적 지형)
-/// _meta[idx]  : CellMeta  (기믹/동적 속성)
 /// _occ[idx]   : E_Occupant(None / Father / Child / Blocker 등)
 ///
 using System;
@@ -25,9 +24,9 @@ public class BoardGrid
     public readonly int _w;
     public readonly int _h;
 
-    private readonly E_CellType[] _cellsBase;
-    private readonly E_CellType[] _cellsOverlay01;
-    private readonly E_CellType[] _cellsOverlay02;
+    private readonly E_CellType[] _cellsBase;   // Empty, Floor, Goal, Door
+    private readonly E_CellType[] _cellsOverlay01;  // Wall, Hole, Switch
+    private readonly E_CellType[] _cellsOverlay02;  // FillerBlock, Child, Father, OuterBorder
 
     private readonly E_Occupant[] _occ;
 
@@ -45,11 +44,10 @@ public class BoardGrid
 
         if (stageDef != null)
         {
-
             for (int i = 0; i < total; i++)
             {
                 // cellsBase
-                // Empty, Floor, Wall
+                // Empty, Floor
                 if (stageDef.Cells[i] == E_CellType.Empty)
                 {
                     _cellsBase[i] = E_CellType.Empty;
@@ -99,8 +97,10 @@ public class BoardGrid
                 _cellsOverlay01[idx] = E_CellType.Door;
             }
 
-            var goal = stageDef.ChildGoalPathStep;
-            _cellsOverlay01[goal] = E_CellType.Goal;
+            var goalStep = stageDef.ChildGoalPathStep;
+            var perimeter = PerimeterPathBuilder.Build(_w, _h);
+            int cellIdx = perimeter[goalStep];
+            _cellsOverlay01[cellIdx] = E_CellType.Goal;
 
             // cellsOverlay02
             // FillerBlock

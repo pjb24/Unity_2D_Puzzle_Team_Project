@@ -28,15 +28,25 @@ public class GridPresenter
             0f);
     }
 
-    private bool IsReady()
+    public Vector3 CellToLocal(Vector2Int c)
     {
-        return _grid != null;
+        if (_grid == null)
+        {
+            Debug.LogWarning("[GridPresenter] CellToLocal fallback: grid is null");
+            return Vector3.zero;
+        }
+
+        return _originLocal + new Vector3(c.x * _tileSize, c.y * _tileSize, 0f);
     }
 
     public Vector3 CellToWorld(Vector2Int c)
     {
-        // 2D 탑뷰: (x,y) 그대로 매핑
-        Vector3 local = _originLocal + new Vector3(c.x * _tileSize, c.y * _tileSize, 0f);
-        return _root.TransformPoint(local);
+        if (_grid == null || _root == null)
+        {
+            Debug.LogWarning("[GridPresenter] CellToWorld fallback: grid/root is null");
+            return CellToLocal(c);
+        }
+
+        return _root.TransformPoint(CellToLocal(c));
     }
 }

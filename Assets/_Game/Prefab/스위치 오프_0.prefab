@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 8273267802161859793}
   - component: {fileID: 6088145151883881910}
   - component: {fileID: 7206237053423607445}
+  - component: {fileID: 3658460386449831023}
   m_Layer: 0
   m_Name: "\uC2A4\uC704\uCE58 \uC624\uD504_0"
   m_TagString: Untagged
@@ -101,3 +102,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _guidRaw: bfc5ae7b3cff45668dc8f7d19f3a5c06
+--- !u!114 &3658460386449831023
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6399177535065323611}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0e1b69cc04371b74ca9283ab552d5483, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _cell: {x: 0, y: 0}
+  _mode: 2
+  _startOn: 0
+  _targetGuids: []
+  _offSprite: {fileID: 1660391451524502293, guid: 9c8ccd72040c92846a2b66d45f59d281, type: 3}
+  _onSprite: {fileID: 5501834076098668930, guid: f0f2f990c3134bc4f99eec92eababdf1, type: 3}

@@ -52,7 +52,7 @@ public static class StageJsonStageFactory
         int h = Mathf.Max(1, outerSize);
         var cells = new E_CellType[w * h];
         for (int i = 0; i < cells.Length; i++)
-            cells[i] = E_CellType.Empty; // Floor
+            cells[i] = E_CellType.Empty;
 
         // Father 이동 bounds = InnerBase 영역 (요구사항)
         RectInt fatherMoveRect = new RectInt(innerOffset, innerOffset, innerW, innerH);
