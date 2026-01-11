@@ -53,6 +53,10 @@ public struct SfxClipEntry
     [Tooltip("Max simultaneous plays allowed for this id.")]
     [Min(0)] public int MaxVoices;
 
+    [Header("Loop Blend")]
+    [Tooltip("Loop 재생 시 끝과 시작을 겹쳐서 자연스럽게 연결한다. (0 = 사용 안함)")]
+    [Min(0f)] public float LoopCrossfadeSeconds;
+
     public void Sanitize()
     {
         if (Volume <= 0f) Volume = 1f;
@@ -69,6 +73,7 @@ public struct SfxClipEntry
         if (MaxVoices <= 0) MaxVoices = 1;
         SpatialBlend = Mathf.Clamp01(SpatialBlend);
         CooldownSeconds = Mathf.Max(0f, CooldownSeconds);
+        LoopCrossfadeSeconds = Mathf.Max(0f, LoopCrossfadeSeconds);
     }
 }
 

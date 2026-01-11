@@ -15,8 +15,15 @@ public class AudioHub : MonoBehaviour
         public E_SfxId Id;
         public uint Serial;
         public AudioSource Source;
+        public AudioSource SecondarySource;
         public float EndTime;
         public bool IsLoop;
+        public bool UsesSeamlessLoop;
+        public float BaseVolume;
+        public float LoopCrossfade;
+        public float ClipLength;
+        public double CurrentStartDsp;
+        public double NextStartDsp;
     }
 
     // StopSfx(token) 용도 (외부에서만 사용)
@@ -110,16 +117,34 @@ public class AudioHub : MonoBehaviour
     private void Update()
     {
         float now = Time.unscaledTime;
+        double dspNow = AudioSettings.dspTime;
 
         for (int i = _activeSfx.Count - 1; i >= 0; i--)
         {
             var a = _activeSfx[i];
-            if (a.Source == null)
+            if (a.Source == null || (a.UsesSeamlessLoop && a.SecondarySource == null))
             {
+                if (a.Source != null)
+                {
+                    a.Source.Stop();
+                    a.Source.clip = null;
+                }
+                if (a.SecondarySource != null)
+                {
+                    a.SecondarySource.Stop();
+                    a.SecondarySource.clip = null;
+                }
                 DecreaseVoiceCount(a.Id);
                 CleanupPlayingByIdIfMatches(a.Id, null);
                 CleanupPlayingByTokenIfMatches(a.Serial, null);
                 _activeSfx.RemoveAt(i);
+                continue;
+            }
+
+            if (a.UsesSeamlessLoop)
+            {
+                UpdateSeamlessLoop(ref a, dspNow);
+                _activeSfx[i] = a;
                 continue;
             }
 
@@ -203,8 +228,16 @@ public class AudioHub : MonoBehaviour
             var a = _activeSfx[i];
             if (a.Serial != token.Serial) continue;
 
-            src.Stop();
-            src.clip = null;
+            if (a.Source != null)
+            {
+                a.Source.Stop();
+                a.Source.clip = null;
+            }
+            if (a.UsesSeamlessLoop && a.SecondarySource != null)
+            {
+                a.SecondarySource.Stop();
+                a.SecondarySource.clip = null;
+            }
 
             DecreaseVoiceCount(a.Id);
             CleanupPlayingByIdIfMatches(a.Id, src);
@@ -304,12 +337,65 @@ public class AudioHub : MonoBehaviour
 
         src.spatialBlend = def.SpatialBlend;
         src.pitch = pitch;
-        src.volume = Mathf.Clamp01(def.Volume * Mathf.Clamp01(volumeScale));
-        src.loop = loop;
+        float baseVolume = Mathf.Clamp01(def.Volume * Mathf.Clamp01(volumeScale));
+        src.volume = baseVolume;
         src.transform.position = worldPos ?? Vector3.zero;
 
+        bool useSeamlessLoop = loop && def.LoopCrossfadeSeconds > 0f;
+        AudioSource secondarySrc = null;
+        float clipLength = def.Clip.length / Mathf.Max(0.01f, Mathf.Abs(pitch));
+        float loopCrossfade = useSeamlessLoop ? Mathf.Clamp(def.LoopCrossfadeSeconds, 0f, clipLength * 0.5f) : 0f;
+
+        if (useSeamlessLoop)
+        {
+            secondarySrc = GetFreeSfxSource(src);
+            if (secondarySrc == null)
+            {
+                useSeamlessLoop = false;
+            }
+        }
+
+        src.loop = loop && !useSeamlessLoop;
+        if (secondarySrc != null)
+        {
+            secondarySrc.spatialBlend = def.SpatialBlend;
+            secondarySrc.pitch = pitch;
+            secondarySrc.volume = 0f;
+            secondarySrc.loop = false;
+            secondarySrc.transform.position = worldPos ?? Vector3.zero;
+        }
+
         src.clip = def.Clip;
-        src.Play();
+
+        if (useSeamlessLoop && secondarySrc != null)
+        {
+            secondarySrc.clip = def.Clip;
+            double startDsp = AudioSettings.dspTime;
+            double nextStart = startDsp + clipLength - loopCrossfade;
+
+            src.PlayScheduled(startDsp);
+            secondarySrc.PlayScheduled(nextStart);
+
+            _activeSfx.Add(new ActiveSfx
+            {
+                Id = id,
+                Serial = 0, // placeholder, overwritten below
+                Source = src,
+                SecondarySource = secondarySrc,
+                EndTime = float.PositiveInfinity,
+                IsLoop = true,
+                UsesSeamlessLoop = true,
+                BaseVolume = baseVolume,
+                LoopCrossfade = loopCrossfade,
+                ClipLength = clipLength,
+                CurrentStartDsp = startDsp,
+                NextStartDsp = nextStart
+            });
+        }
+        else
+        {
+            src.Play();
+        }
 
         uint serial = NextSfxSerial();
         _playingByToken[serial] = src;
@@ -319,17 +405,33 @@ public class AudioHub : MonoBehaviour
 
         _playingById[id] = src;
 
-        float length = def.Clip.length / Mathf.Max(0.01f, Mathf.Abs(pitch));
-        float duration = loop ? 0f : length;
+        float duration = loop ? 0f : clipLength;
 
-        _activeSfx.Add(new ActiveSfx
+        if (useSeamlessLoop && secondarySrc != null)
         {
-            Id = id,
-            Serial = serial,
-            Source = src,
-            EndTime = loop ? float.PositiveInfinity : now + length,
-            IsLoop = loop
-        });
+            var last = _activeSfx.Count - 1;
+            var seamless = _activeSfx[last];
+            seamless.Serial = serial;
+            _activeSfx[last] = seamless;
+        }
+        else
+        {
+            _activeSfx.Add(new ActiveSfx
+            {
+                Id = id,
+                Serial = serial,
+                Source = src,
+                EndTime = loop ? float.PositiveInfinity : now + clipLength,
+                IsLoop = loop,
+                UsesSeamlessLoop = false,
+                BaseVolume = baseVolume,
+                LoopCrossfade = 0f,
+                ClipLength = clipLength,
+                CurrentStartDsp = 0,
+                NextStartDsp = 0,
+                SecondarySource = null
+            });
+        }
 
         return new SfxToken(id, serial, duration);
     }
@@ -352,6 +454,11 @@ public class AudioHub : MonoBehaviour
 
             prev.Stop();
             prev.clip = null;
+            if (a.UsesSeamlessLoop && a.SecondarySource != null)
+            {
+                a.SecondarySource.Stop();
+                a.SecondarySource.clip = null;
+            }
 
             DecreaseVoiceCount(a.Id);
             CleanupPlayingByTokenIfMatches(a.Serial, a.Source);
@@ -460,9 +567,39 @@ public class AudioHub : MonoBehaviour
         {
             var s = _sfxPool[i];
             if (s == null) continue;
-            if (!s.isPlaying) return s;
+            if (s.isPlaying) continue;
+            if (IsSourceReserved(s)) continue;
+            return s;
         }
         return null;
+    }
+
+    private AudioSource GetFreeSfxSource(AudioSource exclude)
+    {
+        if (exclude == null) return GetFreeSfxSource();
+
+        for (int i = 0; i < _sfxPool.Count; i++)
+        {
+            var s = _sfxPool[i];
+            if (s == null || s == exclude) continue;
+            if (s.isPlaying) continue;
+            if (IsSourceReserved(s)) continue;
+            return s;
+        }
+
+        return null;
+    }
+
+    private bool IsSourceReserved(AudioSource source)
+    {
+        for (int i = 0; i < _activeSfx.Count; i++)
+        {
+            var a = _activeSfx[i];
+            if (a.Source == source || a.SecondarySource == source)
+                return true;
+        }
+
+        return false;
     }
 
     private void IncreaseVoiceCount(E_SfxId id)
@@ -480,5 +617,43 @@ public class AudioHub : MonoBehaviour
         v = Mathf.Max(0, v - 1);
         if (v == 0) _activeVoicesById.Remove(id);
         else _activeVoicesById[id] = v;
+    }
+
+    private void UpdateSeamlessLoop(ref ActiveSfx a, double dspNow)
+    {
+        if (a.LoopCrossfade > 0f)
+        {
+            double fadeStart = a.CurrentStartDsp + a.ClipLength - a.LoopCrossfade;
+            if (dspNow >= fadeStart)
+            {
+                float t = (float)((dspNow - fadeStart) / a.LoopCrossfade);
+                t = Mathf.Clamp01(t);
+                a.Source.volume = a.BaseVolume * (1f - t);
+                a.SecondarySource.volume = a.BaseVolume * t;
+            }
+            else
+            {
+                a.Source.volume = a.BaseVolume;
+                a.SecondarySource.volume = 0f;
+            }
+        }
+
+        double currentEnd = a.CurrentStartDsp + a.ClipLength;
+        if (dspNow >= currentEnd)
+        {
+            var oldCurrent = a.Source;
+            a.Source = a.SecondarySource;
+            a.CurrentStartDsp = a.NextStartDsp;
+            a.SecondarySource = oldCurrent;
+
+            _playingById[a.Id] = a.Source;
+
+            a.SecondarySource.Stop();
+            a.SecondarySource.clip = a.Source.clip;
+            a.SecondarySource.volume = 0f;
+
+            a.NextStartDsp = a.CurrentStartDsp + a.ClipLength - a.LoopCrossfade;
+            a.SecondarySource.PlayScheduled(a.NextStartDsp);
+        }
     }
 }
