@@ -33,7 +33,7 @@ public struct BgmClipEntry
 
     public void Sanitize()
     {
-        if (Volume <= 0f) Volume = 1f;
+        if (Volume < 0f) Volume = 0f;
     }
 }
 

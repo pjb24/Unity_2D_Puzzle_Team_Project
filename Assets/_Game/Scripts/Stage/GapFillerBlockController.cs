@@ -17,6 +17,7 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
     private BoardGrid _grid;
     private GridPresenter _presenter;
     private GapFillerBlockRegistry _registry;
+    private HoleVisualRegistry _holeRegistry;
 
     [SerializeField] private Vector2Int _cell;
     [SerializeField] private bool _isAlive = true;
@@ -30,11 +31,12 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
 
     private Coroutine _moveCo;
 
-    public void Initialize(BoardGrid grid, GridPresenter presenter, GapFillerBlockRegistry registry, Vector2Int spawnCell)
+    public void Initialize(BoardGrid grid, GridPresenter presenter, GapFillerBlockRegistry registry, HoleVisualRegistry holeRegistry, Vector2Int spawnCell)
     {
         _grid = grid;
         _presenter = presenter;
         _registry = registry;
+        _holeRegistry = holeRegistry;
 
         if (_grid == null || _presenter == null)
         {
@@ -108,6 +110,8 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
         {
             _grid.SetOcc(from, E_Occupant.None);
             _grid.SetCellOverlay01(to, E_CellType.FilledHole);
+
+            _holeRegistry?.FillHole(to);
 
             _registry?.Unregister(from, this);
             _isAlive = false;

@@ -245,6 +245,9 @@ public class AudioHub : MonoBehaviour
         _bgm.Play();
     }
 
+    private static bool IsRewindBlendSfx(E_SfxId id)
+        => id == E_SfxId.Rewind_Enter || id == E_SfxId.Rewind_Loop || id == E_SfxId.Rewind_Exit;
+
     private SfxToken PlaySfxInternal(E_SfxId id, Vector3? worldPos, float volumeScale, bool loop)
     {
         if (_sfxLibrary == null)
@@ -293,8 +296,12 @@ public class AudioHub : MonoBehaviour
             return SfxToken.Invalid;
         }
 
+
         float pitch = Random.Range(def.PitchMin, def.PitchMax);
         if (Mathf.Approximately(pitch, 0f)) pitch = 1f;
+
+        // Rewind Enter/Loop/Exit는 시퀀스 연결 품질이 중요해서 랜덤 피치를 금지한다.
+        if (IsRewindBlendSfx(id)) pitch = 1f;
 
         src.spatialBlend = def.SpatialBlend;
         src.pitch = pitch;

@@ -45,4 +45,7 @@ public class StageRuntimeRefs
 
     // ===== GapFiller =====
     public GapFillerBlockRegistry _gapFillerRegistry;
+
+    // ===== Hole Visual =====
+    public HoleVisualRegistry _holeVisualRegistry;
 }

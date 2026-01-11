@@ -222,6 +222,12 @@ public class StageLoader
         rt._gapFillerRegistry = gapRegGo.AddComponent<GapFillerBlockRegistry>();
         rt._gapFillerRegistry.ConfigureMoveBounds(stageDef.FatherMoveRect, rt._grid);
 
+        // ===== Hole Visual Registry (Mono) =====
+        var holeRegGo = new GameObject("HoleVisualRegistry");
+        holeRegGo.transform.SetParent(rt._root.transform, false);
+        rt._holeVisualRegistry = holeRegGo.AddComponent<HoleVisualRegistry>();
+        rt._holeVisualRegistry.Configure(prefabs != null ? prefabs.FilledHole : null);
+
         // ===== Spawn: Base Tiles + Walls =====
         SpawnBaseAndWalls(stageDef, prefabs, baseRoot, overlayRoot, rt._gridPresenter, rt._tileScale, pathRuntime);
 
@@ -229,7 +235,7 @@ public class StageLoader
         SpawnBorders(stageDef, prefabs, borderRoot, rt._gridPresenter, rt._tileScale, rt._cellPitch);
 
         // ===== Spawn: Holes =====
-        SpawnHoles(stageDef, prefabs, overlayRoot, rt._gridPresenter, rt._tileScale);
+        SpawnHoles(stageDef, prefabs, overlayRoot, rt._gridPresenter, rt._tileScale, rt._holeVisualRegistry);
 
         // ===== Spawn: Doors =====
         SpawnDoors(stageDef, prefabs, gimmicksRoot, rt, rt._tileScale);
@@ -377,12 +383,13 @@ public class StageLoader
         // Sorting은 프리팹 값만 사용 (여기서 sortingOrder 변경 금지)
     }
 
-    private void SpawnHoles(StageDefinition stageDef, StagePrefabs prefabs, Transform overlayRoot, GridPresenter presenter, float tileScale)
+    private void SpawnHoles(StageDefinition stageDef, StagePrefabs prefabs, Transform overlayRoot, GridPresenter presenter, float tileScale, HoleVisualRegistry holeRegistry)
     {
         var holes = stageDef.GetHoleCells_Runtime();
         for (int i = 0; i < holes.Length; i++)
         {
             var holeGo = SpawnPrefabOrFallback(prefabs != null ? prefabs.Hole : null, "[Hole]", overlayRoot, presenter.CellToLocal(holes[i]), tileScale);
+            holeRegistry?.RegisterHole(holes[i], holeGo);
         }
     }
 
@@ -445,7 +452,7 @@ public class StageLoader
                 ctrl = go.AddComponent<GapFillerBlockController>();
             }
 
-            ctrl.Initialize(rt._grid, rt._gridPresenter, rt._gapFillerRegistry, cell);
+            ctrl.Initialize(rt._grid, rt._gridPresenter, rt._gapFillerRegistry, rt._holeVisualRegistry, cell);
         }
     }
 

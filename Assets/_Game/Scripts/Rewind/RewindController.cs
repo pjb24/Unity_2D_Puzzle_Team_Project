@@ -42,9 +42,14 @@ public class RewindController : MonoBehaviour
     private Coroutine _deferredEnterCo;
 
     // ===== Rewind SFX =====
+    [Header("Rewind SFX Blend")]
+    [SerializeField, Min(0f)] private float _enterToLoopOverlapSeconds = 0.06f;
+    [SerializeField, Min(0f)] private float _loopToExitOverlapSeconds = 0.05f;
+
     private AudioHub.SfxToken _rewindEnterToken = AudioHub.SfxToken.Invalid;
     private AudioHub.SfxToken _rewindLoopToken = AudioHub.SfxToken.Invalid;
     private Coroutine _rewindLoopStartCo;
+    private Coroutine _rewindLoopStopCo;
 
     private void Reset()
     {
@@ -243,12 +248,23 @@ public class RewindController : MonoBehaviour
 
         _rewindEnterToken = hub.PlaySfxOneShot(E_SfxId.Rewind_Enter);
 
-        float delay = Mathf.Max(0f, _rewindEnterToken.DurationSeconds);
+        float enterDuration = _rewindEnterToken.IsValid ? _rewindEnterToken.DurationSeconds : 0f;
+        if (!_rewindEnterToken.IsValid)
+            Debug.LogWarning("[RewindController] StartRewindSfx fallback: Rewind_Enter token invalid. Loop will start immediately.");
+
+        // Enter 끝 무음/프레임 지연으로 “빈 구간”이 들리는 걸 막기 위해 약간 겹치게 Loop 시작
+        float delay = Mathf.Max(0f, enterDuration - Mathf.Max(0f, _enterToLoopOverlapSeconds));
 
         if (_rewindLoopStartCo != null)
         {
             StopCoroutine(_rewindLoopStartCo);
             _rewindLoopStartCo = null;
+        }
+
+        if (_rewindLoopStopCo != null)
+        {
+            StopCoroutine(_rewindLoopStopCo);
+            _rewindLoopStopCo = null;
         }
 
         _rewindLoopStartCo = StartCoroutine(CoStartRewindLoop(delay));
@@ -265,6 +281,9 @@ public class RewindController : MonoBehaviour
 
         var hub = AudioHub.Ensure();
         _rewindLoopToken = hub.PlaySfxLoop(E_SfxId.Rewind_Loop);
+
+        if (!_rewindLoopToken.IsValid)
+            Debug.LogWarning("[RewindController] StartRewindSfx fallback: Rewind_Loop play failed. (pool exhausted / missing clip / library missing)");
     }
 
     private void StopRewindSfx(bool playExit)
@@ -274,17 +293,44 @@ public class RewindController : MonoBehaviour
             StopCoroutine(_rewindLoopStartCo);
             _rewindLoopStartCo = null;
         }
+        
+        if (_rewindLoopStopCo != null)
+        {
+            StopCoroutine(_rewindLoopStopCo);
+            _rewindLoopStopCo = null;
+        }
 
         var hub = AudioHub.Ensure();
 
         if (_rewindEnterToken.IsValid) hub.StopSfx(_rewindEnterToken);
-        if (_rewindLoopToken.IsValid) hub.StopSfx(_rewindLoopToken);
-
         _rewindEnterToken = AudioHub.SfxToken.Invalid;
-        _rewindLoopToken = AudioHub.SfxToken.Invalid;
 
         if (playExit)
+        {
             hub.PlaySfx(E_SfxId.Rewind_Exit);
+
+            // Loop를 즉시 끊으면 클릭/끊김처럼 들릴 수 있음 -> 아주 짧게 겹친 뒤 중단
+            if (_rewindLoopToken.IsValid && _loopToExitOverlapSeconds > 0f)
+            {
+                _rewindLoopStopCo = StartCoroutine(CoStopLoopAfter(_loopToExitOverlapSeconds));
+                return;
+            }
+        }
+
+        if (_rewindLoopToken.IsValid) hub.StopSfx(_rewindLoopToken);
+        _rewindLoopToken = AudioHub.SfxToken.Invalid;
+    }
+
+    private IEnumerator CoStopLoopAfter(float delaySeconds)
+    {
+        if (delaySeconds > 0f)
+            yield return new WaitForSecondsRealtime(delaySeconds);
+
+        _rewindLoopStopCo = null;
+
+        var hub = AudioHub.Ensure();
+        if (_rewindLoopToken.IsValid) hub.StopSfx(_rewindLoopToken);
+        _rewindLoopToken = AudioHub.SfxToken.Invalid;
     }
 
     private void RestoreAndSync(int index)
