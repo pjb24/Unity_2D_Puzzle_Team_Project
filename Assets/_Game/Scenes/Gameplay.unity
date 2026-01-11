@@ -1803,6 +1803,8 @@ MonoBehaviour:
   _turnDriver: {fileID: 454478395}
   _stageRoot: {fileID: 0}
   _rewindMax: 3
+  _enterToLoopOverlapSeconds: 0.1
+  _loopToExitOverlapSeconds: 0.1
 --- !u!1 &859788948
 GameObject:
   m_ObjectHideFlags: 0

@@ -104,18 +104,28 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
         if (occ != E_Occupant.None)
             return false;
 
-        // Hole이면: 블록 소멸 + HoleFilled 상태로 전환(진입 가능 + FilledHole 스프라이트)
+        // Hole이면: Lerp 이동 후 블록 소멸 + HoleFilled 상태로 전환(진입 가능 + FilledHole 스프라이트)
         var cellOv1 = _grid.GetCellOverlay01(to);
         if (cellOv1 == E_CellType.Hole)
         {
             _grid.SetOcc(from, E_Occupant.None);
-            _grid.SetCellOverlay01(to, E_CellType.FilledHole);
-
-            _holeRegistry?.FillHole(to);
 
             _registry?.Unregister(from, this);
+            _cell = to;
             _isAlive = false;
-            gameObject.SetActive(false);
+
+            StartMoveFx(
+                _presenter.CellToWorld(from),
+                _presenter.CellToWorld(to),
+                () =>
+                {
+                    if (_holeRegistry != null)
+                        _holeRegistry.FillHole(to);
+                    else
+                        _grid.SetCellOverlay01(to, E_CellType.FilledHole);
+
+                    gameObject.SetActive(false);
+                });
 
             return true;
         }
@@ -141,7 +151,7 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
         return true;
     }
 
-    private void StartMoveFx(Vector3 fromWorld, Vector3 toWorld)
+    private void StartMoveFx(Vector3 fromWorld, Vector3 toWorld, Action onComplete = null)
     {
         if (_moveCo != null)
         {
@@ -152,6 +162,7 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
         if (!_useLerp)
         {
             transform.position = toWorld;
+            onComplete?.Invoke();
             return;
         }
 
@@ -159,13 +170,14 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
         {
             Debug.LogWarning($"[GapFillerBlock] MoveFX fallback: invalid duration({_moveDuration}). (snap)");
             transform.position = toWorld;
+            onComplete?.Invoke();
             return;
         }
 
-        _moveCo = StartCoroutine(CoMove(fromWorld, toWorld, _moveDuration));
+        _moveCo = StartCoroutine(CoMove(fromWorld, toWorld, _moveDuration, onComplete));
     }
 
-    private IEnumerator CoMove(Vector3 from, Vector3 to, float dur)
+    private IEnumerator CoMove(Vector3 from, Vector3 to, float dur, Action onComplete)
     {
         float t = 0f;
         while (t < 1f)
@@ -177,6 +189,7 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
 
         transform.position = to;
         _moveCo = null;
+        onComplete?.Invoke();
     }
 
     private void SnapToCell()

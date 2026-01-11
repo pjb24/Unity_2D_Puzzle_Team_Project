@@ -296,7 +296,6 @@ public class AudioHub : MonoBehaviour
             return SfxToken.Invalid;
         }
 
-
         float pitch = Random.Range(def.PitchMin, def.PitchMax);
         if (Mathf.Approximately(pitch, 0f)) pitch = 1f;
 
