@@ -20,11 +20,17 @@ public class DoorController : MonoBehaviour, IRewindable
     private int _childPathStep = -1;
 
     private SpriteRenderer _sr;
+    private Vector3 _scale;
 
     private bool _isOpen;
 
     public Vector2Int Cell => _cell;
     public bool IsOpen => _isOpen;
+
+    private void Awake()
+    {
+        _scale = transform.localScale;
+    }
 
     public void Initialize(
         BoardGrid grid,
@@ -126,7 +132,7 @@ public class DoorController : MonoBehaviour, IRewindable
         if (_sr != null) _sr.enabled = true;
         
         // 스프라이트 없으면 이전 유지 + 기존 스케일 표현 유지
-        transform.localScale = new Vector3(0.9f, 0.9f, 1f);
+        transform.localScale = _scale;
     }
 
     public object CaptureState()

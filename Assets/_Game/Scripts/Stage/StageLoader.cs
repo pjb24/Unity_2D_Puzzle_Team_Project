@@ -196,6 +196,9 @@ public class StageLoader
 
         rt._grid = new BoardGrid(w, h, stageDef);
 
+        var scaleApplier = new StageScaleApplier(rt._root.transform);
+        float stageScale = scaleApplier.Apply(w, h);
+
         rt._gridPresenter = new GridPresenter();
         rt._gridPresenter._tileSize = rt._cellPitch;
         rt._gridPresenter.Initialize(tilesRoot, rt._grid);
@@ -470,7 +473,7 @@ public class StageLoader
 
         go.transform.localPosition = localPos;
         if (uniformScale > 0f)
-            go.transform.localScale = Vector3.one * uniformScale;
+            go.transform.localScale *= uniformScale;
 
         return go;
     }

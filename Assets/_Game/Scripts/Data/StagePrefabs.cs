@@ -1,3 +1,4 @@
+// StagePrefabs.cs
 using UnityEngine;
 
 [CreateAssetMenu(menuName = "Puzzle/Data/Stage Prefabs")]
