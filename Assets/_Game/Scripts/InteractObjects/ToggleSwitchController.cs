@@ -119,6 +119,14 @@ public class ToggleSwitchController : MonoBehaviour,
         ApplyVisual();
     }
 
+    public void ApplyInitialPressState()
+    {
+        if (_grid == null)
+            return;
+
+        ApplyPressState(IsAnyPresserOnCell(), playSfx: false);
+    }
+
     public void BindAllLinks(StageRuntimeRefs refs)
     {
         _doors.Clear();
@@ -209,8 +217,11 @@ public class ToggleSwitchController : MonoBehaviour,
             return;
         }
 
-        bool onCell = IsAnyPresserOnCell();
+        ApplyPressState(IsAnyPresserOnCell(), playSfx: true);
+    }
 
+    private void ApplyPressState(bool onCell, bool playSfx)
+    {
         bool entered = onCell && !_isPressed;
         bool exited = !onCell && _isPressed;
         bool prevIsOn = _isOn;
@@ -260,7 +271,7 @@ public class ToggleSwitchController : MonoBehaviour,
 
         bool changed = (_isOn != prevIsOn);
 
-        if (changed)
+        if (changed && playSfx)
         {
             E_SfxId sfxId = _isOn ? E_SfxId.Switch_On : E_SfxId.Switch_Off;
             AudioHub.Ensure().PlaySfx(sfxId);

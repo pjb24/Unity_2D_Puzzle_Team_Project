@@ -539,6 +539,7 @@ public class StageLoader
         {
             if (switches[i] == null) continue;
             switches[i].BindAllLinks(rt);
+            switches[i].ApplyInitialPressState();
         }
     }
 
