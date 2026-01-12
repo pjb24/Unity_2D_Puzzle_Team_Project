@@ -114,6 +114,9 @@ public class GapFillerBlockController : MonoBehaviour, IRewindable
             _cell = to;
             _isAlive = false;
 
+            // === Push 성공 직후 SFX. Hole 진입에도 재생 ===
+            AudioHub.Ensure().PlaySfx(E_SfxId.GapFiller_Push);
+
             StartMoveFx(
                 _presenter.CellToWorld(from),
                 _presenter.CellToWorld(to),
