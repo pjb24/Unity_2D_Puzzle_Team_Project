@@ -66,6 +66,11 @@ public class GameFlowOrchestrator : MonoBehaviour
 
     private void Update()
     {
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            Application.Quit();
+        }
+
         _sm.Tick(_ctx);
     }
 
