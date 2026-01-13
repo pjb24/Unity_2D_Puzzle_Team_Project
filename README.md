@@ -1,5 +1,11 @@
 # 2D 퍼즐 게임 프로토타입
 
+# InGame Image
+![alt text](OneStepAndStep_MainMenu.jpg)
+![alt text](OneStepAndStep_Play.png)
+
+---
+
 본 프로젝트는 게임의 핵심 구조(턴 시스템, Rewind, 난이도 정책)를 검증하기 위한 **프로토타입 구현**을 목표로 한다.
 
 아트 품질, 연출 디테일은 범위에서 제외하며 **게임 루프가 끝까지 완주 가능한 상태**를 완료 기준으로 한다.
