@@ -3001,7 +3001,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 21, y: -70}
+  m_AnchoredPosition: {x: 21, y: -50.1}
   m_SizeDelta: {x: 230, y: 50}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1509873445
@@ -3034,7 +3034,8 @@ MonoBehaviour:
 
     Next: E
 
-    Commit:
+
+    Confirm:
     Space bar'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 9c2e709091616f34885a4f97a909f2ff, type: 2}
