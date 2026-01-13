@@ -99,3 +99,6 @@ InitTestScene*.unity*
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
 
 /ignore
+/WebGL Builds
+connectwebgl.zip
+webgl_sharing

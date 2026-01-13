@@ -4,6 +4,9 @@
 ![alt text](OneStepAndStep_MainMenu.jpg)
 ![alt text](OneStepAndStep_Play.png)
 
+# WebGL Play URL
+https://play.unity.com/ko/games/c9d26a0a-7abf-400c-bf14-7108b10a009d/one-step-and-step
+
 ---
 
 본 프로젝트는 게임의 핵심 구조(턴 시스템, Rewind, 난이도 정책)를 검증하기 위한 **프로토타입 구현**을 목표로 한다.
